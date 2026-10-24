@@ -4,6 +4,7 @@
 Uses key-only SSH and read-only guest commands. No service or policy changes.
 Writes only protected acceptance results and a dedicated SSH known-hosts file.
 """
+import argparse
 import datetime
 import fcntl
 import ipaddress
@@ -13,7 +14,6 @@ import os
 from pathlib import Path
 import platform
 import re
-import secrets as random_secrets
 import shutil
 import stat
 import subprocess
@@ -206,13 +206,29 @@ def probe_ping(state, mtu):
     if not isinstance(mtu, int) or not 576 <= mtu <= 65535:
         raise RuntimeError('unsupported network MTU for IPv4 packet probe')
     output = common.run(['env', 'LC_ALL=C', 'ip', 'netns', 'exec', state['namespace'],
-                         'ping', '-n', '-I', state['metadata_ip'], '-e', str(random_secrets.randbelow(65534) + 1),
+                         'ping', '-n', '-I', state['metadata_ip'],
                          '-c', '3', '-W', '2', '-M', 'do', '-s', str(mtu - 28), state['guest_ip']], timeout=12)
     if not re.search(r'3 packets transmitted, 3 (?:packets )?received', output):
         raise RuntimeError('MTU-sized ping did not receive all three replies')
 
 
-def main():
+def record_ping(state, state_path, mtu):
+    # Clear a prior successful result before a new attempt, and preserve any
+    # already collected guest evidence if this individual check fails.
+    result = {'verified': False, 'mtu': mtu, 'payload_bytes': mtu - 28,
+              'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    state['results']['mtu_ping'] = result
+    launch.atomic_state(state_path, state)
+    probe_ping(state, mtu)
+    result['verified'] = True
+    launch.atomic_state(state_path, state)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--ping-only', action='store_true',
+                        help='retry only the MTU ping, keeping other evidence unchanged')
+    args = parser.parse_args(argv)
     secrets = {}
     try:
         if os.geteuid() != 0:
@@ -236,16 +252,20 @@ def main():
                 state, state_path = load_run(cloud)
                 progress('BEGIN; server=' + state['ids']['server'])
                 network, port = validate_attachment(cloud, state)
+                if args.ping_only:
+                    record_ping(state, state_path, network.mtu)
+                    progress('three MTU-sized IPv4 echo replies through the OVN metadata namespace: PASS')
+                    progress('COMPLETE (MTU ping only; other acceptance evidence unchanged)')
+                    return 0
                 report = inspect_guest(state, network.mtu, port.mac_address)
                 progress('key-only SSH, matching guest IPv4/MAC and DHCP lease: PASS')
                 progress(f"guest MTU matches Neutron: {report['mtu']}")
                 progress('HTTP metadata UUID/name matches the Nova instance: PASS')
-                probe_ping(state, network.mtu)
-                progress('three MTU-sized IPv4 echo replies through the OVN metadata namespace: PASS')
-                report['mtu_ping_verified'] = True
                 report['checked_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 state['results']['guest'] = report
                 launch.atomic_state(state_path, state)
+                record_ping(state, state_path, network.mtu)
+                progress('three MTU-sized IPv4 echo replies through the OVN metadata namespace: PASS')
                 progress('COMPLETE (negative policy, tenant authorization, lifecycle, cleanup and application integration remain pending)')
         return 0
     except Exception as exc:

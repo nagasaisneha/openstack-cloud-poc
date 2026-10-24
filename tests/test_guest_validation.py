@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -82,6 +83,10 @@ class GuestValidationTests(unittest.TestCase):
             self.assertEqual(command[command.index('-s') + 1], '1414')
             self.assertEqual(command[command.index('-I') + 1], '172.30.240.2')
             self.assertIn('do', command)
+            self.assertNotIn('-e', command)  # Unsupported by the verified host ping.
+            self.assertEqual(command[command.index('ping') + 1:],
+                ['-n', '-I', '172.30.240.2', '-c', '3', '-W', '2',
+                 '-M', 'do', '-s', '1414', '172.30.240.154'])
         with patch.object(setup.common, 'run', return_value='3 packets transmitted, 1 received'):
             with self.assertRaises(RuntimeError):
                 setup.probe_ping(self.state(), 1442)
@@ -104,6 +109,32 @@ class GuestValidationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'inspection command failed'):
                 setup.inspect_guest(self.state(), 1442, 'fa:16:3e:12:34:56')
         run.assert_called_once()
+
+    def test_failed_ping_clears_stale_success_and_preserves_guest_evidence(self):
+        state = self.state()
+        state['results'] = {'guest': {'dhcp_lease_verified': True},
+                            'mtu_ping': {'verified': True}}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'run.json'
+            with patch.object(setup, 'probe_ping', side_effect=RuntimeError('probe failed')):
+                with self.assertRaisesRegex(RuntimeError, 'probe failed'):
+                    setup.record_ping(state, path, 1442)
+            stored = json.loads(path.read_text())
+        self.assertFalse(stored['results']['mtu_ping']['verified'])
+        self.assertTrue(stored['results']['guest']['dhcp_lease_verified'])
+
+    def test_successful_ping_records_only_its_own_evidence(self):
+        state = self.state()
+        state['results'] = {'existing': 'retained'}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'run.json'
+            with patch.object(setup, 'probe_ping') as probe:
+                setup.record_ping(state, path, 1442)
+            stored = json.loads(path.read_text())
+        probe.assert_called_once_with(state, 1442)
+        self.assertTrue(stored['results']['mtu_ping']['verified'])
+        self.assertEqual(stored['results']['existing'], 'retained')
+        self.assertNotIn('guest', stored['results'])
 
 
 if __name__ == '__main__':
