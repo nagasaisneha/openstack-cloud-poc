@@ -1,6 +1,6 @@
 # Task 11 — deployed architecture and operational closeout
 
-Status on 2026-10-24: real core-cloud/application acceptance and temporary dependency cleanup passed in the operator terminal. Current operational observations, listener review, logrotate disposition and the retained guest CPU smoke test remain pending. This is a local POC, not staging or production acceptance. The [chronological host evidence](task11-live-deployment-evidence.md) and [application evidence](task11-application-integration.md) distinguish real results from offline tests.
+Status on 2026-10-24: real core-cloud/application acceptance, temporary dependency cleanup, current core service/API/agent checks and the retained guest CPU smoke test passed in the operator terminal. Listener corrections, bounded logrotate runtime validation and timer disposition remain pending. This is a local POC, not staging or production acceptance. The [chronological host evidence](task11-live-deployment-evidence.md) and [application evidence](task11-application-integration.md) distinguish real results from offline tests.
 
 ## Actual architecture and release boundary
 
@@ -35,7 +35,7 @@ OpenStack documents [Caracal packages for Ubuntu 22.04](https://docs.openstack.o
 
 | Service | Configured catalog URL | Implementation |
 | --- | --- | --- |
-| Keystone | `http://127.0.0.1:5000/v3` | Apache mod_wsgi / MariaDB |
+| Keystone | `http://127.0.0.1:5000/v3/` | Apache mod_wsgi / MariaDB |
 | Glance | `http://127.0.0.1:9292` | Glance API / protected file store / MariaDB |
 | Placement | `http://127.0.0.1:8778` | Apache mod_wsgi / MariaDB |
 | Nova | `http://127.0.0.1:8774/v2.1` | API/conductor/scheduler/compute, cells v2, RabbitMQ, Placement, KVM/libvirt |
@@ -55,13 +55,15 @@ Catalog loopback URLs do not prove loopback listener bindings. OVN NB/SB TCP lis
 | Real application | Create/inspect and stop/start/delete through real SDK jobs with observed provider completion, durable duplicate lookup and independent host cleanup | In-process application service; uncertain operations require reconciliation |
 | VM deletion | Operator Nova/Neutron absence, no libvirt domain/source disk, empty Placement allocations and zero temporary tenant compute usage | A retained recovery copy is not a leaked live VM allocation |
 | Dependencies | All original temporary dependencies/users/projects absent; supplemental default group absent; selected OVN switches/namespaces removed | Original demo assets and historical infrastructure retained |
-| CPU workload | Operational review prepared: arithmetic sum inside retained guest using pinned-key SSH | Live execution pending; not AI inference or a performance benchmark |
+| CPU workload | Retained guest returned `5000050000` for sum 1..100000 over pinned-key SSH | CPU smoke workload; not AI inference or a performance benchmark |
 
 Original demo VM `82382430-4b64-4386-a55b-8468e04da011` remains `ACTIVE` after cleanup, on private network `6ee5ad82-efc5-405d-bf5c-a4953e9a063b`, subnet `172.30.240.0/24`, guest `172.30.240.154`, metadata source `172.30.240.2`. Its base image is `da953e4e-38ca-47d2-b97a-b62d3f33646a`. Its remaining flavor/key/group/port IDs are retained in root-only `run.json`. The local probe rules permit only TCP/22 and ICMP from the metadata address `/32`. The app VM and both temporary project networks are deleted; old application acceptance commands must not be replayed.
 
 Temporary cleanup completed with supplemental recovery bundle `/root/openstack-poc-acceptance/dependency-recovery-b0a2694420364856a755347a048ea36a-eiocsu57`. The operator verified the reviewed recreated default-group removal, both empty task network inventories, both user/project removals and final OVN/namespace absence. This result supersedes the earlier partial-cleanup entries; the history is preserved for incident traceability.
 
 ## Current operations review command
+
+The operator completed this command successfully. It is retained for later health verification; the next action is the scoped correction below.
 
 ```bash
 sudo /usr/bin/python3 -B /home/sneha/projects/openstack-cloud-poc/scripts/local-openstack/review_operations.py
@@ -74,6 +76,59 @@ The script runs one bounded guest `awk` arithmetic command over the existing pri
 Systemd observation `PASS` means the properties were read; required active units also have an explicit `expected_profile_match` flag. Inactive `logrotate.timer`, idle `logrotate.service` and intentionally inactive VTEP are reported without inventing a service failure. Listener `loopback=false` identifies a binding that needs review; it does not establish Windows/LAN/internet reachability. SSH/workload success is separate from systemd state.
 
 Review results before listener changes or timer reactivation. Current local configuration inspection found OVN `ovs-appctl --timeout=5` but unbounded calls in the OVS logrotate hook. The earlier OVN hook validation remains valid for its observed time; a debug parse does not establish current hook runtime. Keep the timer stopped until safe current runtime validation and the remaining bound/timeout review are complete. Changes to shared Apache or historical uWSGI routes must preserve unrelated applications.
+
+## Verified operations review and remaining findings
+
+The operator saved `/root/openstack-poc-acceptance/operations-review-68f79bba5a35404ab2573968235db55a.json`. Every required core unit was loaded/active with its expected profile. Nova compute, both required OVN agents and matching Placement inventory were healthy. Authenticated catalog/resource reads passed; the retained original VM was `ACTIVE`, with 1 vCPU/256 MiB/1 GiB flavor `7f0e32eb-7fd1-4047-8954-1dde8078d459`, port `74677cfa-f5cb-4adc-8e6e-5c0ca26e2136` and MTU 1442. The actual guest arithmetic result passed over pinned-key SSH. These are live operator-supplied observations, distinct from the local shell test.
+
+| Installed component | Full observed package version |
+| --- | --- |
+| Keystone | `2:25.0.0-0ubuntu1.4~cloud0` |
+| Glance API | `2:28.1.0-0ubuntu1~cloud0` |
+| Placement API | `1:11.0.0-0ubuntu1~cloud0` |
+| Nova API/compute | `3:29.2.0-0ubuntu1.8~cloud0` |
+| Neutron API/OVN metadata | `2:24.1.0-0ubuntu1.2~cloud0` |
+| Open vSwitch | `3.3.9-0ubuntu0.24.04.1~cloud0` |
+| OVN central/host | `24.03.6-0ubuntu0.24.04.1~cloud0` |
+| libvirt daemon | `8.0.0-1ubuntu7.21` |
+| QEMU x86 | `1:6.2+dfsg-2ubuntu6.31` |
+| MariaDB | `1:10.6.23-0ubuntu0.22.04.1` |
+| RabbitMQ | `3.9.27-0ubuntu0.6` |
+| Apache | `2.4.52-1ubuntu4.25` |
+| mod_wsgi | `4.9.0-1ubuntu0.1` |
+| Memcached | `1.6.14-1ubuntu0.3` |
+| OpenStackClient | `6.6.0-0ubuntu2~cloud0` |
+| OpenStack SDK | `3.0.0-0ubuntu2~cloud0` |
+
+Linux root free space was 1,001,853,288,448 bytes; Windows C: mount free space was 806,689,443,840 bytes. Linux virtual filesystem capacity is not physical Windows capacity. `MemAvailable` was 1,585,056 KiB (about 1.51 GiB), with 820,020 KiB swap used. These are point observations, not sustained performance guarantees. Limiting the restarted APIs to one worker each is a modest laptop capacity correction; no exact memory improvement is claimed before measurement.
+
+TCP ports 8774/8775/9696, 6640/6641/6642, 11211 and 3306 were loopback-only. Ports 5000/8778, 9292, 5672, 4369, 25672 and shared Apache port 80 had wildcard bindings. This is listener evidence, not a LAN/internet reachability test. Logrotate debug parsing passed, OVN calls were bounded, and OVS calls were not. Both logrotate job and timer were inactive; the job's `TimeoutStartUSec` was `infinity`. The timer and VTEP were still enabled, so a future host boot can activate them; restart behavior has not been tested.
+
+## Prepared API and logrotate correction
+
+```bash
+sudo /usr/bin/python3 -B /home/sneha/projects/openstack-cloud-poc/scripts/local-openstack/harden_local_apis.py --apply
+```
+
+The [scoped script](../../scripts/local-openstack/harden_local_apis.py) changes exactly five targets after verified recovery snapshots:
+
+- `/etc/apache2/sites-available/keystone.conf`: port/vhost 5000 to `127.0.0.1`, one WSGI process, explicit loopback client authorization on global `/identity` alias.
+- `/etc/apache2/sites-available/placement-api.conf`: the same treatment for 8778 and `/placement`.
+- `/etc/glance/glance-api.conf`: `[DEFAULT] bind_host=127.0.0.1` and `workers=1`; existing database/authentication/unrelated settings retained.
+- `/etc/logrotate.d/openvswitch-switch`: add only `--timeout=5` to its existing `ovs-appctl` call, retaining rotation policy and script structure.
+- New `/etc/systemd/system/logrotate.service.d/50-openstack-poc-timeout.conf`: `TimeoutStartSec=5min`, `TimeoutStopSec=15s` for future jobs. The vendor unit is preserved.
+
+The Apache address/port behavior follows [Apache 2.4 binding documentation](https://httpd.apache.org/docs/2.4/bind.html); a full restart is used for the Listen change. Global alias access uses [explicit loopback IP authorization](https://httpd.apache.org/docs/2.4/mod/mod_authz_host.html). Apache and Glance restart, briefly interrupting their API traffic and shared Apache routes. Legacy Apache configuration files and port-80 listener remain intact. No RabbitMQ/EPMD, libvirt, OVS/OVN daemon, VM, network, package, host DNS or firewall change occurs in this stage. The master deployment authorization covers this scoped correction; normal sudo authentication is still required.
+
+Preparation creates a new 0700 `api-hardening-recovery-<suffix>` directory, with 0600 file originals and ownership/mode metadata, consistent cloud SQL/live OVSDB snapshots and the protected operational/configuration archive. Self-contained change-plan/checksum files and `RECOVERY.md` preserve configuration-only recovery even if the working state index is lost. Hashes, exact target scope and every required artifact are checked before live writes. Original existence/UID/GID/mode are preserved. State is in root-only `api-hardening.json`; retries reuse its immutable recovery point and refuse unexpected file drift rather than overwriting it. Incomplete preparation directories remain preserved; no full restore is claimed.
+
+After staging, Apache syntax must pass before daemon-reload and the two service restarts. The script waits for real authenticated cloud/provider readiness and pinned-SSH guest arithmetic recovery. It requires loopback-only 5000/8778/9292 listeners and HTTP 403 on the two aliases when accessed through the host's own non-loopback IPv4 address. This is a scoped host-interface test, not an external scan. Proxy settings and HTTP redirects are disabled for those probes.
+
+It then issues bounded `vlog/reopen` probes to current core OVN/OVS control sockets and executes the exact bounded postrotate sections from both root-owned hook files. Parser debug mode must also pass, and the whole-job timeout must be five minutes. This validates log reopen/runtime hooks without forcing log rotation. The timer remains stopped so results can be reviewed before activation. A failure keeps the backup and phase record for targeted recovery; it does not automatically restore live SQL/OVSDB data or remove files/resources.
+
+Finally it collects selected read-only RabbitMQ cluster/client/configuration-path metadata, EPMD node names and hostname resolution, without dumping configuration contents, cookies or environment values. This informs the remaining broker/EPMD correction. Hostname resolution matters: limiting distribution to loopback can break CLI access if the existing Erlang nodename resolves to the underlay address. Node renaming/Mnesia replacement is outside this stage. RabbitMQ 3.9.27's [installed-release schema](https://raw.githubusercontent.com/rabbitmq/rabbitmq-server/v3.9.27/deps/rabbit/priv/schema/rabbit.schema) supports explicit AMQP and distribution interfaces; the live preflight is needed before choosing the exact transition.
+
+All **373 offline tests** passed. Eleven added tests cover scoped/idempotent Apache, Glance and hook edits; preservation of unrelated/authentication settings; conflicting authorization/timeout refusal; file drift/symlink rejection; missing backup/socket gates; exact restart ordering; and allowlisted broker metadata. These tests do not apply host changes, restart services or prove the live correction. Non-root execution and whitespace checks passed. RabbitMQ/EPMD bindings, preserved shared port-80 exposure and timer activation remain explicit review items.
 
 ## Starting and pausing this POC
 
@@ -154,4 +209,4 @@ Relevant local milestones: `eef0cbf` Nova configuration, `58cee64` Neutron/OVN, 
 
 Closeout is pending until the new operational report is reviewed, material listener findings and logrotate disposition are handled, and the final report distinguishes every remaining limitation. Do not mark all requirements complete merely because the core VM/API/network acceptance passed.
 
-Workspace verification: all **362 offline tests** passed. Six added safeguards cover wildcard/IPv6/loopback listener classification, sensitive exception suppression, package metadata validation, inactive-service health truthfulness, pinned SSH/exact workload results, and execution of the arithmetic command in a local shell. That last test is a host command test, not guest/cloud evidence. The non-root execution guard and whitespace checks passed. Current host operational observations and the actual guest arithmetic result await the normal-terminal command above.
+Earlier workspace verification: all **362 offline tests** passed before the operations review. Six added safeguards covered listener classification, sensitive exception suppression, package metadata validation, inactive-service health truthfulness, pinned SSH/exact workload results and execution of arithmetic in a local shell. The subsequent operator report above supplies actual guest/cloud evidence; the prepared correction's current test result is recorded separately.
