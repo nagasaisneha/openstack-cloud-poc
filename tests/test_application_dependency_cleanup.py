@@ -1,12 +1,15 @@
 """Deletion-scope, backup and retry safeguards; no live cloud operations."""
 import copy
 import importlib.util
+import json
 from pathlib import Path
 import sys
 from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 from uuid import uuid4
+
+import requests
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts/local-openstack'
 sys.path.insert(0, str(SCRIPTS))
@@ -52,6 +55,101 @@ def scope():
 
 
 class DependencyCleanupTests(unittest.TestCase):
+    def setUp(self):
+        # Other suites explicitly verify that fixture execution imports no
+        # cloud clients. Keep actual-SDK contract imports local to this test.
+        modules = set(sys.modules)
+        def restore_sdk_imports():
+            for name in set(sys.modules) - modules:
+                if name.split('.')[0] in {'openstack', 'keystoneauth1'}:
+                    sys.modules.pop(name, None)
+        self.addCleanup(restore_sdk_imports)
+
+    def sdk_admin(self, responses):
+        """Run the installed SDK/HTTP status path with a socket-free transport."""
+        from keystoneauth1.session import Session
+        from keystoneauth1.token_endpoint import Token
+        from openstack.compute.v2._proxy import Proxy
+        from openstack import exceptions
+        self.sdk_exceptions = exceptions
+        class Transport(requests.adapters.BaseAdapter):
+            def __init__(self):
+                self.pending = list(responses)
+                self.observed = []
+
+            def send(self, request, **kwargs):
+                self.observed.append(request)
+                if not self.pending:
+                    raise AssertionError('unexpected additional HTTP request')
+                status, payload = self.pending.pop(0)
+                response = requests.Response()
+                response.status_code = status
+                response.url = request.url
+                response.request = request
+                response.headers['Content-Type'] = 'application/json'
+                response._content = json.dumps(payload).encode() if payload is not None else b''
+                return response
+
+            def close(self):
+                pass
+        transport = Transport()
+        session = requests.Session()
+        session.mount('http://', transport)
+        session.mount('https://', transport)
+        self.addCleanup(session.close)
+        auth = Session(auth=Token('http://task11.invalid/v2.1', 'offline-test-token'), session=session)
+        compute = Proxy(auth, service_type='compute', endpoint_override='http://task11.invalid/v2.1')
+        compute._connection = NS(_global_request_id=None, cache_enabled=False, _api_cache_keys=set())
+        return NS(compute=compute), transport
+
+    def test_installed_sdk_keypair_delete_observes_404_without_parsing_error_as_keypair(self):
+        item = {'kind': 'keypair', 'id': 'task-key', 'name': 'task-key', 'user_id': 'task-user'}
+        public = 'ssh-ed25519 AAAA'
+        admin, transport = self.sdk_admin([
+            (200, {'keypair': {'name': 'task-key', 'user_id': 'task-user', 'public_key': public}}),
+            (204, None), (404, {'itemNotFound': {'message': 'absent', 'code': 404}})])
+        setup.delete_item(admin, item, public)
+        self.assertEqual([request.method for request in transport.observed], ['GET', 'DELETE', 'GET'])
+        for request in transport.observed:
+            self.assertTrue(request.url.endswith('/os-keypairs/task-key?user_id=task-user'))
+            self.assertEqual(request.headers['X-OpenStack-Nova-API-Version'], '2.10')
+        self.assertFalse(transport.pending)
+
+    def test_installed_sdk_already_absent_keypair_does_not_repeat_delete(self):
+        admin, transport = self.sdk_admin([(404, {'itemNotFound': {'message': 'absent'}})] * 2)
+        setup.delete_item(admin, {'kind': 'keypair', 'id': 'task-key', 'user_id': 'task-user'}, '')
+        self.assertEqual([request.method for request in transport.observed], ['GET', 'GET'])
+
+    def test_installed_sdk_error_status_never_becomes_absence_or_deletion(self):
+        for status in (401, 403, 409, 500):
+            admin, transport = self.sdk_admin([(status, {'error': {'message': 'provider error'}})])
+            with self.assertRaises(self.sdk_exceptions.HttpException) as raised:
+                setup.get_existing(lambda name: setup.keypair(admin, name, 'task-user'), 'task-key')
+            self.assertEqual(raised.exception.status_code, status)
+            self.assertEqual([request.method for request in transport.observed], ['GET'])
+
+    def test_success_status_with_malformed_keypair_envelope_blocks_mutation(self):
+        for payload in ({'error': {'message': 'wrong envelope'}}, {'keypair': []}, []):
+            admin, transport = self.sdk_admin([(200, payload)])
+            with self.assertRaisesRegex(RuntimeError, 'response shape'):
+                setup.delete_item(admin, {'kind': 'keypair', 'id': 'task-key', 'user_id': 'task-user'}, '')
+            self.assertEqual([request.method for request in transport.observed], ['GET'])
+        admin, _ = self.sdk_admin([(202, {})])
+        with self.assertRaisesRegex(RuntimeError, 'HTTP status'):
+            setup.get_existing(lambda name: setup.keypair(admin, name, 'task-user'), 'task-key')
+
+    def test_keypair_list_checks_http_and_envelope_before_interpreting_emptiness(self):
+        for payload in ({}, {'keypairs': {}}, {'keypairs': [{'keypair': None}]}):
+            admin, _ = self.sdk_admin([(200, payload)])
+            with self.assertRaisesRegex(RuntimeError, 'list response shape'):
+                setup.keypairs(admin, 'task-user')
+        admin, _ = self.sdk_admin([(403, {'forbidden': {'message': 'denied'}})])
+        with self.assertRaises(self.sdk_exceptions.ForbiddenException):
+            setup.keypairs(admin, 'task-user')
+        admin, transport = self.sdk_admin([(200, {'keypairs': []})])
+        self.assertEqual(setup.keypairs(admin, 'task-user'), [])
+        self.assertTrue(transport.observed[0].url.endswith('/os-keypairs?user_id=task-user'))
+
     def test_retry_plan_binds_every_target_to_protected_scope(self):
         original, state, plan = scope()
         setup.validate_plan(plan, original, state)
@@ -137,6 +235,7 @@ class DependencyCleanupTests(unittest.TestCase):
     def test_user_keypairs_and_project_assignments_prevent_identity_deletion(self):
         original, state, plan = scope()
         admin = MagicMock()
+        admin.compute.get.return_value.status_code = 200
         admin.compute.get.return_value.json.return_value = {'keypairs': [{'keypair': {'name': 'unexpected'}}]}
         for item in (plan[-4], plan[-3]):
             resource = NS(id=item['id'], name=item['name'], domain_id='default', description=item['marker'])
@@ -148,9 +247,11 @@ class DependencyCleanupTests(unittest.TestCase):
             delete.assert_not_called()
         admin.identity.unassign_project_role_from_user.assert_not_called()
 
-    def workflow(self, *, backup_error=None, verify_error=None, done=None):
+    def workflow(self, *, backup_error=None, verify_error=None, done=None, existing_backup=False):
         original, state, plan = scope()
         state['results']['dependency_cleanup'] = dict(plan=plan, done=done or [], verified=False)
+        if existing_backup:
+            state['results']['dependency_cleanup']['backup_directory'] = '/protected/existing-snapshot'
         admin = Mock()
         with patch.object(setup, 'cleanup_backup', return_value=Path('/protected/snapshot'), side_effect=backup_error), \
              patch.object(setup, 'verify_cleanup_backup', side_effect=verify_error) as verify, \
@@ -176,6 +277,18 @@ class DependencyCleanupTests(unittest.TestCase):
         self.assertNotIn(plan[0], [call.args[1] for call in delete.call_args_list])
         self.assertTrue(state['results']['dependency_cleanup']['verified'])
         self.assertEqual(verify.call_count, 2)
+
+    def test_retry_after_eight_removals_reuses_verified_backup_and_starts_at_keypair(self):
+        state, plan, delete, verify = self.workflow(done=list(range(8)), existing_backup=True,
+            backup_error=AssertionError('must retain existing backup without creating another'))
+        self.assertEqual(delete.call_count, len(plan) - 8)
+        self.assertEqual(delete.call_args_list[0].args[1]['kind'], 'keypair')
+        self.assertEqual(verify.call_count, 1)
+        self.assertTrue(state['results']['dependency_cleanup']['verified'])
+        state, plan, delete, verify = self.workflow(done=list(range(8)), existing_backup=True,
+            verify_error=RuntimeError('existing backup damaged'))
+        delete.assert_not_called()
+        self.assertFalse(state['results']['dependency_cleanup']['verified'])
 
     def test_already_absent_resource_does_not_repeat_delete(self):
         class NotFound(Exception):

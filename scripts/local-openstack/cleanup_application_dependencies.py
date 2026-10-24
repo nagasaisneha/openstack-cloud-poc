@@ -41,17 +41,44 @@ def get_existing(get, identifier):
         raise
 
 
+def keypair_request(admin, method, user_id, name=None):
+    from openstack import exceptions as sdk_exceptions
+
+    url = '/os-keypairs' + ('/' + name if name is not None else '')
+    # SDK Proxy.request defaults to raise_exc=False. A normal post-delete
+    # 404 otherwise becomes an error JSON object without a "keypair" field.
+    response = getattr(admin.compute, method)(url, params={'user_id': user_id},
+        microversion='2.10', raise_exc=False)
+    # Use the SDK exception convention (status_code), matching resource get
+    # methods and get_existing; keystoneauth exceptions use http_status.
+    sdk_exceptions.raise_from_response(response, error_message='Nova keypair request failed')
+    expected = 204 if method == 'delete' else 200
+    if response.status_code != expected:
+        raise RuntimeError('unexpected Nova keypair HTTP status: ' + str(response.status_code))
+    return response
+
+
 def keypair(admin, name, user_id):
-    response = admin.compute.get('/os-keypairs/' + name, params={'user_id': user_id}, microversion='2.10')
-    return response.json()['keypair']
+    payload = keypair_request(admin, 'get', user_id, name).json()
+    if not isinstance(payload, dict) or not isinstance(payload.get('keypair'), dict):
+        raise RuntimeError('unexpected Nova keypair response shape; preserving resources')
+    return payload['keypair']
+
+
+def keypairs(admin, user_id):
+    payload = keypair_request(admin, 'get', user_id).json()
+    if (not isinstance(payload, dict) or not isinstance(payload.get('keypairs'), list)
+            or any(not isinstance(item, dict) or not isinstance(item.get('keypair'), dict)
+                or not isinstance(item['keypair'].get('name'), str) for item in payload['keypairs'])):
+        raise RuntimeError('unexpected Nova keypair list response shape; preserving resources')
+    return payload['keypairs']
 
 
 def clients(admin, item):
     kind = item['kind']
     if kind == 'keypair':
         return (lambda identifier: keypair(admin, identifier, item['user_id']),
-                lambda identifier: admin.compute.delete('/os-keypairs/' + identifier,
-                    params={'user_id': item['user_id']}, microversion='2.10'))
+                lambda identifier: keypair_request(admin, 'delete', item['user_id'], identifier))
     mapping = {'subnet': (admin.network.get_subnet, admin.network.delete_subnet),
         'network': (admin.network.get_network, admin.network.delete_network),
         'security_group': (admin.network.get_security_group, admin.network.delete_security_group),
@@ -210,7 +237,7 @@ def inventory(admin, original, state, passwords, public_key):
             if (member.identity.get('/users/' + user.id + '/groups').json()['groups']
                     or list(member.identity.application_credentials(user.id))):
                 raise RuntimeError('test user has unexpected group/application-credential consumers')
-        pairs = admin.compute.get('/os-keypairs', params={'user_id': user.id}, microversion='2.10').json()['keypairs']
+        pairs = keypairs(admin, user.id)
         expected_keys = {state['ids']['keypair']} if label == 'a' else set()
         if {item['keypair']['name'] for item in pairs} != expected_keys:
             raise RuntimeError('test user has unexpected/missing SSH keypairs')
@@ -327,7 +354,7 @@ def delete_item(admin, item, public_key):
         if item['kind'] in ('user', 'project'):
             project_empty(admin, item['project_id'])
         if item['kind'] == 'user':
-            pairs = admin.compute.get('/os-keypairs', params={'user_id': item['id']}, microversion='2.10').json()['keypairs']
+            pairs = keypairs(admin, item['id'])
             if pairs:
                 raise RuntimeError('test user still owns SSH keypairs; no identity deletion')
             assignments = list(admin.identity.role_assignments(user_id=item['id']))

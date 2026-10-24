@@ -1,6 +1,6 @@
 # Task 11 — real application provider integration
 
-Status: real application create/inspect, catalog, image integrity, KVM, Neutron binding, guest/ARP checks, stop/start, verified recovery backup and deletion passed in the operator terminal. Dependency cleanup and operational closeout remain pending. Infrastructure and member-project results are recorded in [live deployment evidence](task11-live-deployment-evidence.md). Earlier stage commands/results below form a chronological record; do not replay create/guest/lifecycle stages against the now-deleted application VM. The next command is in the dependency-cleanup section at the end.
+Status: real application create/inspect, catalog, image integrity, KVM, Neutron binding, guest/ARP checks, stop/start, verified recovery backup and deletion passed in the operator terminal. Dependency cleanup verified its new backup and eight removals, then stopped at keypair response handling; final cleanup and operational closeout remain pending. Infrastructure and member-project results are recorded in [live deployment evidence](task11-live-deployment-evidence.md). Earlier stage commands/results below form a chronological record; do not replay create/guest/lifecycle stages against the now-deleted application VM. The cleanup retry command and correction are recorded at the end.
 
 ## Application boundary
 
@@ -184,3 +184,28 @@ The script checks ownership before each mutation and records each observed absen
 It retains the original demo VM/network/subnet/group/key/flavor/base image, shared roles, service identities, `br-int`, all historical billing/metering data, configurations, backups, root credential files, manifests, SSH trust/source files and job history. No file deletion, package operation, SQL mutation, service restart, raw network mutation or automatic recovery occurs. Completed temporary tenant identities cease to authenticate after deletion; old acceptance scripts must not be replayed to recreate them. Future demonstrations of the general application path require a fresh authorized member scope and new job/resource references.
 
 Eleven added offline tests cover protected/duplicate/changed plan targets, ownership/sharing drift, exact OVN metadata-port consumers, user-scoped public-key matching, project/keypair/role consumers, HTTP error classification, backup gates, absent-resource retries and partial progress. All **341 offline tests** passed, along with the non-root execution guard and whitespace check. These tests do not establish live dependency cleanup. Operational closeout remains separate: actual service/version/endpoint evidence, listener exposure review, startup/shutdown guidance, logrotate status, capacity/recovery limitations and requirement mapping must reflect the retained implementation.
+
+## Partial dependency cleanup and keypair HTTP correction
+
+The operator executed the cleanup command. Protected inventory passed for 13 resources, and the fresh metadata recovery bundle passed at `/root/openstack-poc-acceptance/dependency-recovery-b0a2694420364856a755347a048ea36a-wfk7feoy`. The script observed and recorded absence of these eight dependencies:
+
+| Kind | Recorded resource ID |
+| --- | --- |
+| Application subnet | `fed30af1-2abb-4bb5-9482-a97b0d0a85c9` |
+| Tenant-A network | `f8d7419d-42c4-4518-8269-56eaead75c79` |
+| Application security group | `87efd1ea-ffea-4085-8982-289e5cc1e56d` |
+| Tenant-A default security group | `c0d7015a-6e54-4795-83f7-5a2cc614dfab` |
+| Tenant-B network | `d7b42155-3ebd-45a8-aeda-cdd700af0bd9` |
+| Tenant-B default security group | `171c2d4d-7486-40cd-bd90-9240ffe72f5d` |
+| Application private image | `5719231d-5e8a-4ff8-a782-533cb852d0e8` |
+| Application private flavor | `bb382ac7-4f5b-46d6-a3be-992bcfc6e5a0` |
+
+The next keypair step raised `KeyError: 'keypair'`. The live HTTP status/body and whether the keypair delete request had already completed were not captured; keypair absence remains unverified. Neither user/project deletion nor the final OVN/namespace/demo checks completed in this invocation. No original demo asset, root operational file or backup was selected for deletion.
+
+Installed SDK source inspection identified an error-handling omission: `openstack.proxy.Proxy.request` defaults to `raise_exc=False`. A raw HTTP 404 response therefore reaches `.json()['keypair']` as an error envelope, rather than raising the SDK absence exception expected by the cleanup code. Nova's installed show controller and [Compute API reference](https://docs.openstack.org/api-ref/compute/) use a `keypair` envelope for successful show and HTTP 404 for absence. A post-delete 404 is a plausible trigger for the observed failure, reproduced offline; it is not claimed as the captured live response.
+
+The correction explicitly translates error responses with `openstack.exceptions.raise_from_response` before parsing show/list bodies. This preserves SDK `status_code` semantics used by the existing absence classifier; simply enabling keystoneauth exceptions would instead expose `http_status`. GET requires HTTP 200 and the expected envelope, DELETE requires HTTP 204 at microversion 2.10, and all keypair operations retain the exact task `user_id`. HTTP 401/403/409/500, unexpected success statuses and malformed bodies stop the stage. Response bodies and key material are not added to console diagnostics by the parser.
+
+Six new regressions include the installed SDK and keystoneauth stack with an in-memory Requests transport that opens no sockets. They cover successful show/delete followed by an actual HTTP 404-shaped response, an already-absent keypair without a repeated DELETE, non-404 errors, malformed responses/list envelopes, and resuming after eight removals using the existing verified recovery point. These supplement the earlier doubles that missed raw HTTP error semantics. All **347 offline tests** passed; fixture tests still verify no cloud-client import from their execution path. Non-root execution and whitespace checks passed. No live retry result is claimed.
+
+Retry the same cleanup command above in the normal Ubuntu terminal. The saved eight completed indices are skipped, both existing recovery bundles are verified again, and no replacement backup or resource is created. A remaining keypair is deleted only after exact user/name/public-key checks; HTTP 404 permits reconciliation if it is already gone. The task users/projects are processed only after the remaining consumer/assignment guards pass. Completion still requires independent final absence, OVN/namespace reconciliation and original demo `ACTIVE` checks. Keep all manifests and recovery points intact.
