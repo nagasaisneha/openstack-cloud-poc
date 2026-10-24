@@ -1,7 +1,7 @@
 # Task 11 — OVS/OVN endpoint inventory and pre-upgrade backup proposal
 
 **Assessment date:** 2026-10-24
-**Status:** Protected inventory complete for the searched paths; backup operations are authorized by the master execution instruction but not executed because Codex has no sudo authentication.
+**Status:** Protected inventory and pre-Caracal backup completed and verified; deployment is authorized by the master execution instruction but awaits the operator's privileged package commands.
 
 ## Verified database endpoints
 
@@ -92,9 +92,21 @@ sudo virsh list --all --details
 
 If the inventory finds recovery or operational data outside `/home/stack`, `/var/backups`, and `/var/lib/libvirt/images`, add those exact paths to the archive plan before approval. Do not inspect `/home/stack/devstack`; it was previously confirmed absent.
 
-## Authorized backup commands — not executed
+## Backup execution evidence
 
-This is the authorized pre-upgrade procedure. It writes a new, root-owned mode-0700 directory under `/home/sneha`; `mkdir` intentionally fails if the timestamped path already exists. It snapshots the three live OVSDB service databases using the verified endpoints. It does **not** copy their active database files.
+The operator ran the approved backup block on 2026-10-24 and reported:
+
+- Backup directory: `/home/sneha/openstack-poc-pre-caracal-20261024-150119`.
+- All three expected database names were confirmed from their live sockets and snapshotted with `ovsdb-client backup`.
+- The command reached and passed database readability (`ovsdb-tool show-log` and `db-name`) and archive membership checks.
+- `sha256sum -c` returned `OK` for every listed payload, including the operational-data and service-configuration archives, all three OVSDB snapshots, topology files, libvirt network XML, package versions, unit files, and service state.
+- The command reported `Backup created and checks passed`.
+
+The reported digest results provide integrity evidence for the files at creation time. No restore was performed, so recoverability has not been proven by a restore exercise. The backup is root-owned and contains sensitive operational configuration; do not paste or commit its contents.
+
+## Authorized backup commands — execution record
+
+The command block below is the procedure that produced the verified backup above. It writes a new, root-owned mode-0700 directory under `/home/sneha`; `mkdir` intentionally fails if the timestamped path already exists. It snapshots the three live OVSDB service databases using the verified endpoints. It does **not** copy their active database files. It is retained for traceability and must not be rerun over the verified backup.
 
 The inventory found no matching billing/metering process, service, timer, or cron writer. The archive contains private operational data and configuration; keep it root-only and do not upload or paste its contents. The command rechecks endpoints, running libvirt guests, and verifies the generated artifacts. It adds `/etc/placement` and archives the existing apt package cache for rollback support.
 
@@ -180,9 +192,10 @@ The `CONFIG_PATHS` list must be extended with exact custom configuration paths d
 4. Restore service configuration, libvirt network XML, and guest/operational data only after checking ownership, paths, and service compatibility. Revalidate OVS/OVN DBs, bridges, OVN topology, libvirt network, VM disks, and billing/metering data before resuming services.
 5. Because the package transaction upgrades OVS 2.17 to 3.3.9 and OVN 22.03 to 24.03.6, it can restart active networking services and trigger database/config migration or conffile decisions. The apt simulation does not establish those runtime effects or guarantee package downgrade availability. Do not run `apt autoremove`.
 
-## Approval boundary
+## Deployment gate
 
-- The database endpoint-specific commands above are proposed for approval and have not been executed.
-- The broad file/configuration backup is not ready for approval until protected asset inventory, active billing/metering writers, and topology output are reviewed and any uncovered paths are added.
-- OpenStack package installation and OVS/OVN upgrade require a separate approval after the backup has been executed and integrity checks have passed.
+- The pre-install backup has been created and its reported integrity checks passed.
+- The master execution instruction authorizes the Caracal deployment after this backup gate; no additional architecture approval is pending for the package installation.
+- The apt package simulation previously reported 11 upgrades, 229 new packages, zero removals, and 22 held packages. It includes OVS 2.17.12→3.3.9 and OVN 22.03→24.03.6; the actual package plan must be simulated again after the host UCA keyring/source bootstrap.
+- No package installation has started. The local terminal operator must perform commands requiring sudo authentication and return their output so the next step can be verified.
 - No repository tests or cloud calls were made for this documentation task.
