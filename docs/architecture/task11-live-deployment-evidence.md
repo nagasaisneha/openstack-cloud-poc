@@ -14,8 +14,8 @@ The operator installed the reviewed Caracal package set. The subsequent `dpkg --
 |---|---|---|
 | Keystone | Configured MariaDB, initialized schema and Fernet/credential keys, bootstrapped identity; `GET http://127.0.0.1:5000/v3` returned 200; later admin token requests succeeded | Tenant negative authorization and application identity integration remain untested |
 | Placement | Replaced obsolete `dbcounter` database URL plugin; created database/schema, service identity and endpoints; API returned 200; authenticated resource-provider list succeeded; Nova later registered the provider recorded below | Registration does not prove guest launch or network operation |
-| Glance | Created database/schema, service identity and endpoints; API discovery returned 300 and authenticated image listing succeeded | No Nova guest has used the image yet |
-| Glance image upload | Private `cirros-0.6.3-x86_64-poc`, ID `da953e4e-38ca-47d2-b97a-b62d3f33646a`, qcow2, 21,692,416 bytes, reached `active` | Upload is real; VM execution remains unverified |
+| Glance | Created database/schema, service identity and endpoints; API discovery returned 300 and authenticated image listing succeeded; later Nova used the image for the instance below | Guest network and metadata checks remain pending |
+| Glance image upload | Private `cirros-0.6.3-x86_64-poc`, ID `da953e4e-38ca-47d2-b97a-b62d3f33646a`, qcow2, 21,692,416 bytes, reached `active` | Image upload and the first KVM-backed VM launch are real; remaining acceptance is pending |
 | Image source integrity | CirrOS 0.6.3 x86_64 disk image SHA-256 matched `7d6355852aeb6dbcd191bcda7cd74f1536cfe5cbf8a10495a7283a8396e4b75b` | Source download retained at `/tmp/openstack-poc-cirros.FcgL2d/cirros-0.6.3-x86_64-disk.img`; temporary storage is not a recovery copy |
 | OVN database listeners | NB `ptcp:6641:127.0.0.1`, SB `ptcp:6642:127.0.0.1`; socket listener output confirmed loopback bindings | This change alone does not restrict other API or RabbitMQ listeners or prove tenant networking |
 
@@ -70,9 +70,23 @@ Readiness requires an authenticated network-list query, the router/security-grou
 
 Workspace verification: all **9 Neutron setup tests** passed, including MTU validation, plugin-loader edits, backend drift/listener checks, atomic config backup, and readiness rejection for missing/dead/mismatched agents or extensions. All **204 offline tests** passed after adding this stage and refactoring the shared config writer. Python syntax and the non-root execution guard passed. Host configuration was executed by the operator; Codex did not independently execute it.
 
-## Pending first real VM launch
+## First real VM launch evidence
 
-The [test VM launch script](../../scripts/local-openstack/launch_test_vm.py) is prepared; host execution is pending. It uses the already uploaded private CirrOS image and the authenticated admin project for this first infrastructure smoke test. It does not establish tenant-user authorization or cross-project isolation. It checks image state/ownership/minimum size, project compute quota, at least 768 MiB host `MemAvailable`, and CIDR overlap against host IPv4 addresses/routes and observed Neutron subnets. Candidate `/24` networks are `172.30.240.0/24`, `10.203.0.0/24`, and `192.168.240.0/24`; it chooses a non-overlapping candidate or stops.
+The operator ran the [test VM launch script](../../scripts/local-openstack/launch_test_vm.py). Its image, quota, memory and CIDR checks passed, and the task-owned Nova instance progressed from `BUILD` to `ACTIVE`. Libvirt domain XML reported `type=kvm`, and the read-only QEMU `query-kvm` response confirmed KVM present/enabled. These verify a real running accelerated guest; guest boot completion, networking and lifecycle tests still require the checks below. This first infrastructure smoke test uses the authenticated admin project, so it does not establish tenant-user authorization or cross-project isolation.
+
+| Launch evidence | Operator-supplied result |
+|---|---|
+| Run marker | `b0a2694420364856a755347a048ea36a` |
+| Private network | `6ee5ad82-efc5-405d-bf5c-a4953e9a063b` |
+| DHCP-enabled subnet | `25f8362e-436b-405e-8158-2e2d552cd2e7`, `172.30.240.0/24` |
+| Security group | `5a3b3c35-d5d6-4cbe-bf62-41ca04aec923` |
+| Nova server | `82382430-4b64-4386-a55b-8468e04da011`, `ACTIVE` |
+| KVM acceleration | Domain type `kvm`, QEMU reports present/enabled |
+| Neutron allocated address | `172.30.240.154`; this alone does not prove the guest applied a DHCP lease |
+| Metadata namespace probe source | `172.30.240.2/32`; only ICMP and TCP/22 ingress from this source are allowed by the created group |
+| Network MTU | 1,442 bytes |
+
+The script checks image state/ownership/minimum size, project compute quota, at least 768 MiB host `MemAvailable`, and CIDR overlap against host IPv4 addresses/routes and observed Neutron subnets. Candidate `/24` networks are `172.30.240.0/24`, `10.203.0.0/24`, and `192.168.240.0/24`; it chooses a non-overlapping candidate or stops.
 
 The stage creates one private Geneve network, DHCP-enabled IPv4 subnet, security group, private 1-vCPU/256-MiB/1-GiB flavor, SSH public-key registration, and one Nova instance. Only ICMP and TCP/22 ingress from that network's OVN metadata port `/32` are allowed in the created group. No physical interface, host route, NAT, external bridge mapping, external gateway, floating IP, or public image is added. Existing networks, VM disks, images, backups, and identities are preserved. CirrOS is a cloud test image with known default login credentials; this test has no external gateway, consistent with the [OpenStack image guide](https://docs.openstack.org/image-guide/obtain-images.html).
 
@@ -84,8 +98,18 @@ On failure, the script retains task resources and the manifest for diagnosis; it
 
 Workspace verification: **7 launch safety tests** passed, covering CIDR conflicts, ownership/project checks, duplicate prevention and interrupted creation recovery, constrained probe rules, and actual-KVM evidence requirements. All **211 offline tests** passed. Python syntax and the non-root execution guard passed. These tests did not launch a VM or contact OpenStack.
 
+## Pending guest networking and metadata checks
+
+The [guest validation script](../../scripts/local-openstack/validate_guest.py) is prepared; host execution is pending. It verifies the protected manifest, project/run markers, private network/subnet ownership and DHCP settings, the instance's sole port/security group, and the existing metadata namespace source address before probing. It connects only to the recorded guest address through that namespace, binds the known source `/32`, and authenticates using the retained SSH key. Password and keyboard-interactive authentication, agent forwarding, proxy commands and configured port forwarding are disabled. A dedicated root-only known-hosts file uses first-contact key acceptance and requires that pinned key on later connections; this local POC trust bootstrap is not production host-key verification.
+
+Guest commands inspect interface IPv4, MAC, MTU and kernel boot ID, dump the DHCP lease using `dhcpcd -U`, and retrieve OpenStack metadata from `http://169.254.169.254/openstack/latest/meta_data.json`. The script requires the applied address/prefix and lease to match Neutron, the guest MAC to match its port, the MTU to match the network, and metadata UUID/name to match the task instance (and project ID if the endpoint includes it). It then sends three IPv4 echo probes with DF set and payload `network MTU - 28`, requiring all three replies. Full metadata, credentials and tokens are not written to the evidence record; only selected verified fields and a timestamp are added to the root-only manifest.
+
+This stage changes no guest configuration, Neutron policy, VM lifecycle state, services or host networking. It writes only the protected SSH known-hosts file and acceptance results. It does not yet prove security-group denial, cross-project API isolation, routed/external connectivity, multi-host overlays, stop/start/reboot/delete, cleanup or application provider integration. Those remain separate acceptance steps after guest reachability is established.
+
+Workspace verification: **9 guest validation tests** passed, covering complete/missing/ambiguous guest evidence, provider/lease/MAC/MTU/metadata mismatches, restricted SSH arguments, bounded readiness failures, and MTU payload/full-reply checks. All **220 offline tests** passed. Python syntax and the non-root execution guard passed. The guest/packet checks themselves have not been executed by these tests.
+
 ## Remaining acceptance work
 
-Launch a real KVM-backed guest, validate lifecycle and tenant networking/isolation, exercise authorized cleanup, integrate the POC application with real scoped APIs, and run the required acceptance tests. Review all local control-plane listener exposure before completion. KVM permissions across WSL restart, recovery restoration, and staging acceptance remain unverified. Keep `logrotate.timer` inactive until the existing runtime validation/review requirement is satisfied; VTEP remains stopped.
+Validate guest networking/metadata, lifecycle and tenant isolation; exercise authorized cleanup; integrate the POC application with real scoped APIs; and run the required acceptance tests. Review all local control-plane listener exposure before completion. KVM permissions across WSL restart, recovery restoration, and staging acceptance remain unverified. Keep `logrotate.timer` inactive until the existing runtime validation/review requirement is satisfied; VTEP remains stopped.
 
-The offline fixture lifecycle evidence remains separate from real-provider evidence. No real Nova guest or Neutron tenant network has been verified by this record. Local repository commits do not imply deployment completion or authorize remote pushes.
+The offline fixture lifecycle evidence remains separate from real-provider evidence. The operator verified a real Nova/KVM guest and Neutron resource creation, but guest networking, remaining lifecycle operations, cleanup and application integration have not yet passed acceptance. Local repository commits do not imply full POC completion or authorize remote pushes.
