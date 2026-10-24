@@ -105,6 +105,14 @@ umask 077
 
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_DIR="/home/sneha/openstack-poc-pre-caracal-${STAMP}"
+
+# Refuse to begin if any libvirt guest is running; do not print guest names.
+RUNNING_GUESTS="$(virsh list --state-running --name | sed '/^[[:space:]]*$/d')"
+if [ -n "$RUNNING_GUESTS" ]; then
+  printf 'STOP: running guest(s) require an approved consistent disk backup method.\n' >&2
+  exit 20
+fi
+
 mkdir -m 0700 "$BACKUP_DIR"
 
 # Reconfirm the exact primary databases before creating snapshots.
@@ -117,15 +125,7 @@ ovsdb-client backup unix:/run/openvswitch/db.sock Open_vSwitch > "$BACKUP_DIR/op
 ovsdb-client backup unix:/run/ovn/ovnnb_db.sock OVN_Northbound > "$BACKUP_DIR/ovn_northbound.ovsdb"
 ovsdb-client backup unix:/run/ovn/ovnsb_db.sock OVN_Southbound > "$BACKUP_DIR/ovn_southbound.ovsdb"
 
-# Preserve VM/image and operational data. Run only after confirming no guest
-# is running and any billing/metering/database writers have a safe snapshot plan.
-RUNNING_GUESTS="$(virsh list --state-running --name | sed '/^[[:space:]]*$/d')"
-if [ -n "$RUNNING_GUESTS" ]; then
-  printf 'STOP: running guest(s) require an approved consistent disk backup method.\n' >&2
-  printf '%s\n' "$RUNNING_GUESTS" >&2
-  exit 20
-fi
-
+# Preserve VM/image and operational data after the running-guest preflight.
 tar --sparse --acls --xattrs --numeric-owner -cpf "$BACKUP_DIR/host-operational-data.tar" \
   --exclude=home/stack/devstack -C / home/stack var/lib/libvirt/images var/backups var/cache/apt/archives
 
