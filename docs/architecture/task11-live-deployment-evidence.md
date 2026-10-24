@@ -2,6 +2,8 @@
 
 Recorded 2026-10-24 for the approved Ubuntu 22.04 WSL2 laptop POC. Host evidence below was supplied by the operator from the actual Ubuntu terminal. Codex's restricted execution environment cannot independently validate those services. This record does not establish staging or production readiness.
 
+Current status: real infrastructure and application VM/network acceptance, application stop/start/delete and the pre-deletion recovery bundle passed. Scoped dependency cleanup and operational closeout remain pending. Earlier sections retain chronological stage observations; the final section gives the latest verified state.
+
 ## Preservation and package gate
 
 The verified pre-Caracal backup is `/home/sneha/openstack-poc-pre-caracal-20261024-150119`. Its archive and snapshot checks are recorded in [the backup procedure](task11-ovs-ovn-backup-procedure.md). No restoration has been exercised. Existing operational, billing, metering, VM recovery, and network data must remain preserved.
@@ -186,4 +188,12 @@ The operator's first guest-stage run passed the application VM's key-only SSH, i
 
 Complete cross-tenant packet checks; execute real application acceptance and authorized cleanup; and run the remaining required acceptance tests. Review all local control-plane listener exposure before completion. KVM permissions across WSL restart, recovery restoration, and staging acceptance remain unverified. Keep `logrotate.timer` inactive until the existing runtime validation/review requirement is satisfied; VTEP remains stopped.
 
-The offline fixture lifecycle evidence remains separate from real-provider evidence. The operator verified a real Nova/KVM guest, Neutron resource creation, key-only SSH, the applied DHCP lease/address/MAC, guest MTU, instance metadata identity, MTU-sized packet delivery, narrow TCP/22 policy denial/restoration on the local path, real stop/start/reboot with recovered guest checks, and the selected member-project API authorization boundaries. Cross-tenant packet checks, deletion/cleanup and live application integration remain pending. Local repository commits do not imply full POC completion or authorize remote pushes.
+The offline fixture lifecycle evidence remains separate from real-provider evidence. The chronological entries above describe each stage at its execution time; the current verified state is recorded below. Local repository commits do not imply full POC completion or authorize remote pushes.
+
+## Application lifecycle passed; dependency cleanup and closeout pending
+
+The operator completed actual application stop/start/stop-for-backup/delete against `db0d12b8-3bf4-4e53-9a63-4bbea9971831`. Application jobs reached observed success; independent checks confirmed Nova/libvirt shutdown, changed guest boot ID and recovered SSH/DHCP/metadata/MTU/KVM on start. Before deletion, the offline disk, SQLite snapshot, transactional cloud SQL, live OVSDB snapshots and operational archive checks passed at `/root/openstack-poc-acceptance/recovery-db0d12b8-3bf4-4e53-9a63-4bbea9971831-lu4cuzr1`. Operator Nova/Neutron absence, libvirt/disk cleanup, empty Placement allocations and zero tenant compute usage then passed. Original infrastructure-test VM `82382430-4b64-4386-a55b-8468e04da011` remains `ACTIVE`.
+
+This supplements the verified real create/inspect, guest/network checks, narrow TCP/22 policy enforcement, infrastructure stop/start/reboot, member-project API boundaries and bounded ARP-path isolation results. All-protocol, routed/external, hostile-tenant and multi-host connectivity/isolation have not been demonstrated. Full recovery restoration and KVM permission persistence across WSL restart remain unverified.
+
+The next [dependency cleanup stage](../../scripts/local-openstack/cleanup_application_dependencies.py) targets only recorded application/isolation dependencies after protected consumer inventory and a fresh verified metadata recovery bundle. It preserves the original demo and every backup/history file. It verifies API absence and normal removal of the selected OVN logical switches/metadata namespaces without forced topology changes. Exact scope, retry constraints, recovery limitations and the normal-terminal command are in [the application integration record](task11-application-integration.md). Live dependency cleanup and operational closeout are pending; the POC is not yet marked complete.

@@ -1,6 +1,6 @@
 # Task 11 — real application provider integration
 
-Status: real application create/inspect, catalog, image integrity, KVM, Neutron binding, guest checks and bounded ARP observations passed in the operator terminal. Application stop/start/delete and cleanup remain pending. Infrastructure and member-project results are recorded in [live deployment evidence](task11-live-deployment-evidence.md).
+Status: real application create/inspect, catalog, image integrity, KVM, Neutron binding, guest/ARP checks, stop/start, verified recovery backup and deletion passed in the operator terminal. Dependency cleanup and operational closeout remain pending. Infrastructure and member-project results are recorded in [live deployment evidence](task11-live-deployment-evidence.md). Earlier stage commands/results below form a chronological record; do not replay create/guest/lifecycle stages against the now-deleted application VM. The next command is in the dependency-cleanup section at the end.
 
 ## Application boundary
 
@@ -151,3 +151,36 @@ After the verified backup, the application submits `compute.delete` with a stabl
 Failures preserve durable job/phase evidence and may leave the application VM stopped. Pending/uncertain jobs are not automatically replayed. A persisted deletion intent allows later independent cleanup verification using the same durable job, including when the instance is already absent. A failed/changed recovery bundle prevents any new delete request. No automatic whole-cloud rollback runs.
 
 Verification: all **330 offline tests** passed. Eight recovery tests include real offline conversion/flattening/comparison of an owned temporary disk with nonzero data, SQLite snapshot independence, archive handling, private diagnostics and damaged/missing artifact rejection. Seven lifecycle tests cover ordering, attachment readiness after start, backup gates, exact HTTP absence semantics, Placement/quota checks and interrupted deletion recovery. These do not execute the live lifecycle/backup/delete sequence. Required command binaries were found; the non-root guard and whitespace check passed. Host execution remains pending.
+
+## Verified application lifecycle and deletion recovery point
+
+The operator executed the lifecycle stage for exact application VM `db0d12b8-3bf4-4e53-9a63-4bbea9971831`. Each application job was observed `running` then `succeeded`; independent host/provider checks also passed:
+
+| Operation | Application job | Observed result |
+| --- | --- | --- |
+| Stop | `openstack-job-4bc1cd0aeab040668063da6c7b492dd9` | Nova `SHUTOFF`, power 4, libvirt shutoff |
+| Start | `openstack-job-391f200327624391bafd93a48f306d33` | Changed guest boot ID; recovered SSH, DHCP, metadata, MTU-sized packets and actual KVM |
+| Stop for backup | `openstack-job-0954ef5bcd1f4fefa0f1d44ef9dce9f6` | Offline recovery point permitted only after shutdown |
+| Delete | `openstack-job-983d0e16c19f4ee6ae76a7fbf1295554` | Operator Nova/Neutron absence, libvirt/disk cleanup, empty Placement allocations and zero tenant compute usage |
+
+The verified root-only recovery bundle is `/root/openstack-poc-acceptance/recovery-db0d12b8-3bf4-4e53-9a63-4bbea9971831-lu4cuzr1`. Offline disk, SQLite, transactional cloud SQL, live OVSDB and operational archive checks passed before the application delete request. The detailed artifact checks and recovery constraints above apply. This establishes backup integrity, not a rehearsed restore or one distributed atomic snapshot. All historical recovery points remain preserved.
+
+Original infrastructure-test VM `82382430-4b64-4386-a55b-8468e04da011` remains `ACTIVE`. Application images, network dependencies, protected credentials, retained source image, pinned keys and durable journal remain intact for scoped dependency cleanup. No service restart or host topology reconfiguration was required by this lifecycle acceptance result.
+
+## Prepared dependency cleanup; live execution pending
+
+The [cleanup script](../../scripts/local-openstack/cleanup_application_dependencies.py) requires the exact run marker, protected manifests and completed create journal, verified application deletion, and an intact application VM recovery bundle. It first inventories both task-created isolation projects/users. It refuses unexpected VMs, networks, subnets, images (including hidden images), ports, routers, floating IPs, security groups, user keypairs, group memberships, application credentials, role assignments, cross-group references, sharing policies or private-flavor consumers/grants. Additional catalog service families require a separate inventory before project deletion; no storage-service emptiness is assumed.
+
+It creates and verifies a new 0700 root-only `dependency-recovery-<run>-<suffix>` bundle before any deletion: SQLite backup-API snapshot, transactional cloud SQL, three live OVSDB snapshots, protected operational/configuration archive, exact cleanup plan and recovery notes. SHA256 checks, required artifacts and the exact plan must pass. The prior VM bundle supplies the preserved offline guest disk; neither bundle replaces historical backups. Same-ID SQL/OVSDB rollback still requires approved write quiescence and protection of newer data. For ordinary recovery, prefer a new project/resource scope using retained images or the flattened disk. No restore is executed or claimed.
+
+```bash
+sudo /usr/bin/python3 -B /home/sneha/projects/openstack-cloud-poc/scripts/local-openstack/cleanup_application_dependencies.py --apply-run b0a2694420364856a755347a048ea36a
+```
+
+This removes only the recorded application subnet/security group/private image/private flavor/user keypair, both task tenant networks and unused default security groups, the two task users' recorded member assignments, and the otherwise empty task users/projects. Keypair queries/deletion explicitly select the task user with Nova microversion 2.10; keys are user-scoped rather than project-scoped ([Compute API reference](https://docs.openstack.org/api-ref/compute/)). Standard Neutron API deletion handles metadata-port dependencies; it never forces removal of OVS objects or Linux namespaces ([Networking API reference](https://docs.openstack.org/api-ref/network/v2/index.html)).
+
+The script checks ownership before each mutation and records each observed absence. On retry, it binds the persisted plan to the original manifests again, verifies the same recovery point, skips completed removals, and accepts only HTTP 404 as absence. Authorization failures, timeouts and unexpected consumers stop rather than being interpreted as success. It requires the two selected OVN logical switches, metadata namespaces and Neutron ports to disappear through normal service reconciliation. It finally checks that the original demo VM remains `ACTIVE`.
+
+It retains the original demo VM/network/subnet/group/key/flavor/base image, shared roles, service identities, `br-int`, all historical billing/metering data, configurations, backups, root credential files, manifests, SSH trust/source files and job history. No file deletion, package operation, SQL mutation, service restart, raw network mutation or automatic recovery occurs. Completed temporary tenant identities cease to authenticate after deletion; old acceptance scripts must not be replayed to recreate them. Future demonstrations of the general application path require a fresh authorized member scope and new job/resource references.
+
+Eleven added offline tests cover protected/duplicate/changed plan targets, ownership/sharing drift, exact OVN metadata-port consumers, user-scoped public-key matching, project/keypair/role consumers, HTTP error classification, backup gates, absent-resource retries and partial progress. All **341 offline tests** passed, along with the non-root execution guard and whitespace check. These tests do not establish live dependency cleanup. Operational closeout remains separate: actual service/version/endpoint evidence, listener exposure review, startup/shutdown guidance, logrotate status, capacity/recovery limitations and requirement mapping must reflect the retained implementation.
