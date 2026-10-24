@@ -1,7 +1,7 @@
 # Task 11 — Host recovery evidence and package installation gate
 
 **Assessment date:** 2026-10-24
-**Status:** Host recovery evidence recorded; OpenStack package installation is not approved or performed.
+**Status:** Historical pre-install assessment. Subsequent authorized installation, real API/VM/network acceptance and temporary dependency cleanup are verified in [live deployment evidence](task11-live-deployment-evidence.md). Remaining [operational closeout](task11-operations-and-closeout.md) is separate. The inventory/proposals below describe their original assessment time; do not rerun installation from this historical record.
 
 ## Recovery evidence
 

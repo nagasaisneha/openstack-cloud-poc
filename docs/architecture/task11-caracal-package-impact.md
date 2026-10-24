@@ -1,7 +1,7 @@
 # Task 11 — Caracal package-impact review
 
 **Assessment date:** 2026-10-24
-**Status:** Caracal package impact re-simulated against the enabled Jammy Cloud Archive; OpenStack service-package installation is authorized but not yet performed.
+**Status:** Historical package-impact/simulation record. The operator subsequently installed these packages and verified real core-cloud/application acceptance; see [live evidence](task11-live-deployment-evidence.md) and [operational closeout](task11-operations-and-closeout.md). Proposal/pending statements below describe their original stage, not the current installed host.
 
 ## Method and scope
 

@@ -1,7 +1,7 @@
 # Task 11 — OVS/OVN endpoint inventory and pre-upgrade backup proposal
 
 **Assessment date:** 2026-10-24
-**Status:** Protected inventory and pre-Caracal backup completed and verified; deployment is authorized by the master execution instruction but awaits the operator's privileged package commands.
+**Status:** Historical inventory/pre-upgrade backup record; these backups, subsequent package deployment, real acceptance and temporary dependency cleanup are verified in [live evidence](task11-live-deployment-evidence.md). [Operational closeout](task11-operations-and-closeout.md) remains pending. Preserve these original recovery procedures; do not replay the historical install proposal against the deployed host.
 
 ## Verified database endpoints
 
