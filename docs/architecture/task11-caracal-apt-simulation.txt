@@ -1,0 +1,652 @@
+NOTE: This is only a simulation!
+      apt-get needs root privileges for real execution.
+      Keep also in mind that locking is deactivated,
+      so don't depend on the relevance to the real current situation!
+Reading package lists...
+Building dependency tree...
+Reading state information...
+apache2 is already the newest version (2.4.52-1ubuntu4.25).
+libapache2-mod-wsgi-py3 is already the newest version (4.9.0-1ubuntu0.1).
+The following packages were automatically installed and are no longer required:
+  apport-symptoms htop libevent-pthreads-2.1-7 libmecab2 libprotobuf-lite23
+  mecab-ipadic mecab-ipadic-utf8 mecab-utils python3-apport
+  python3-problem-report
+Use 'apt autoremove' to remove them.
+The following additional packages will be installed:
+  alembic bridge-utils docutils-common erlang-asn1 erlang-base erlang-crypto
+  erlang-eldap erlang-ftp erlang-inets erlang-mnesia erlang-os-mon
+  erlang-parsetools erlang-public-key erlang-runtime-tools erlang-snmp
+  erlang-ssl erlang-syntax-tools erlang-tftp erlang-tools erlang-xmerl
+  galera-4 glance-api glance-common ieee-data keystone-common libbpf1
+  libconfig-inifiles-perl libdbi-perl libjs-sphinxdoc libmariadb3 libxdp1
+  libxmlsec1 libxmlsec1-openssl mariadb-client-10.6 mariadb-client-core-10.6
+  mariadb-common mariadb-server-10.6 mariadb-server-core-10.6 mysql-common
+  net-tools neutron-common nova-common nova-compute-kvm nova-compute-libvirt
+  nvme-cli openvswitch-common os-brick-common ovn-common ovn-controller-vtep
+  placement-common pycadf-common python-pastedeploy-tpl python3-alembic
+  python3-amqp python3-aniso8601 python3-anyjson python3-appdirs python3-arrow
+  python3-automaton python3-autopage python3-barbicanclient python3-blinker
+  python3-cachetools python3-castellan python3-cffi python3-cinderclient
+  python3-click python3-cliff python3-cmd2 python3-cursive python3-dateutil
+  python3-ddt python3-debtcollector python3-decorator python3-defusedxml
+  python3-deprecation python3-designateclient python3-dnspython
+  python3-docutils python3-dogpile.cache python3-elementpath python3-eventlet
+  python3-extras python3-fasteners python3-fixtures python3-flask
+  python3-flask-restful python3-futurist python3-glance python3-glance-store
+  python3-glanceclient python3-greenlet python3-importlib-resources
+  python3-iso8601 python3-itsdangerous python3-jmespath python3-jsonschema
+  python3-keystone python3-keystoneauth1 python3-keystoneclient
+  python3-keystonemiddleware python3-kombu python3-ldap python3-logutils
+  python3-lxml python3-mako python3-memcache python3-microversion-parse
+  python3-migrate python3-monotonic python3-msgpack python3-munch python3-nacl
+  python3-netaddr python3-networkx python3-neutron python3-neutron-lib
+  python3-neutronclient python3-nova python3-novaclient python3-numpy
+  python3-openstacksdk python3-openvswitch python3-os-brick
+  python3-os-client-config python3-os-ken python3-os-resource-classes
+  python3-os-service-types python3-os-traits python3-os-vif python3-os-win
+  python3-osc-lib python3-osc-placement python3-oslo.cache
+  python3-oslo.concurrency python3-oslo.config python3-oslo.context
+  python3-oslo.db python3-oslo.i18n python3-oslo.limit python3-oslo.log
+  python3-oslo.messaging python3-oslo.metrics python3-oslo.middleware
+  python3-oslo.policy python3-oslo.privsep python3-oslo.reports
+  python3-oslo.rootwrap python3-oslo.serialization python3-oslo.service
+  python3-oslo.upgradecheck python3-oslo.utils python3-oslo.versionedobjects
+  python3-oslo.vmware python3-osprofiler python3-ovsdbapp python3-packaging
+  python3-paramiko python3-passlib python3-paste python3-pastedeploy
+  python3-pbr python3-pecan python3-placement python3-platformdirs python3-ply
+  python3-prettytable python3-prometheus-client python3-psutil
+  python3-psycopg2 python3-pyasyncore python3-pycadf python3-pycparser
+  python3-pyinotify python3-pymemcache python3-pymysql python3-pyperclip
+  python3-pyroute2 python3-pysaml2 python3-repoze.lru
+  python3-requestsexceptions python3-retrying python3-rfc3986 python3-roman
+  python3-routes python3-scrypt python3-semantic-version python3-setproctitle
+  python3-simplegeneric python3-simplejson python3-singledispatch
+  python3-sqlalchemy python3-sqlalchemy-utils python3-sqlparse python3-statsd
+  python3-stevedore python3-suds python3-swiftclient python3-taskflow
+  python3-tempita python3-tenacity python3-testresources python3-testscenarios
+  python3-testtools python3-tinyrpc python3-tooz python3-typing-extensions
+  python3-unittest2 python3-vine python3-voluptuous python3-warlock
+  python3-wcwidth python3-webob python3-websockify python3-werkzeug
+  python3-wrapt python3-wsme python3-xmlschema python3-zvmcloudconnector
+  sgml-base xml-core xmlsec1 zvmcloudconnector-common
+Suggested packages:
+  ifupdown erlang erlang-manpages erlang-doc libmldbm-perl libnet-daemon-perl
+  libsql-statement-perl mailx mariadb-test guestmount multipath-tools
+  openvswitch-doc python-amqp-doc python-arrow-doc python-automaton-doc
+  python-blinker-doc python-castellan-doc python-cliff-doc python-cursive-doc
+  python-debtcollector-doc python3-trio python3-h2 python3-httpx
+  python3-httpcore docutils-doc fonts-linuxlibertine | ttf-linux-libertine
+  texlive-lang-french texlive-latex-base texlive-latex-recommended
+  python-eventlet-doc python3-dotenv python-flask-doc python-futurist-doc
+  python3-rados python3-rbd python-glanceclient-doc python-greenlet-dev
+  python-greenlet-doc python-jsonschema-doc python3-rfc3987
+  python3-uritemplate python3-webcolors python3-ldappool
+  python-keystoneauth1-doc python3-requests-kerberos python-kombu-doc
+  python3-boto python3-django python3-pymongo python3-redis python-lxml-doc
+  python3-beaker python-mako-doc python-microversion-parse-doc
+  python-migrate-doc python-nacl-doc ipython3 python-netaddr-docs
+  python-networkx-doc python3-gdal python3-matplotlib python3-pydot
+  python3-pygraphviz python3-scipy python-neutron-lib-doc gfortran
+  python-numpy-doc python3-pytest python-openstacksdk-doc python-os-brick-doc
+  python-os-client-config-doc python3-ncclient python-os-service-types-doc
+  python-os-traits-doc python-os-vif-doc python-os-win-doc python-osc-lib-doc
+  python-osc-placement-doc python3-binary-memcached python-oslo.cache-doc
+  python-oslo.concurrency-doc python-oslo.log-doc python3-confluent-kafka
+  python3-zmq python-oslo.middleware-doc python-oslo.policy-doc
+  python-oslo.privsep-doc python-oslo.reports-doc python-oslo.service-doc
+  python-oslo.versionedobjects-doc python-ovsdbapp-doc python3-gssapi
+  python3-invoke httpd-wsgi libapache2-mod-python libapache2-mod-scgi
+  libjs-mochikit python-pecan-doc python-ply-doc python-psutil-doc
+  python-psycopg2-doc python-pyinotify-doc python-pymysql-doc
+  python3-repoze.who python-semantic-version-doc python-sqlalchemy-doc
+  python3-fdb python3-pymssql python3-mysqldb python3-asyncpg
+  python3-aiosqlite python-sqlalchemy-utils-doc python3-infinity
+  python3-intervals python3-psycopg2cffi python-sqlparse-doc python3-kazoo
+  python3-pydotplus python-tenacity-doc python-testtools-doc
+  python-tinyrpc-doc python3-etcd3gw python3-sysv-ipc python3-zake
+  python-webob-doc python-werkzeug-doc python3-watchdog sgml-base-doc
+Recommended packages:
+  libdbd-mariadb-perl | libdbd-mysql-perl libterm-readkey-perl libpaper-utils
+  python3-pil python3-asgiref python3-bs4 python3-html5lib python3-pastescript
+  python3-sqlalchemy-ext
+The following NEW packages will be installed:
+  alembic bridge-utils docutils-common erlang-asn1 erlang-base erlang-crypto
+  erlang-eldap erlang-ftp erlang-inets erlang-mnesia erlang-os-mon
+  erlang-parsetools erlang-public-key erlang-runtime-tools erlang-snmp
+  erlang-ssl erlang-syntax-tools erlang-tftp erlang-tools erlang-xmerl
+  galera-4 glance glance-api glance-common ieee-data keystone keystone-common
+  libbpf1 libconfig-inifiles-perl libdbi-perl libmariadb3 libxdp1 libxmlsec1
+  libxmlsec1-openssl mariadb-client-10.6 mariadb-client-core-10.6
+  mariadb-common mariadb-server mariadb-server-10.6 mariadb-server-core-10.6
+  mysql-common net-tools neutron-common neutron-ovn-metadata-agent
+  neutron-plugin-ml2 neutron-server nova-api nova-common nova-compute
+  nova-compute-kvm nova-compute-libvirt nova-conductor nova-scheduler nvme-cli
+  os-brick-common placement-api placement-common pycadf-common
+  python-pastedeploy-tpl python3-alembic python3-amqp python3-aniso8601
+  python3-anyjson python3-appdirs python3-arrow python3-automaton
+  python3-autopage python3-barbicanclient python3-cachetools python3-castellan
+  python3-cffi python3-cinderclient python3-cliff python3-cmd2 python3-cursive
+  python3-dateutil python3-ddt python3-debtcollector python3-decorator
+  python3-defusedxml python3-deprecation python3-designateclient
+  python3-dnspython python3-docutils python3-dogpile.cache python3-elementpath
+  python3-eventlet python3-extras python3-fasteners python3-fixtures
+  python3-flask python3-flask-restful python3-futurist python3-glance
+  python3-glance-store python3-glanceclient python3-greenlet
+  python3-importlib-resources python3-iso8601 python3-itsdangerous
+  python3-jmespath python3-keystone python3-keystoneauth1
+  python3-keystoneclient python3-keystonemiddleware python3-kombu python3-ldap
+  python3-logutils python3-lxml python3-mako python3-memcache
+  python3-microversion-parse python3-migrate python3-monotonic python3-msgpack
+  python3-munch python3-nacl python3-netaddr python3-networkx python3-neutron
+  python3-neutron-lib python3-neutronclient python3-nova python3-novaclient
+  python3-numpy python3-openstackclient python3-openstacksdk python3-os-brick
+  python3-os-client-config python3-os-ken python3-os-resource-classes
+  python3-os-service-types python3-os-traits python3-os-vif python3-os-win
+  python3-osc-lib python3-osc-placement python3-oslo.cache
+  python3-oslo.concurrency python3-oslo.config python3-oslo.context
+  python3-oslo.db python3-oslo.i18n python3-oslo.limit python3-oslo.log
+  python3-oslo.messaging python3-oslo.metrics python3-oslo.middleware
+  python3-oslo.policy python3-oslo.privsep python3-oslo.reports
+  python3-oslo.rootwrap python3-oslo.serialization python3-oslo.service
+  python3-oslo.upgradecheck python3-oslo.utils python3-oslo.versionedobjects
+  python3-oslo.vmware python3-osprofiler python3-ovsdbapp python3-packaging
+  python3-paramiko python3-passlib python3-paste python3-pastedeploy
+  python3-pbr python3-pecan python3-placement python3-platformdirs python3-ply
+  python3-prettytable python3-prometheus-client python3-psutil
+  python3-psycopg2 python3-pyasyncore python3-pycadf python3-pycparser
+  python3-pyinotify python3-pymemcache python3-pymysql python3-pyperclip
+  python3-pyroute2 python3-pysaml2 python3-repoze.lru
+  python3-requestsexceptions python3-retrying python3-rfc3986 python3-roman
+  python3-routes python3-scrypt python3-semantic-version python3-setproctitle
+  python3-simplegeneric python3-simplejson python3-singledispatch
+  python3-sqlalchemy python3-sqlalchemy-utils python3-sqlparse python3-statsd
+  python3-stevedore python3-suds python3-swiftclient python3-taskflow
+  python3-tempita python3-tenacity python3-testresources python3-testscenarios
+  python3-testtools python3-tinyrpc python3-tooz python3-typing-extensions
+  python3-unittest2 python3-vine python3-voluptuous python3-warlock
+  python3-wcwidth python3-webob python3-websockify python3-werkzeug
+  python3-wrapt python3-wsme python3-xmlschema python3-zvmcloudconnector
+  rabbitmq-server sgml-base xml-core xmlsec1 zvmcloudconnector-common
+The following packages will be upgraded:
+  libjs-sphinxdoc openvswitch-common openvswitch-switch ovn-central ovn-common
+  ovn-controller-vtep ovn-host python3-blinker python3-click
+  python3-jsonschema python3-openvswitch
+11 upgraded, 228 newly installed, 0 to remove and 22 not upgraded.
+Inst mysql-common (5.8+1.0.8 Ubuntu:22.04/jammy [all])
+Inst mariadb-common (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [all])
+Inst galera-4 (26.4.9-1build1 Ubuntu:22.04/jammy [amd64])
+Inst libdbi-perl (1.643-3ubuntu0.4 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst libconfig-inifiles-perl (3.000003-1ubuntu0.1 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Inst libmariadb3 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Inst mariadb-client-core-10.6 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Inst mariadb-client-10.6 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Inst mariadb-server-core-10.6 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Conf mysql-common (5.8+1.0.8 Ubuntu:22.04/jammy [all])
+Conf mariadb-common (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [all])
+Inst mariadb-server-10.6 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Inst nova-common (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Inst python3-importlib-resources (5.1.2-1 Ubuntu:22.04/jammy [all])
+Inst python3-mako (1.1.3+ds1-2ubuntu0.2 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Inst python3-greenlet (1.1.2-3build1 Ubuntu:22.04/jammy [amd64])
+Inst python3-sqlalchemy (1.4.50+ds1-1build1~cloud0 jammy-updates [all])
+Inst python3-typing-extensions (3.10.0.2-1 Ubuntu:22.04/jammy [all])
+Inst python3-alembic (1.13.1-3~cloud0 jammy-updates [all])
+Inst python3-autopage (0.4.0-3 Ubuntu:22.04/jammy [all])
+Inst python3-pyperclip (1.8.2-2 Ubuntu:22.04/jammy [all])
+Inst python3-wcwidth (0.2.5+dfsg1-1 Ubuntu:22.04/jammy [all])
+Inst python3-cmd2 (2.3.3-1 Ubuntu:22.04/jammy [all])
+Inst sgml-base (1.30 Ubuntu:22.04/jammy [all])
+Inst xml-core (0.18+nmu1 Ubuntu:22.04/jammy [all])
+Inst docutils-common (0.20.1+dfsg-3~cloud1 jammy-updates [all])
+Inst python3-roman (3.3-1 Ubuntu:22.04/jammy [all])
+Inst python3-docutils (0.20.1+dfsg-3~cloud1 jammy-updates [all])
+Inst python3-pbr (5.11.1-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-prettytable (2.5.0-2 Ubuntu:22.04/jammy [all])
+Inst python3-stevedore (1:5.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-cliff (4.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-iso8601 (1.0.2-1 Ubuntu:22.04/jammy [all])
+Inst python3-lxml (4.8.0-1ubuntu0.1 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst python3-os-service-types (1.7.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-keystoneauth1 (5.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.i18n (6.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-wrapt (1.13.3-1build1 Ubuntu:22.04/jammy [amd64])
+Inst python3-debtcollector (2.3.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-msgpack (1.0.3-1build1 Ubuntu:22.04/jammy [amd64])
+Inst ieee-data (20210605.1 Ubuntu:22.04/jammy [all])
+Inst python3-netaddr (0.8.0-2 Ubuntu:22.04/jammy [all])
+Inst python3-packaging (21.3-1 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.utils (7.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.serialization (5.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-barbicanclient (5.7.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-dateutil (2.8.2-3ubuntu1~cloud0 jammy-updates [all])
+Inst python3-dnspython (2.6.1-1ubuntu1~cloud0 jammy-updates [all])
+Inst python3-monotonic (1.6-2 Ubuntu:22.04/jammy [all])
+Inst python3-eventlet (0.35.2-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.context (1:5.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-pyinotify (0.9.6-1.3 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.log (5.5.1-0ubuntu1~cloud0 jammy-updates [all]) []
+Inst python3-rfc3986 (1.5.0-2 Ubuntu:22.04/jammy [all]) []
+Inst python3-oslo.config (1:9.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-castellan (5.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-simplejson (3.17.6-1build1 Ubuntu:22.04/jammy [amd64])
+Inst python3-cinderclient (1:9.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-cursive (0.2.2-4 Ubuntu:22.04/jammy [all])
+Inst python3-decorator (4.4.2-0ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-futurist (2.4.0-2 Ubuntu:22.04/jammy [all])
+Inst python3-jsonschema [3.2.0-0ubuntu2] (4.10.3-2ubuntu1~cloud0 jammy-updates [all])
+Inst python3-warlock (1.3.3-2 Ubuntu:22.04/jammy [all])
+Inst python3-glanceclient (1:4.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst keystone-common (2:25.0.0-0ubuntu1.4~cloud0 jammy-updates [all])
+Inst python3-dogpile.cache (1.1.8-3~cloud0 jammy-updates [all])
+Inst python3-extras (1.0.0-4build1 Ubuntu:22.04/jammy [all])
+Inst python3-testtools (2.5.0-3ubuntu2 Ubuntu:22.04/jammy [all]) []
+Inst python3-fixtures (3.0.0-4 Ubuntu:22.04/jammy [all])
+Inst python3-blinker [1.4+dfsg1-0.4] (1.7.0-1~cloud0 jammy-updates [all])
+Inst python3-click [8.0.3-1] (8.1.6-2~cloud0 jammy-updates [all])
+Inst python3-itsdangerous (2.1.2-4~cloud0 jammy-updates [all])
+Inst python3-werkzeug (3.0.1-3ubuntu0.1~cloud0 jammy-updates [all])
+Inst python3-flask (3.0.2-1ubuntu1~cloud0 jammy-updates [all])
+Inst python3-aniso8601 (9.0.1-2 Ubuntu:22.04/jammy [all])
+Inst python3-flask-restful (0.3.9-2 Ubuntu:22.04/jammy [all])
+Inst python3-keystoneclient (1:5.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-memcache (1.59-5 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.cache (3.7.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst pycadf-common (3.1.1-2 Ubuntu:22.04/jammy [all])
+Inst python3-pycadf (3.1.1-2 Ubuntu:22.04/jammy [all])
+Inst python3-webob (1:1.8.6-1.1ubuntu0.2 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Inst python3-keystonemiddleware (10.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-ldap (3.2.0-4ubuntu7.2 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst python3-sqlparse (0.4.2-1ubuntu0.22.04.3 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Inst python3-tempita (0.5.2-6ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-migrate (0.13.0-0ubuntu2 Ubuntu:22.04/jammy [all])
+Inst libjs-sphinxdoc [4.3.2-1] (7.2.6-6~cloud0 jammy-updates [all])
+Inst alembic (1.13.1-3~cloud0 jammy-updates [all])
+Inst python3-unittest2 (1.1.0-9 Ubuntu:22.04/jammy [all])
+Inst python3-testresources (2.0.1-3 Ubuntu:22.04/jammy [all])
+Inst python3-testscenarios (0.5.0-3build1 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.db (15.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-vine (5.0.0+dfsg-2 Ubuntu:22.04/jammy [all])
+Inst python3-amqp (5.0.9-1 Ubuntu:22.04/jammy [all])
+Inst python3-cachetools (5.0.0-1 Ubuntu:22.04/jammy [all])
+Inst python3-anyjson (0.3.3-4 Ubuntu:22.04/jammy [all])
+Inst python3-kombu (5.2.3-1 Ubuntu:22.04/jammy [all])
+Inst python3-prometheus-client (0.9.0-1 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.metrics (0.8.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-statsd (3.3.0-2build1 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.middleware (6.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-fasteners (0.18-2~cloud0 jammy-updates [all])
+Inst python3-oslo.concurrency (6.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-paste (3.5.0+dfsg1-1 Ubuntu:22.04/jammy [all])
+Inst python-pastedeploy-tpl (2.1.1-1 Ubuntu:22.04/jammy [all])
+Inst python3-pastedeploy (2.1.1-1 Ubuntu:22.04/jammy [all])
+Inst python3-repoze.lru (0.7-2 Ubuntu:22.04/jammy [all])
+Inst python3-routes (2.5.1-1ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.service (3.4.1-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-tenacity (6.3.1-3 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.messaging (14.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.policy (4.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.upgradecheck (2.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-osprofiler (3.4.3-3~cloud0 jammy-updates [all])
+Inst python3-passlib (1.7.4-1 Ubuntu:22.04/jammy [all])
+Inst python3-pymysql (1.0.2-1ubuntu1.22.04.1 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Inst python3-elementpath (2.5.0-1 Ubuntu:22.04/jammy [all])
+Inst python3-xmlschema (1.10.0-1 Ubuntu:22.04/jammy [all])
+Inst libxmlsec1 (1.2.33-1build2 Ubuntu:22.04/jammy [amd64])
+Inst libxmlsec1-openssl (1.2.33-1build2 Ubuntu:22.04/jammy [amd64])
+Inst xmlsec1 (1.2.33-1build2 Ubuntu:22.04/jammy [amd64])
+Inst python3-defusedxml (0.7.1-1 Ubuntu:22.04/jammy [all])
+Inst python3-pysaml2 (7.1.0-0ubuntu2 Ubuntu:22.04/jammy [all])
+Inst python3-scrypt (0.8.0-0.3ubuntu8 Ubuntu:22.04/jammy [amd64])
+Inst python3-keystone (2:25.0.0-0ubuntu1.4~cloud0 jammy-updates [all])
+Inst python3-microversion-parse (1.0.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-deprecation (2.1.0-2 Ubuntu:22.04/jammy [all])
+Inst python3-jmespath (0.10.0-1 Ubuntu:22.04/jammy [all])
+Inst python3-munch (2.5.0-1 Ubuntu:22.04/jammy [all])
+Inst python3-platformdirs (4.2.0-1~cloud0 jammy-updates [all])
+Inst python3-requestsexceptions (1.4.0-3 Ubuntu:22.04/jammy [all])
+Inst python3-openstacksdk (3.0.0-0ubuntu2~cloud0 jammy-updates [all])
+Inst python3-appdirs (1.4.4-2 Ubuntu:22.04/jammy [all])
+Inst python3-os-client-config (2.1.0-0ubuntu3 Ubuntu:22.04/jammy [all])
+Inst python3-osc-lib (3.0.1-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-neutronclient (1:11.2.0-0ubuntu1.1~cloud0 jammy-updates [all])
+Inst nvme-cli (1.16-3ubuntu0.3 Ubuntu:22.04/jammy-updates [amd64])
+Inst os-brick-common (6.7.0-0ubuntu1.1~cloud0 jammy-updates [all])
+Inst python3-os-win (5.9.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-ply (3.11-5 Ubuntu:22.04/jammy [all])
+Inst python3-pycparser (2.21-1 Ubuntu:22.04/jammy [all])
+Inst python3-cffi (1.15.0-1build2 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.privsep (3.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-retrying (1.3.3-4 Ubuntu:22.04/jammy [all])
+Inst python3-os-brick (6.7.0-0ubuntu1.1~cloud0 jammy-updates [all])
+Inst python3-os-resource-classes (1.1.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-os-traits (3.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.versionedobjects (3.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst libbpf1 (1:1.3.0-2build2~cloud0 jammy-updates [amd64])
+Inst libxdp1 (1.4.2-1ubuntu4~cloud0 jammy-updates [amd64])
+Inst python3-openvswitch [2.17.12-0ubuntu0.22.04.1] (3.3.9-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Inst python3-ovsdbapp (2.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-psutil (5.9.0-1build1 Ubuntu:22.04/jammy [amd64])
+Inst python3-pyroute2 (0.7.11-0ubuntu2~cloud0 jammy-updates [all])
+Inst python3-os-vif (3.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.limit (2.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.reports (3.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-oslo.rootwrap (6.3.1-0ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-ddt (1.6.0-3~cloud0 jammy-updates [all])
+Inst python3-suds (1.0.0-1 Ubuntu:22.04/jammy [all])
+Inst python3-oslo.vmware (4.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-nacl (1.5.0-2 Ubuntu:22.04/jammy [amd64])
+Inst python3-paramiko (2.9.3-0ubuntu1.3 Ubuntu:22.04/jammy-updates [all])
+Inst python3-pymemcache (4.0.0-6~cloud0 jammy-updates [all])
+Inst python3-voluptuous (0.12.2-1 Ubuntu:22.04/jammy [all])
+Inst python3-tooz (6.0.1-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-numpy (1:1.21.5-1ubuntu22.04.1 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst python3-websockify (0.10.0+dfsg1-2build1 Ubuntu:22.04/jammy [amd64])
+Inst zvmcloudconnector-common (2.0.0~b1~git2019062011.4fc9142.really.1.4.1-0ubuntu3 Ubuntu:22.04/jammy [all])
+Inst python3-zvmcloudconnector (2.0.0~b1~git2019062011.4fc9142.really.1.4.1-0ubuntu3 Ubuntu:22.04/jammy [all])
+Inst python3-nova (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Inst nova-api (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Inst bridge-utils (1.7-1ubuntu3 Ubuntu:22.04/jammy [amd64])
+Inst nova-compute-libvirt (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Inst nova-compute-kvm (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Inst nova-compute (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Inst nova-conductor (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Inst nova-scheduler (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Inst openvswitch-switch [2.17.12-0ubuntu0.22.04.1] (3.3.9-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64]) []
+Inst openvswitch-common [2.17.12-0ubuntu0.22.04.1] (3.3.9-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Inst erlang-base (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-asn1 (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-crypto (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-public-key (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-mnesia (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-runtime-tools (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-ssl (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-eldap (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-ftp (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-tftp (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-inets (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-snmp (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-os-mon (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-parsetools (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-syntax-tools (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-tools (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst erlang-xmerl (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst mariadb-server (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [all])
+Inst net-tools (1.60+git20181103.0eebece-1ubuntu5.4 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Inst neutron-common (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Inst python3-designateclient (6.0.1-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-tinyrpc (0.6-3.1 Ubuntu:22.04/jammy [all])
+Inst python3-os-ken (2.8.1-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-logutils (0.3.3-8 Ubuntu:22.04/jammy [all])
+Inst python3-simplegeneric (0.8.1-3 Ubuntu:22.04/jammy [all])
+Inst python3-singledispatch (3.4.0.3-3 Ubuntu:22.04/jammy [all])
+Inst python3-pecan (1.5.1-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-setproctitle (1.2.2-2build1 Ubuntu:22.04/jammy [amd64])
+Inst python3-neutron-lib (3.11.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-novaclient (2:18.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-neutron (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Inst neutron-ovn-metadata-agent (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Inst neutron-plugin-ml2 (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Inst neutron-server (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Inst ovn-controller-vtep [22.03.8-0ubuntu0.22.04.1] (24.03.6-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64]) []
+Inst ovn-host [22.03.8-0ubuntu0.22.04.1] (24.03.6-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64]) []
+Inst ovn-central [22.03.8-0ubuntu0.22.04.1] (24.03.6-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64]) []
+Inst ovn-common [22.03.8-0ubuntu0.22.04.1] (24.03.6-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Inst placement-common (1:11.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-placement (1:11.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst placement-api (1:11.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-arrow (1.2.1-1 Ubuntu:22.04/jammy [all])
+Inst python3-automaton (2.4.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Inst python3-swiftclient (1:4.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-glance-store (4.7.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-networkx (2.4-4ubuntu2 Ubuntu:22.04/jammy [all])
+Inst python3-osc-placement (4.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-openstackclient (6.6.0-0ubuntu2~cloud0 jammy-updates [all])
+Inst python3-psycopg2 (2.9.2-1build2 Ubuntu:22.04/jammy [amd64])
+Inst python3-pyasyncore (1.0.2-2~cloud0 jammy-updates [all])
+Inst python3-semantic-version (2.8.5-1 Ubuntu:22.04/jammy [all])
+Inst python3-sqlalchemy-utils (0.41.1-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-taskflow (5.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-wsme (0.12.1-2~cloud0 jammy-updates [all])
+Inst glance-common (2:28.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst python3-glance (2:28.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst glance-api (2:28.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst glance (2:28.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Inst keystone (2:25.0.0-0ubuntu1.4~cloud0 jammy-updates [all])
+Inst rabbitmq-server (3.9.27-0ubuntu0.6 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Conf galera-4 (26.4.9-1build1 Ubuntu:22.04/jammy [amd64])
+Conf libdbi-perl (1.643-3ubuntu0.4 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf libconfig-inifiles-perl (3.000003-1ubuntu0.1 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Conf libmariadb3 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Conf mariadb-client-core-10.6 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Conf mariadb-client-10.6 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Conf mariadb-server-core-10.6 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Conf mariadb-server-10.6 (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [amd64])
+Conf nova-common (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Conf python3-importlib-resources (5.1.2-1 Ubuntu:22.04/jammy [all])
+Conf python3-mako (1.1.3+ds1-2ubuntu0.2 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Conf python3-greenlet (1.1.2-3build1 Ubuntu:22.04/jammy [amd64])
+Conf python3-sqlalchemy (1.4.50+ds1-1build1~cloud0 jammy-updates [all])
+Conf python3-typing-extensions (3.10.0.2-1 Ubuntu:22.04/jammy [all])
+Conf python3-alembic (1.13.1-3~cloud0 jammy-updates [all])
+Conf python3-autopage (0.4.0-3 Ubuntu:22.04/jammy [all])
+Conf python3-pyperclip (1.8.2-2 Ubuntu:22.04/jammy [all])
+Conf python3-wcwidth (0.2.5+dfsg1-1 Ubuntu:22.04/jammy [all])
+Conf python3-cmd2 (2.3.3-1 Ubuntu:22.04/jammy [all])
+Conf sgml-base (1.30 Ubuntu:22.04/jammy [all])
+Conf xml-core (0.18+nmu1 Ubuntu:22.04/jammy [all])
+Conf docutils-common (0.20.1+dfsg-3~cloud1 jammy-updates [all])
+Conf python3-roman (3.3-1 Ubuntu:22.04/jammy [all])
+Conf python3-docutils (0.20.1+dfsg-3~cloud1 jammy-updates [all])
+Conf python3-pbr (5.11.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-prettytable (2.5.0-2 Ubuntu:22.04/jammy [all])
+Conf python3-stevedore (1:5.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-cliff (4.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-iso8601 (1.0.2-1 Ubuntu:22.04/jammy [all])
+Conf python3-lxml (4.8.0-1ubuntu0.1 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf python3-os-service-types (1.7.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-keystoneauth1 (5.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.i18n (6.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-wrapt (1.13.3-1build1 Ubuntu:22.04/jammy [amd64])
+Conf python3-debtcollector (2.3.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-msgpack (1.0.3-1build1 Ubuntu:22.04/jammy [amd64])
+Conf ieee-data (20210605.1 Ubuntu:22.04/jammy [all])
+Conf python3-netaddr (0.8.0-2 Ubuntu:22.04/jammy [all])
+Conf python3-packaging (21.3-1 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.utils (7.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.serialization (5.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-barbicanclient (5.7.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-dateutil (2.8.2-3ubuntu1~cloud0 jammy-updates [all])
+Conf python3-dnspython (2.6.1-1ubuntu1~cloud0 jammy-updates [all])
+Conf python3-monotonic (1.6-2 Ubuntu:22.04/jammy [all])
+Conf python3-eventlet (0.35.2-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.context (1:5.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-pyinotify (0.9.6-1.3 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.log (5.5.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-rfc3986 (1.5.0-2 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.config (1:9.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-castellan (5.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-simplejson (3.17.6-1build1 Ubuntu:22.04/jammy [amd64])
+Conf python3-cinderclient (1:9.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-cursive (0.2.2-4 Ubuntu:22.04/jammy [all])
+Conf python3-decorator (4.4.2-0ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-futurist (2.4.0-2 Ubuntu:22.04/jammy [all])
+Conf python3-jsonschema (4.10.3-2ubuntu1~cloud0 jammy-updates [all])
+Conf python3-warlock (1.3.3-2 Ubuntu:22.04/jammy [all])
+Conf python3-glanceclient (1:4.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf keystone-common (2:25.0.0-0ubuntu1.4~cloud0 jammy-updates [all])
+Conf python3-dogpile.cache (1.1.8-3~cloud0 jammy-updates [all])
+Conf python3-extras (1.0.0-4build1 Ubuntu:22.04/jammy [all])
+Conf python3-testtools (2.5.0-3ubuntu2 Ubuntu:22.04/jammy [all])
+Conf python3-fixtures (3.0.0-4 Ubuntu:22.04/jammy [all])
+Conf python3-blinker (1.7.0-1~cloud0 jammy-updates [all])
+Conf python3-click (8.1.6-2~cloud0 jammy-updates [all])
+Conf python3-itsdangerous (2.1.2-4~cloud0 jammy-updates [all])
+Conf python3-werkzeug (3.0.1-3ubuntu0.1~cloud0 jammy-updates [all])
+Conf python3-flask (3.0.2-1ubuntu1~cloud0 jammy-updates [all])
+Conf python3-aniso8601 (9.0.1-2 Ubuntu:22.04/jammy [all])
+Conf python3-flask-restful (0.3.9-2 Ubuntu:22.04/jammy [all])
+Conf python3-keystoneclient (1:5.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-memcache (1.59-5 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.cache (3.7.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf pycadf-common (3.1.1-2 Ubuntu:22.04/jammy [all])
+Conf python3-pycadf (3.1.1-2 Ubuntu:22.04/jammy [all])
+Conf python3-webob (1:1.8.6-1.1ubuntu0.2 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Conf python3-keystonemiddleware (10.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-ldap (3.2.0-4ubuntu7.2 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf python3-sqlparse (0.4.2-1ubuntu0.22.04.3 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Conf python3-tempita (0.5.2-6ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-migrate (0.13.0-0ubuntu2 Ubuntu:22.04/jammy [all])
+Conf libjs-sphinxdoc (7.2.6-6~cloud0 jammy-updates [all])
+Conf alembic (1.13.1-3~cloud0 jammy-updates [all])
+Conf python3-unittest2 (1.1.0-9 Ubuntu:22.04/jammy [all])
+Conf python3-testresources (2.0.1-3 Ubuntu:22.04/jammy [all])
+Conf python3-testscenarios (0.5.0-3build1 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.db (15.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-vine (5.0.0+dfsg-2 Ubuntu:22.04/jammy [all])
+Conf python3-amqp (5.0.9-1 Ubuntu:22.04/jammy [all])
+Conf python3-cachetools (5.0.0-1 Ubuntu:22.04/jammy [all])
+Conf python3-anyjson (0.3.3-4 Ubuntu:22.04/jammy [all])
+Conf python3-kombu (5.2.3-1 Ubuntu:22.04/jammy [all])
+Conf python3-prometheus-client (0.9.0-1 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.metrics (0.8.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-statsd (3.3.0-2build1 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.middleware (6.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-fasteners (0.18-2~cloud0 jammy-updates [all])
+Conf python3-oslo.concurrency (6.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-paste (3.5.0+dfsg1-1 Ubuntu:22.04/jammy [all])
+Conf python-pastedeploy-tpl (2.1.1-1 Ubuntu:22.04/jammy [all])
+Conf python3-pastedeploy (2.1.1-1 Ubuntu:22.04/jammy [all])
+Conf python3-repoze.lru (0.7-2 Ubuntu:22.04/jammy [all])
+Conf python3-routes (2.5.1-1ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.service (3.4.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-tenacity (6.3.1-3 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.messaging (14.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.policy (4.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.upgradecheck (2.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-osprofiler (3.4.3-3~cloud0 jammy-updates [all])
+Conf python3-passlib (1.7.4-1 Ubuntu:22.04/jammy [all])
+Conf python3-pymysql (1.0.2-1ubuntu1.22.04.1 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
+Conf python3-elementpath (2.5.0-1 Ubuntu:22.04/jammy [all])
+Conf python3-xmlschema (1.10.0-1 Ubuntu:22.04/jammy [all])
+Conf libxmlsec1 (1.2.33-1build2 Ubuntu:22.04/jammy [amd64])
+Conf libxmlsec1-openssl (1.2.33-1build2 Ubuntu:22.04/jammy [amd64])
+Conf xmlsec1 (1.2.33-1build2 Ubuntu:22.04/jammy [amd64])
+Conf python3-defusedxml (0.7.1-1 Ubuntu:22.04/jammy [all])
+Conf python3-pysaml2 (7.1.0-0ubuntu2 Ubuntu:22.04/jammy [all])
+Conf python3-scrypt (0.8.0-0.3ubuntu8 Ubuntu:22.04/jammy [amd64])
+Conf python3-keystone (2:25.0.0-0ubuntu1.4~cloud0 jammy-updates [all])
+Conf python3-microversion-parse (1.0.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-deprecation (2.1.0-2 Ubuntu:22.04/jammy [all])
+Conf python3-jmespath (0.10.0-1 Ubuntu:22.04/jammy [all])
+Conf python3-munch (2.5.0-1 Ubuntu:22.04/jammy [all])
+Conf python3-platformdirs (4.2.0-1~cloud0 jammy-updates [all])
+Conf python3-requestsexceptions (1.4.0-3 Ubuntu:22.04/jammy [all])
+Conf python3-openstacksdk (3.0.0-0ubuntu2~cloud0 jammy-updates [all])
+Conf python3-appdirs (1.4.4-2 Ubuntu:22.04/jammy [all])
+Conf python3-os-client-config (2.1.0-0ubuntu3 Ubuntu:22.04/jammy [all])
+Conf python3-osc-lib (3.0.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-neutronclient (1:11.2.0-0ubuntu1.1~cloud0 jammy-updates [all])
+Conf nvme-cli (1.16-3ubuntu0.3 Ubuntu:22.04/jammy-updates [amd64])
+Conf os-brick-common (6.7.0-0ubuntu1.1~cloud0 jammy-updates [all])
+Conf python3-os-win (5.9.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-ply (3.11-5 Ubuntu:22.04/jammy [all])
+Conf python3-pycparser (2.21-1 Ubuntu:22.04/jammy [all])
+Conf python3-cffi (1.15.0-1build2 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.privsep (3.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-retrying (1.3.3-4 Ubuntu:22.04/jammy [all])
+Conf python3-os-brick (6.7.0-0ubuntu1.1~cloud0 jammy-updates [all])
+Conf python3-os-resource-classes (1.1.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-os-traits (3.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.versionedobjects (3.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf libbpf1 (1:1.3.0-2build2~cloud0 jammy-updates [amd64])
+Conf libxdp1 (1.4.2-1ubuntu4~cloud0 jammy-updates [amd64])
+Conf python3-openvswitch (3.3.9-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Conf python3-ovsdbapp (2.6.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-psutil (5.9.0-1build1 Ubuntu:22.04/jammy [amd64])
+Conf python3-pyroute2 (0.7.11-0ubuntu2~cloud0 jammy-updates [all])
+Conf python3-os-vif (3.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.limit (2.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.reports (3.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-oslo.rootwrap (6.3.1-0ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-ddt (1.6.0-3~cloud0 jammy-updates [all])
+Conf python3-suds (1.0.0-1 Ubuntu:22.04/jammy [all])
+Conf python3-oslo.vmware (4.4.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-nacl (1.5.0-2 Ubuntu:22.04/jammy [amd64])
+Conf python3-paramiko (2.9.3-0ubuntu1.3 Ubuntu:22.04/jammy-updates [all])
+Conf python3-pymemcache (4.0.0-6~cloud0 jammy-updates [all])
+Conf python3-voluptuous (0.12.2-1 Ubuntu:22.04/jammy [all])
+Conf python3-tooz (6.0.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-numpy (1:1.21.5-1ubuntu22.04.1 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf python3-websockify (0.10.0+dfsg1-2build1 Ubuntu:22.04/jammy [amd64])
+Conf zvmcloudconnector-common (2.0.0~b1~git2019062011.4fc9142.really.1.4.1-0ubuntu3 Ubuntu:22.04/jammy [all])
+Conf python3-zvmcloudconnector (2.0.0~b1~git2019062011.4fc9142.really.1.4.1-0ubuntu3 Ubuntu:22.04/jammy [all])
+Conf python3-nova (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Conf nova-api (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Conf bridge-utils (1.7-1ubuntu3 Ubuntu:22.04/jammy [amd64])
+Conf nova-compute-libvirt (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Conf nova-compute-kvm (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Conf nova-compute (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Conf nova-conductor (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Conf nova-scheduler (3:29.2.0-0ubuntu1.8~cloud0 jammy-updates [all])
+Conf openvswitch-switch (3.3.9-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Conf openvswitch-common (3.3.9-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Conf erlang-base (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-asn1 (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-crypto (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-public-key (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-mnesia (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-runtime-tools (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-ssl (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-eldap (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-ftp (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-tftp (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-inets (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-snmp (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-os-mon (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-parsetools (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-syntax-tools (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-tools (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf erlang-xmerl (1:24.2.1+dfsg-1ubuntu0.8 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf mariadb-server (1:10.6.23-0ubuntu0.22.04.1 Ubuntu:22.04/jammy-updates [all])
+Conf net-tools (1.60+git20181103.0eebece-1ubuntu5.4 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])
+Conf neutron-common (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Conf python3-designateclient (6.0.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-tinyrpc (0.6-3.1 Ubuntu:22.04/jammy [all])
+Conf python3-os-ken (2.8.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-logutils (0.3.3-8 Ubuntu:22.04/jammy [all])
+Conf python3-simplegeneric (0.8.1-3 Ubuntu:22.04/jammy [all])
+Conf python3-singledispatch (3.4.0.3-3 Ubuntu:22.04/jammy [all])
+Conf python3-pecan (1.5.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-setproctitle (1.2.2-2build1 Ubuntu:22.04/jammy [amd64])
+Conf python3-neutron-lib (3.11.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-novaclient (2:18.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-neutron (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Conf neutron-ovn-metadata-agent (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Conf neutron-plugin-ml2 (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Conf neutron-server (2:24.1.0-0ubuntu1.2~cloud0 jammy-updates [all])
+Conf ovn-controller-vtep (24.03.6-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Conf ovn-host (24.03.6-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Conf ovn-central (24.03.6-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Conf ovn-common (24.03.6-0ubuntu0.24.04.1~cloud0 jammy-updates [amd64])
+Conf placement-common (1:11.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-placement (1:11.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf placement-api (1:11.0.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-arrow (1.2.1-1 Ubuntu:22.04/jammy [all])
+Conf python3-automaton (2.4.0-0ubuntu1 Ubuntu:22.04/jammy [all])
+Conf python3-swiftclient (1:4.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-glance-store (4.7.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-networkx (2.4-4ubuntu2 Ubuntu:22.04/jammy [all])
+Conf python3-osc-placement (4.3.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-openstackclient (6.6.0-0ubuntu2~cloud0 jammy-updates [all])
+Conf python3-psycopg2 (2.9.2-1build2 Ubuntu:22.04/jammy [amd64])
+Conf python3-pyasyncore (1.0.2-2~cloud0 jammy-updates [all])
+Conf python3-semantic-version (2.8.5-1 Ubuntu:22.04/jammy [all])
+Conf python3-sqlalchemy-utils (0.41.1-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-taskflow (5.5.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-wsme (0.12.1-2~cloud0 jammy-updates [all])
+Conf glance-common (2:28.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf python3-glance (2:28.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf glance-api (2:28.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf glance (2:28.1.0-0ubuntu1~cloud0 jammy-updates [all])
+Conf keystone (2:25.0.0-0ubuntu1.4~cloud0 jammy-updates [all])
+Conf rabbitmq-server (3.9.27-0ubuntu0.6 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])
