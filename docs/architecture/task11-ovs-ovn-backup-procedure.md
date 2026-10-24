@@ -1,7 +1,7 @@
 # Task 11 — OVS/OVN endpoint inventory and pre-upgrade backup proposal
 
 **Assessment date:** 2026-10-24
-**Status:** Endpoints verified from operator-provided output; backup commands proposed but not approved or executed.
+**Status:** Protected inventory complete for the searched paths; backup operations are authorized by the master execution instruction but not executed because Codex has no sudo authentication.
 
 ## Verified database endpoints
 
@@ -25,15 +25,15 @@ The operator supplied protected path and service inventory output. Under `/home/
 
 The filtered file inventory showed no candidate VM disk/image filename in the searched paths. This does not prove there are no disks; the proposed archive includes `/var/lib/libvirt/images` and checks for running libvirt guests before copying. It also found `/etc/placement/placement.conf`, `/etc/libvirt` configuration and network XML, `/etc/openvswitch/system-id.conf`, `/etc/logrotate.d/ovn-common`, and `/etc/systemd/system/kvm-device-permissions.service`. Values were not displayed. These paths must be preserved.
 
-The sanitized process listing showed `ovn-controller` and `ovn-northd`, with no billing/metering process-name match. The service listing showed `libvirtd`, OVS, OVN Northbound/Southbound/controller services active and `ovn-controller-vtep` inactive; no billing/metering service-name match was shown. The cron filter output was malformed and did not establish whether a scheduled billing/metering writer exists. No host files or services were changed by the inventory.
+The sanitized process listing showed `ovn-controller` and `ovn-northd`, with no billing/metering process-name match. The service listing showed `libvirtd`, OVS, OVN Northbound/Southbound/controller services active and `ovn-controller-vtep` inactive; no billing/metering service-name match was shown. The first cron filter was malformed; the operator then reran a corrected read-only cron filter and reported no output. Therefore no matching billing/metering/Nova/Neutron/OVN/OpenStack entries were found in `/etc/crontab`, `/etc/cron.d`, or `/var/spool/cron/crontabs` at that time. No host files or services were changed by the inventory.
 
 The current host inventory is therefore incomplete for:
 
 - Any VM disk not matched by the filename-filtered scan, current running-guest state, and Nova database/recovery files in unsearched custom directories.
-- Root/system cron jobs that may write billing or metering data. The process and service filters found no billing/metering name match, but cron output is still unverified.
+- Nova/recovery data in unsearched custom directories and any VM disk not matched by the filename-filtered scan. The archive includes the searched operational roots and the current running-guest check guards image archiving.
 - Full OVS/OVN port and logical topology, package state, and any custom paths outside those searched.
 
-Do not run the proposed broad operational-data archive until the corrected cron result is reviewed and the running-guest check passes. If a billing/metering scheduled writer is active, its data needs an application-consistent export or approved quiescence plan. Do not infer consistency from a tar archive of a live mutable database.
+The corrected cron result and sanitized process/service inventory found no billing/metering writer by the searched names. The approved backup command still checks that no libvirt guest is running before archiving image paths. No billing/metering file contents have been inspected. Do not infer consistency from a tar archive of a live mutable database.
 
 ## Read-only inventory commands for the operator
 
@@ -92,11 +92,11 @@ sudo virsh list --all --details
 
 If the inventory finds recovery or operational data outside `/home/stack`, `/var/backups`, and `/var/lib/libvirt/images`, add those exact paths to the archive plan before approval. Do not inspect `/home/stack/devstack`; it was previously confirmed absent.
 
-## Proposed backup commands — approval required; not executed
+## Authorized backup commands — not executed
 
-This is the proposed pre-upgrade procedure for review. It writes a new, root-owned mode-0700 directory under `/home/sneha`; `mkdir` intentionally fails if the timestamped path already exists. It snapshots the three live OVSDB service databases using the verified endpoints. It does **not** copy their active database files.
+This is the authorized pre-upgrade procedure. It writes a new, root-owned mode-0700 directory under `/home/sneha`; `mkdir` intentionally fails if the timestamped path already exists. It snapshots the three live OVSDB service databases using the verified endpoints. It does **not** copy their active database files.
 
-Do not run this until the file/process/cron inventory above is reviewed, any active writers are handled with an approved consistency method, the additional custom paths are known, and enough disk space is confirmed. The archive contains private operational data and configuration; keep it root-only and do not upload or paste its contents.
+The inventory found no matching billing/metering process, service, timer, or cron writer. The archive contains private operational data and configuration; keep it root-only and do not upload or paste its contents. The command rechecks endpoints, running libvirt guests, and verifies the generated artifacts. It adds `/etc/placement` and archives the existing apt package cache for rollback support.
 
 ```bash
 sudo bash <<'ROOT'
@@ -127,7 +127,7 @@ if [ -n "$RUNNING_GUESTS" ]; then
 fi
 
 tar --sparse --acls --xattrs --numeric-owner -cpf "$BACKUP_DIR/host-operational-data.tar" \
-  --exclude=home/stack/devstack -C / home/stack var/lib/libvirt/images var/backups
+  --exclude=home/stack/devstack -C / home/stack var/lib/libvirt/images var/backups var/cache/apt/archives
 
 # Preserve service configuration, logrotate edits, custom KVM unit, cron jobs,
 # apt source definitions, package versions, and libvirt network definition.
