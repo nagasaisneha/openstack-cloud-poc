@@ -13,7 +13,7 @@ The operator reports that `ovsdb-client list-dbs` succeeded against all three so
 | `unix:/run/ovn/ovnnb_db.sock` | `OVN_Northbound` | `_Server` |
 | `unix:/run/ovn/ovnsb_db.sock` | `OVN_Southbound` | `_Server` |
 
-The sockets responded at the time of that check. The supplied output does not include `ovs-vsctl show`, `ovn-nbctl show`, or `ovn-sbctl show`; current bridge, logical-switch, router, chassis, and port topology therefore remains unverified. The earlier file inventory observed `/var/lib/openvswitch/conf.db`, `/var/lib/ovn/ovnnb_db.db`, and `/var/lib/ovn/ovnsb_db.db`. Those live files must not be copied as a substitute for an online snapshot.
+The sockets responded at the time of that check. Operator-provided evidence also identifies OVS 2.17.12, bridge `br-int`, OVN chassis `DESKTOP-Sneha`, and Geneve endpoint `172.19.169.140`. Full bridge ports and OVN logical switch/router/port topology were not included. The earlier file inventory observed `/var/lib/openvswitch/conf.db`, `/var/lib/ovn/ovnnb_db.db`, and `/var/lib/ovn/ovnsb_db.db`. Those live files must not be copied as a substitute for an online snapshot.
 
 `_Server` is OVSDB's built-in, read-only server status/configuration database. The proposed backup below targets the three service databases, not `_Server`; server unit/configuration files are preserved separately. (See the [OVSDB server schema](https://www.openvswitch.org/support/dist-docs/ovsdb-server.5.pdf).)
 
@@ -21,15 +21,19 @@ Open vSwitch documents `ovsdb-client backup SERVER DATABASE` as an atomic snapsh
 
 ## Inventory gaps
 
-No privileged filesystem/process inventory output was supplied with the endpoint results. A bounded attempt from Codex using `sudo -n` failed with “a password is required”; it made no host changes and read no protected data. Existing records mention VM recovery backups, Nova database backups, billing data, and metering scripts, but their exact paths, sizes, and owners were not found in the repository. Task T27 explicitly says those host artifacts were outside its scope and were not read.
+The operator supplied protected path and service inventory output. Under `/home/stack`, it found `billing.csv` (7,938,792 bytes), numerous dated billing CSV snapshots, compute/floating-IP/volume state CSVs, metering CSVs, `meter.log`, metering Python scripts, and `run_meter.sh`. The complete paths and sizes are in the operator's terminal output; file contents were not read. The backup proposal archives all of `/home/stack`, `/var/backups`, and `/var/lib/libvirt/images`, so it preserves these artifacts without selecting individual billing files. The known `/var/backups/ovn-common.before-codex-20261024` must remain untouched and is included through the `/var/backups` archive.
+
+The filtered file inventory showed no candidate VM disk/image filename in the searched paths. This does not prove there are no disks; the proposed archive includes `/var/lib/libvirt/images` and checks for running libvirt guests before copying. It also found `/etc/placement/placement.conf`, `/etc/libvirt` configuration and network XML, `/etc/openvswitch/system-id.conf`, `/etc/logrotate.d/ovn-common`, and `/etc/systemd/system/kvm-device-permissions.service`. Values were not displayed. These paths must be preserved.
+
+The sanitized process listing showed `ovn-controller` and `ovn-northd`, with no billing/metering process-name match. The service listing showed `libvirtd`, OVS, OVN Northbound/Southbound/controller services active and `ovn-controller-vtep` inactive; no billing/metering service-name match was shown. The cron filter output was malformed and did not establish whether a scheduled billing/metering writer exists. No host files or services were changed by the inventory.
 
 The current host inventory is therefore incomplete for:
 
-- VM disks, image files, Nova database backups, billing data, metering scripts, and custom recovery directories, including possible content under `/home/stack`.
-- Active billing/metering processes, systemd services/timers, and root cron jobs. The non-privileged check did not reveal a readable user crontab; this does not prove there are no system or root jobs.
-- Current OVS/OVN topology, package state, and persistent custom configuration under protected paths.
+- Any VM disk not matched by the filename-filtered scan, current running-guest state, and Nova database/recovery files in unsearched custom directories.
+- Root/system cron jobs that may write billing or metering data. The process and service filters found no billing/metering name match, but cron output is still unverified.
+- Full OVS/OVN port and logical topology, package state, and any custom paths outside those searched.
 
-Do not run the proposed broad operational-data archive until this inventory is reviewed. If a billing/metering process or scheduled writer is active, its data needs an application-consistent export or an approved quiescence plan. Do not infer consistency from a tar archive of a live mutable database.
+Do not run the proposed broad operational-data archive until the corrected cron result is reviewed and the running-guest check passes. If a billing/metering scheduled writer is active, its data needs an application-consistent export or approved quiescence plan. Do not infer consistency from a tar archive of a live mutable database.
 
 ## Read-only inventory commands for the operator
 
@@ -131,7 +135,7 @@ CONFIG_PATHS=()
 for p in etc/openvswitch etc/ovn etc/libvirt \
          etc/logrotate.d/ovn-common etc/logrotate.d/openvswitch-switch \
          etc/systemd/system/kvm-device-permissions.service \
-         etc/systemd/system/kvm-device-permissions.service.d \
+         etc/systemd/system/kvm-device-permissions.service.d etc/placement \
          etc/cron.d etc/crontab var/spool/cron/crontabs \
          etc/apt/sources.list etc/apt/sources.list.d \
          etc/apt/preferences.d etc/apt/keyrings; do
