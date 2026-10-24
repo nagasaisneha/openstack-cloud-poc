@@ -22,6 +22,7 @@ import uuid
 import backup_application as backup
 import configure_nova as common
 import launch_test_vm as launch
+import inspect_cleanup_dependencies as inventory_read
 import validate_application_guest as application
 import validate_application_lifecycle as lifecycle
 import validate_guest as guest
@@ -123,10 +124,12 @@ def preserved_demo(admin, original):
 
 
 def project_empty(admin, project_id):
-    queries = (admin.network.networks, admin.network.subnets, admin.network.ports,
-               admin.network.routers, admin.network.ips, admin.network.security_groups)
-    if any(list(query(project_id=project_id)) for query in queries):
-        raise RuntimeError('project still contains network resources; no identity deletion')
+    # Neutron's project-filtered SG list lazily creates a missing default SG.
+    # Inspect host-local metadata in an explicit SQL read-only transaction.
+    resources = inventory_read.network_resources([project_id])
+    if resources:
+        kinds = ','.join(sorted({item['kind'] for item in resources}))
+        raise RuntimeError('project still contains network resources (' + kinds + '); no identity deletion')
     if any(server.project_id == project_id for server in admin.compute.servers(all_projects=True)):
         raise RuntimeError('project still contains a compute instance; no identity deletion')
     if list(admin.image.images(owner=project_id)) or list(admin.image.images(owner=project_id, is_hidden=True)):

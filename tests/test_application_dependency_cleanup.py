@@ -220,17 +220,21 @@ class DependencyCleanupTests(unittest.TestCase):
 
     def test_project_consumers_prevent_identity_deletion(self):
         admin = MagicMock()
-        admin.network.ports.return_value = [NS(id='unexpected-port')]
-        with self.assertRaises(RuntimeError):
+        with patch.object(setup.inventory_read, 'network_resources') as network_resources:
+            network_resources.return_value = [{'kind': 'security_group'}]
+            with self.assertRaisesRegex(RuntimeError, 'security_group'):
+                setup.project_empty(admin, 'test-project')
+            network_resources.return_value = []
+            admin.compute.servers.return_value = [NS(project_id='test-project')]
+            with self.assertRaises(RuntimeError):
+                setup.project_empty(admin, 'test-project')
+            admin.compute.servers.return_value = []
+            admin.image.images.return_value = [NS(id='unexpected-image')]
+            with self.assertRaises(RuntimeError):
+                setup.project_empty(admin, 'test-project')
+            admin.image.images.return_value = []
             setup.project_empty(admin, 'test-project')
-        admin.network.ports.return_value = []
-        admin.compute.servers.return_value = [NS(project_id='test-project')]
-        with self.assertRaises(RuntimeError):
-            setup.project_empty(admin, 'test-project')
-        admin.compute.servers.return_value = []
-        admin.image.images.return_value = [NS(id='unexpected-image')]
-        with self.assertRaises(RuntimeError):
-            setup.project_empty(admin, 'test-project')
+        self.assertEqual(admin.network.mock_calls, [])
 
     def test_user_keypairs_and_project_assignments_prevent_identity_deletion(self):
         original, state, plan = scope()
