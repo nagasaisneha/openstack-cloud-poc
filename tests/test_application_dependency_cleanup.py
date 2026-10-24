@@ -55,6 +55,86 @@ def scope():
 
 
 class DependencyCleanupTests(unittest.TestCase):
+    def recreated_scope(self):
+        original, state, plan = scope()
+        original['run_id'] = state['run_id'] = setup.RECREATED_DEFAULT_RUN
+        original['results']['tenant_api']['tenants']['a']['project_id'] = setup.RECREATED_DEFAULT_PROJECT
+        state['results']['dependency_cleanup'] = dict(plan=[], done=list(range(9)))
+        item = setup.recreated_default_item(original, state, setup.RECREATED_DEFAULT_ID)
+        row = dict(kind='security_group', id=item['id'], project_id=item['project_id'],
+            default_name=True, default_description=True, is_project_default='1', bound_port_count='0',
+            external_reference_count='0', sharing_policy_count='0', rule_count='4',
+            created_at='2026-10-24 16:47:13', updated_at='2026-10-24 16:47:13')
+        return original, state, item, row
+
+    def test_recreated_default_requires_exact_reviewed_scope_and_string_counts(self):
+        original, state, item, row = self.recreated_scope()
+        self.assertEqual(setup.validate_recreated_metadata([row], item), row)
+        with self.assertRaises(RuntimeError):
+            setup.recreated_default_item(original, state, str(uuid4()))
+        original['ids']['protected-group'] = item['id']
+        with self.assertRaises(RuntimeError):
+            setup.recreated_default_item(original, state, item['id'])
+        del original['ids']['protected-group']
+        for field, value in (('project_id', uuid4().hex), ('is_project_default', '0'),
+                             ('bound_port_count', '1'), ('external_reference_count', '1'),
+                             ('sharing_policy_count', '1'), ('rule_count', '5'),
+                             ('created_at', 'different'), ('default_name', 1.0)):
+            with self.assertRaises(RuntimeError):
+                setup.validate_recreated_metadata([dict(row, **{field: value})], item)
+        for rows in ([], [row, row]):
+            with self.assertRaises(RuntimeError):
+                setup.validate_recreated_metadata(rows, item)
+        self.assertIsNone(setup.validate_recreated_metadata([], item, allow_absent=True))
+        for value in (True, False, '-1', '0.0', '00', None):
+            with self.assertRaises(RuntimeError):
+                setup.metadata_number(value)
+
+    def supplemental_workflow(self, *, backup_error=None, verify_error=None, phase='prepared', absent=False):
+        original, state, item, row = self.recreated_scope()
+        reconciliation = dict(item=item, phase=phase, verified=False)
+        if phase in ('delete_intent', 'absent'):
+            reconciliation['backup_directory'] = '/protected/supplemental'
+        state['results']['dependency_cleanup']['recreated_default'] = reconciliation
+        rows = [] if absent else [row]
+        observed = []
+        with patch.object(setup.inventory_read, 'network_resources', side_effect=[rows, rows, []]), \
+             patch.object(setup.launch, 'atomic_state'), patch.object(setup, 'progress'), \
+             patch.object(setup, 'cleanup_backup', side_effect=backup_error,
+                          return_value=Path('/protected/supplemental')) as create, \
+             patch.object(setup, 'verify_cleanup_backup', side_effect=verify_error) as verify, \
+             patch.object(setup, 'delete_item', side_effect=lambda *args: observed.append('delete')) as delete, \
+             patch.object(setup, 'get_existing', return_value=None):
+            try:
+                setup.reconcile_recreated_default(Mock(), original, state, Path('/protected/application.json'), item['id'])
+            except RuntimeError:
+                pass
+            return reconciliation, create, verify, delete
+
+    def test_supplemental_backup_failure_prevents_default_group_deletion(self):
+        for kwargs in ({'backup_error': RuntimeError('dump failed')}, {'verify_error': RuntimeError('hash differs')}):
+            record, create, verify, delete = self.supplemental_workflow(**kwargs)
+            delete.assert_not_called()
+            self.assertFalse(record['verified'])
+
+    def test_supplemental_backup_includes_exact_new_target_before_single_delete(self):
+        record, create, verify, delete = self.supplemental_workflow()
+        self.assertTrue(record['verified'])
+        self.assertEqual(record['phase'], 'absent')
+        self.assertEqual(create.call_args.args[2], [record['item']])
+        self.assertEqual(verify.call_count, 2)
+        self.assertEqual(delete.call_count, 1)
+        self.assertEqual(delete.call_args.args[1]['id'], setup.RECREATED_DEFAULT_ID)
+
+    def test_supplemental_delete_intent_reconciles_absence_without_repeated_delete(self):
+        record, create, verify, delete = self.supplemental_workflow(phase='delete_intent', absent=True)
+        delete.assert_not_called()
+        self.assertTrue(record['verified'])
+        record, create, verify, delete = self.supplemental_workflow(phase='prepared', absent=True)
+        delete.assert_not_called()
+        create.assert_not_called()
+        self.assertFalse(record['verified'])
+
     def setUp(self):
         # Other suites explicitly verify that fixture execution imports no
         # cloud clients. Keep actual-SDK contract imports local to this test.
@@ -234,6 +314,9 @@ class DependencyCleanupTests(unittest.TestCase):
                 setup.project_empty(admin, 'test-project')
             admin.image.images.return_value = []
             setup.project_empty(admin, 'test-project')
+            admin.identity.services.return_value = [NS(type='volumev3')]
+            with self.assertRaisesRegex(RuntimeError, 'additional service families'):
+                setup.project_empty(admin, 'test-project')
         self.assertEqual(admin.network.mock_calls, [])
 
     def test_user_keypairs_and_project_assignments_prevent_identity_deletion(self):

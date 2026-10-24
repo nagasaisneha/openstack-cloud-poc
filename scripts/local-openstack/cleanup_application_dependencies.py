@@ -124,6 +124,8 @@ def preserved_demo(admin, original):
 
 
 def project_empty(admin, project_id):
+    if {service.type for service in admin.identity.services()} - {'identity', 'image', 'compute', 'placement', 'network'}:
+        raise RuntimeError('additional service families require inventory before identity cleanup')
     # Neutron's project-filtered SG list lazily creates a missing default SG.
     # Inspect host-local metadata in an explicit SQL read-only transaction.
     resources = inventory_read.network_resources([project_id])
@@ -391,7 +393,107 @@ def verify_networks_gone(admin, plan):
             raise RuntimeError('Neutron/OVN namespace cleanup not yet complete; no manual topology removal')
 
 
-def execute(admin, original, state, path, passwords, public_key):
+RECREATED_DEFAULT_ID = '4799b49b-78db-4681-9050-95bf1a0288ff'
+RECREATED_DEFAULT_PROJECT = 'c039831922bc457a8b9a2bc903e4d997'
+RECREATED_DEFAULT_RUN = 'b0a2694420364856a755347a048ea36a'
+
+
+def recreated_default_item(original, state, identifier):
+    protected = set(original['ids'].values()) | {original['image_id'], original['project_id']}
+    if (identifier != RECREATED_DEFAULT_ID or state['run_id'] != RECREATED_DEFAULT_RUN
+            or original['run_id'] != RECREATED_DEFAULT_RUN
+            or identifier in protected or RECREATED_DEFAULT_PROJECT == original['project_id']
+            or original['results']['tenant_api']['tenants']['a']['project_id'] != RECREATED_DEFAULT_PROJECT):
+        raise RuntimeError('recreated default scope differs from the reviewed read-only inventory')
+    return dict(kind='security_group', id=identifier, name='default',
+                project_id=RECREATED_DEFAULT_PROJECT, marker='Default security group')
+
+
+def metadata_number(value):
+    if type(value) is int and value >= 0:
+        return value
+    if isinstance(value, str) and re.fullmatch(r'0|[1-9][0-9]*', value):
+        return int(value)
+    raise RuntimeError('invalid numeric metadata; preserving default security group')
+
+
+def validate_recreated_metadata(rows, item, *, allow_absent=False):
+    if not rows and allow_absent:
+        return None
+    if len(rows) != 1:
+        raise RuntimeError('unexpected remaining network scope; preserving all resources')
+    row = rows[0]
+    if (row['kind'] != item['kind'] or row['id'] != item['id'] or row['project_id'] != item['project_id']
+            or any(not (value is True or (type(value) is int and value == 1) or (isinstance(value, str) and value == '1'))
+                   for value in (row['default_name'], row['default_description'], row['is_project_default']))
+            or any(metadata_number(row[field]) != 0 for field in
+                   ('bound_port_count', 'external_reference_count', 'sharing_policy_count'))
+            or metadata_number(row['rule_count']) != 4
+            or row['created_at'] != '2026-10-24 16:47:13'
+            or row['updated_at'] != '2026-10-24 16:47:13'):
+        raise RuntimeError('reviewed default security group metadata/consumers changed; preserving it')
+    return row
+
+
+def reconcile_recreated_default(admin, original, state, path, identifier):
+    item = recreated_default_item(original, state, identifier)
+    record = state['results']['dependency_cleanup']
+    reconciliation = record.get('recreated_default')
+    if reconciliation is not None and reconciliation['item'] != item:
+        raise RuntimeError('persisted supplemental cleanup target differs')
+    projects = original['results']['tenant_api']['tenants']
+    rows = inventory_read.network_resources([projects[label]['project_id'] for label in ('a', 'b')])
+    allow_absent = bool(reconciliation and reconciliation.get('phase') in ('delete_intent', 'absent'))
+    if allow_absent and not reconciliation.get('backup_directory'):
+        raise RuntimeError('supplemental deletion intent lacks its original recovery point')
+    row = validate_recreated_metadata(rows, item, allow_absent=allow_absent)
+    if reconciliation is None:
+        # The original plan and its completion indices remain unchanged.
+        for index, prior in enumerate(record['plan']):
+            if prior['kind'] not in ('user', 'project'):
+                if index not in record['done'] or get_existing(clients(admin, prior)[0], prior['id']) is not None:
+                    raise RuntimeError('original resource cleanup not independently complete')
+        for label in ('a', 'b'):
+            project = admin.identity.get_project(projects[label]['project_id'])
+            assert_resource(project, dict(kind='project', id=projects[label]['project_id'],
+                name='task11-' + state['run_id'] + '-' + label, marker=tenants.marker(original)), '')
+        if any(server.project_id in {item['project_id'], projects['b']['project_id']}
+               for server in admin.compute.servers(all_projects=True)):
+            raise RuntimeError('task project contains a VM; preserving default group')
+        for label in ('a', 'b'):
+            project_id = projects[label]['project_id']
+            if list(admin.image.images(owner=project_id)) or list(admin.image.images(owner=project_id, is_hidden=True)):
+                raise RuntimeError('task project owns an image; preserving default group')
+        preserved_demo(admin, original)
+        assert_resource(admin.network.get_security_group(item['id']), item, '')
+        reconciliation = dict(item=item, observed_metadata=row, verified=False, phase='prepared')
+        record['recreated_default'] = reconciliation
+        launch.atomic_state(path, state)
+    supplemental_plan = record['plan'] + [item]
+    if not reconciliation.get('backup_directory'):
+        directory = cleanup_backup(state, path, supplemental_plan)
+        verify_cleanup_backup(directory, state, supplemental_plan)
+        reconciliation['backup_directory'] = str(directory)
+        launch.atomic_state(path, state)
+        progress('supplemental default-group recovery bundle: PASS; path=' + str(directory))
+    verify_cleanup_backup(Path(reconciliation['backup_directory']), state, supplemental_plan)
+    rows = inventory_read.network_resources([projects[label]['project_id'] for label in ('a', 'b')])
+    row = validate_recreated_metadata(rows, item, allow_absent=allow_absent)
+    if row is not None:
+        reconciliation['phase'] = 'delete_intent'
+        launch.atomic_state(path, state)
+        # Single-object GET/DELETE do not invoke the lazy default-list hook.
+        delete_item(admin, item, '')
+    elif get_existing(admin.network.get_security_group, item['id']) is not None:
+        raise RuntimeError('SQL/API default-group absence differs; preserving identities')
+    if inventory_read.network_resources([projects[label]['project_id'] for label in ('a', 'b')]):
+        raise RuntimeError('network resources remain after supplemental cleanup; preserving identities')
+    reconciliation.update(phase='absent', verified=True, checked_at=application.now())
+    launch.atomic_state(path, state)
+    progress('reviewed recreated default group absent; both task network inventories empty: PASS')
+
+
+def execute(admin, original, state, path, passwords, public_key, recreated_default_group=None):
     record = state['results'].get('dependency_cleanup')
     if record is None:
         plan = inventory(admin, original, state, passwords, public_key)
@@ -408,6 +510,10 @@ def execute(admin, original, state, path, passwords, public_key):
         launch.atomic_state(path, state)
         progress('fresh metadata recovery bundle: PASS; path=' + str(directory))
     verify_cleanup_backup(Path(record['backup_directory']), state, plan)
+    if recreated_default_group is not None:
+        reconcile_recreated_default(admin, original, state, path, recreated_default_group)
+    elif record.get('recreated_default'):
+        raise RuntimeError('retry requires the explicit recorded --remove-recreated-default-group ID')
     for index, item in enumerate(plan):
         if index not in record['done']:
             delete_item(admin, item, public_key)
@@ -427,6 +533,7 @@ def execute(admin, original, state, path, passwords, public_key):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--apply-run', required=True, help='exact task run marker whose recorded dependencies may be removed')
+    parser.add_argument('--remove-recreated-default-group', help='exact reviewed supplemental default-group UUID; verified backup required')
     args = parser.parse_args()
     secrets = {}
     try:
@@ -465,7 +572,7 @@ def main():
                 if len(public_key.split()) < 2:
                     raise RuntimeError('task public key is incomplete')
                 progress('BEGIN; exact run=' + state['run_id'])
-                execute(admin, original, state, path, passwords, public_key)
+                execute(admin, original, state, path, passwords, public_key, args.remove_recreated_default_group)
                 progress('COMPLETE (application/isolation dependencies only; operational closeout remains pending)')
         return 0
     except Exception as exc:
