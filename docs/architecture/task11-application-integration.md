@@ -32,7 +32,7 @@ sudo /usr/bin/python3 /home/sneha/projects/openstack-cloud-poc/scripts/local-ope
 
 The script uses tenant A from the verified isolation run. Admin access prepares only the new private flavor grant and reads source-image/inventory data. The application uses the member session for catalog reads and Nova operations. It creates:
 
-1. One task-marked DHCP subnet on tenant A's existing empty private network. It chooses a CIDR outside observed host routes and Neutron subnets, preferring `172.30.241.0/24`. A gateway address is reserved but no router/external connectivity is created.
+1. One task-marked DHCP subnet on tenant A's existing private network. Before subnet creation an operator-visible inventory must show no subnets and either no ports or one exact empty OVN metadata port. It chooses a CIDR outside observed host routes and Neutron subnets, preferring `172.30.241.0/24`. A gateway address is reserved but no router/external connectivity is created.
 2. One owned security group with TCP/22 and ICMP ingress limited to that network's OVN metadata address `/32`. Unexpected broader/duplicate rules stop the stage. A user-scoped keypair reuses the retained root-only test key.
 3. One private 1-vCPU, 256-MiB, 1-GiB flavor, available only to the task project. One private tenant image copied from the verified admin image; SHA256 and exact size are checked. The original image is not shared, replaced or deleted.
 4. One application-created VM, after checking tenant quotas and at least 768 MiB host available memory. Nova/Placement remain authoritative for actual scheduling. The original infrastructure-test VM stays running.
@@ -56,3 +56,15 @@ Remaining sequence:
 5. Update actual architecture, task status and start/stop instructions; rerun applicable acceptance checks and commit only verified related work. Do not mark staging/production readiness or the entire POC complete from fixture results.
 
 Workspace verification: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests` passed **275 tests**. Of these, 16 new tests exercise the real management boundary using SDK doubles, including uncertain response handling, explicit Nova errors, missing completion, task ownership, idempotency, reopen behavior and safe errors; 6 new tests exercise acceptance-script image/rule safeguards. The non-root guard and `git diff --check` passed. Host acceptance remains pending.
+
+## Pre-subnet inventory guard correction
+
+The first operator attempt reached member project `c039831922bc457a8b9a2bc903e4d997` and stopped with `tenant network has unexpected existing consumers; preserving it`. The original guard rejected any port or subnet, without reporting its classification. This invocation stopped before the subnet, image, flavor or Nova create calls; only the root-only application manifest had been initialized. The supplied output does not identify the live consumer.
+
+Inspection of the installed Caracal Neutron driver confirmed that `OVNClient.create_network` calls `create_metadata_port`. That function creates a `network:distributed` port with `device_id=ovnmeta-<network UUID>`, the network's project ID, and an empty fixed-IP list when there are no DHCP subnets. The original guard therefore cannot distinguish normal OVN metadata infrastructure from a workload consumer. This is a verified defect in the guard and a likely explanation of the operator stop, not a confirmed classification of that live port.
+
+The corrected preflight queries ports and subnets with the existing operator connection, so member filtering cannot hide consumers. It emits only normalized port/subnet UUIDs, owner/network/device-match booleans and fixed-IP counts. It allows zero subnets and at most one empty port matching the exact network, project, distributed owner and metadata device ID. It records that inventory before subnet creation and preserves the port. Workload/router/unbound ports, malformed IDs, other projects/networks, an inexact metadata device ID, allocated/unknown IPs, duplicate metadata ports, or any subnet still stop the run. No port is deleted, relabelled or reset.
+
+Retry the same command above with the same protected manifest and IDs. An accepted metadata port will be explicitly reported; an unexpected consumer will produce the limited inventory and stop before subnet creation. No host diagnosis is inferred from offline tests.
+
+Verification after correction: **12 application safety tests**, including six new inventory regressions, passed; all **281 offline tests** passed. The non-root guard and whitespace check passed. Live retry/application acceptance remains pending.

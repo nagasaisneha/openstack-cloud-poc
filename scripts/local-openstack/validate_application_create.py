@@ -63,6 +63,44 @@ def ensure_probe_rules(cloud, group, source, marker):
         raise RuntimeError('application narrow ingress rules were not observed')
 
 
+def pre_subnet_inventory(admin, network, state, path):
+    """Allow only OVN's empty per-network metadata port before a subnet.
+
+    Query as operator so a member's filtered view cannot hide consumers.
+    Caracal's OVN driver creates this service port on network creation, with
+    no fixed IPs until a DHCP subnet exists. Never delete/relabel that port.
+    """
+    ports = list(admin.network.ports(network_id=network.id))
+    subnets = list(admin.network.subnets(network_id=network.id))
+    expected_device = 'ovnmeta-' + network.id
+    def safe_id(value):
+        try:
+            return str(uuid.UUID(value))
+        except (ValueError, TypeError, AttributeError):
+            return 'invalid-or-missing'
+    observations = []
+    for port in ports:
+        observations.append({
+            'port_id': safe_id(port.id),
+            'network_matches': port.network_id == network.id,
+            'project_matches': port.project_id == state['project_id'],
+            'distributed_owner': port.device_owner == 'network:distributed',
+            'metadata_device_matches': port.device_id == expected_device,
+            'fixed_ip_count': len(port.fixed_ips) if isinstance(port.fixed_ips, list) else None,
+        })
+    inventory = {'ports': observations, 'subnet_ids': [safe_id(subnet.id) for subnet in subnets]}
+    progress('pre-subnet inventory: ' + json.dumps(inventory, sort_keys=True))
+    if (subnets or len(ports) > 1 or any(
+            item['port_id'] == 'invalid-or-missing'
+            or not all(item[key] for key in ('network_matches', 'project_matches',
+                                            'distributed_owner', 'metadata_device_matches'))
+            or item['fixed_ip_count'] != 0 for item in observations)):
+        raise RuntimeError('tenant network has unexpected existing consumers; preserving it')
+    state['pre_subnet_inventory'] = inventory
+    launch.atomic_state(path, state)
+    progress('pre-subnet inventory: PASS; ' + ('existing empty OVN metadata port preserved' if ports else 'no existing ports'))
+
+
 def source_image(admin):
     path = launch.DATA_DIR / 'application-cirros-source.qcow2'
     if not path.exists():
@@ -89,8 +127,7 @@ def prepare(admin, cloud, original, state, path):
     subnet = tenants.select_owned(cloud.network.subnets(name=name + '-subnet'),
         state['ids'].get('subnet'), name + '-subnet', marker, project_id=project)
     if subnet is None:
-        if list(cloud.network.ports(network_id=network.id)) or list(cloud.network.subnets(network_id=network.id)):
-            raise RuntimeError('tenant network has unexpected existing consumers; preserving it')
+        pre_subnet_inventory(admin, network, state, path)
         occupied = [item.cidr for item in admin.network.subnets()]
         occupied += [item['dst'] for item in json.loads(common.run(['ip', '-j', '-4', 'route', 'show', 'table', 'all']))
                      if item.get('dst') not in (None, 'default')]

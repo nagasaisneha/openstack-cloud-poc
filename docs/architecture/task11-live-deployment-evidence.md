@@ -164,6 +164,8 @@ The [application create acceptance script](../../scripts/local-openstack/validat
 
 All **275 offline tests** passed, including **16 real management boundary tests** and **6 application acceptance safety tests**. The non-root guard and whitespace check passed. These mocks test failure handling and contracts; they do not establish live application integration. Details, resource scope, protected journal and recovery behavior are in [the application integration record](task11-application-integration.md).
 
+The first operator application attempt stopped at the pre-subnet existing-consumer guard, before any subnet/image/flavor/VM creation by that invocation. Its live consumer was not identified in the output. Installed Neutron code confirms normal OVN metadata ports can exist before subnets, which the original guard incorrectly rejected. The corrected guard now classifies operator-visible inventory and permits only a single exact empty metadata port, retaining all other consumer checks. **281 offline tests** pass after six inventory regressions; live classification and application acceptance await the same-command retry. See the detailed correction in the application record.
+
 ## Remaining acceptance work
 
 Complete cross-tenant packet checks; execute real application acceptance and authorized cleanup; and run the remaining required acceptance tests. Review all local control-plane listener exposure before completion. KVM permissions across WSL restart, recovery restoration, and staging acceptance remain unverified. Keep `logrotate.timer` inactive until the existing runtime validation/review requirement is satisfied; VTEP remains stopped.

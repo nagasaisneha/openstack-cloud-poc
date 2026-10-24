@@ -6,6 +6,7 @@ import tempfile
 from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import Mock, patch
+from uuid import uuid4
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts/local-openstack'
 sys.path.insert(0, str(SCRIPTS))
@@ -18,6 +19,66 @@ finally:
 
 
 class ApplicationCreateSafetyTests(unittest.TestCase):
+    def inventory(self, ports, subnets=()):
+        network = NS(id='ac0d6dd9-ccae-4a7a-9754-713a2a3aa466')
+        admin = NS(network=NS(ports=Mock(return_value=ports), subnets=Mock(return_value=subnets)))
+        state = {'project_id': 'member-project'}
+        return admin, network, state
+
+    def metadata_port(self):
+        return NS(id=str(uuid4()), network_id='ac0d6dd9-ccae-4a7a-9754-713a2a3aa466',
+                  project_id='member-project', device_owner='network:distributed',
+                  device_id='ovnmeta-ac0d6dd9-ccae-4a7a-9754-713a2a3aa466', fixed_ips=[])
+
+    def test_empty_ovn_metadata_port_is_preserved_and_inventory_persisted(self):
+        port = self.metadata_port()
+        admin, network, state = self.inventory([port])
+        with tempfile.TemporaryDirectory() as directory, patch.object(setup, 'progress'):
+            setup.pre_subnet_inventory(admin, network, state, Path(directory) / 'state.json')
+        self.assertEqual(state['pre_subnet_inventory']['ports'][0]['port_id'], port.id)
+        self.assertEqual(port.fixed_ips, [])
+        admin.network.ports.assert_called_once_with(network_id=network.id)
+        admin.network.subnets.assert_called_once_with(network_id=network.id)
+
+    def test_network_without_ports_remains_allowed(self):
+        admin, network, state = self.inventory([])
+        with tempfile.TemporaryDirectory() as directory, patch.object(setup, 'progress'):
+            setup.pre_subnet_inventory(admin, network, state, Path(directory) / 'state.json')
+        self.assertEqual(state['pre_subnet_inventory'], {'ports': [], 'subnet_ids': []})
+
+    def test_workload_router_and_unbound_ports_are_not_metadata_exemptions(self):
+        for owner in ('compute:nova', 'network:router_interface', ''):
+            port = self.metadata_port()
+            port.device_owner = owner
+            admin, network, state = self.inventory([port])
+            with tempfile.TemporaryDirectory() as directory, patch.object(setup, 'progress'), self.assertRaises(RuntimeError):
+                setup.pre_subnet_inventory(admin, network, state, Path(directory) / 'state.json')
+            self.assertNotIn('pre_subnet_inventory', state)
+
+    def test_wrong_project_network_or_metadata_device_is_rejected(self):
+        for field in ('project_id', 'network_id', 'device_id', 'id'):
+            port = self.metadata_port()
+            setattr(port, field, 'unexpected-sensitive-sentinel')
+            admin, network, state = self.inventory([port])
+            with tempfile.TemporaryDirectory() as directory, patch.object(setup, 'progress') as output, self.assertRaises(RuntimeError):
+                setup.pre_subnet_inventory(admin, network, state, Path(directory) / 'state.json')
+            self.assertNotIn('sensitive-sentinel', str(output.call_args_list))
+
+    def test_allocated_or_unknown_metadata_ips_cannot_be_ignored(self):
+        for addresses in ([{'subnet_id': str(uuid4()), 'ip_address': '172.30.241.2'}], None):
+            port = self.metadata_port()
+            port.fixed_ips = addresses
+            admin, network, state = self.inventory([port])
+            with tempfile.TemporaryDirectory() as directory, patch.object(setup, 'progress'), self.assertRaises(RuntimeError):
+                setup.pre_subnet_inventory(admin, network, state, Path(directory) / 'state.json')
+
+    def test_duplicate_metadata_or_any_existing_subnet_still_blocks(self):
+        for ports, subnets in (([self.metadata_port(), self.metadata_port()], []),
+                               ([self.metadata_port()], [NS(id=str(uuid4()))])):
+            admin, network, state = self.inventory(ports, subnets)
+            with tempfile.TemporaryDirectory() as directory, patch.object(setup, 'progress'), self.assertRaises(RuntimeError):
+                setup.pre_subnet_inventory(admin, network, state, Path(directory) / 'state.json')
+
     def test_only_real_404_allows_new_image_creation(self):
         class ProviderError(Exception):
             def __init__(self, status):
