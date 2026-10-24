@@ -3,11 +3,14 @@ import importlib.util
 import contextlib
 import io
 import json
+import shutil
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
 from types import SimpleNamespace as NS
 import unittest
+import zipfile
 from unittest.mock import Mock, patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts/local-openstack'
@@ -179,6 +182,74 @@ class ApiHardeningTests(unittest.TestCase):
     def test_empty_valid_connections_are_distinct_from_missing_metadata(self):
         report = setup.rabbit_metadata(self.metadata(), [], {'config_files': []})
         self.assertEqual(report['connection_count'], 0)
+        self.assertTrue(report['all_connections_loopback'])
+        self.assertTrue(report['only_poc_connection_users'])
+
+    def test_metadata_structure_reports_all_selected_types_without_values(self):
+        cluster = dict(self.metadata(), ram_nodes='', password='SECRET_SENTINEL')
+        connections = [{'user': 'SECRET_SENTINEL', 'peer_host': 'SECRET_SENTINEL'}]
+        report = setup.rabbit_shapes(cluster, connections, {'config_files': ['SECRET_SENTINEL'], 'environment': 'SECRET_SENTINEL'})
+        self.assertEqual(report['cluster_fields']['ram_nodes'], {'present': True, 'type': 'str', 'length': 0})
+        self.assertEqual(report['connection_fields']['valid_ip_rows'], 0)
+        self.assertEqual(report['status_fields']['config_files']['absolute_path_rows'], 0)
+        self.assertNotIn('SECRET_SENTINEL', repr(report))
+        self.assertNotIn('password', repr(report))
+        self.assertNotIn('environment', repr(report))
+
+    def test_shape_report_handles_missing_and_malformed_sections_without_guessing(self):
+        report = setup.rabbit_shapes([], None, {'config_files': None})
+        self.assertEqual(report['cluster_fields']['disk_nodes'], {'present': False})
+        self.assertEqual(report['connections'], {'type': 'NoneType'})
+        self.assertEqual(report['status_fields']['config_files']['type'], 'NoneType')
+
+    def test_invalid_peer_uses_static_error_code_not_raw_exception_contents(self):
+        with self.assertRaises(setup.RabbitMetadataError) as error:
+            setup.rabbit_metadata(self.metadata(), [{'user': 'openstack', 'peer_host': 'SECRET_SENTINEL'}], {'config_files': []})
+        self.assertEqual(str(error.exception), 'peer_address')
+        self.assertNotIn('SECRET_SENTINEL', str(error.exception))
+
+    def test_failed_preflight_emits_shapes_and_does_not_relax_validation(self):
+        outputs = ['epmd: up and running\nname rabbit at port 25672\n',
+                   '{"running_nodes":["rabbit@host"],"disk_nodes":["rabbit@host"],"ram_nodes":""}',
+                   '[]', '{"config_files":[]}']
+        output = io.StringIO()
+        with patch.object(setup.common, 'run', side_effect=outputs) as run, contextlib.redirect_stdout(output), \
+             self.assertRaises(setup.RabbitMetadataError):
+            setup.rabbit_preflight()
+        self.assertIn('"validation_code": "cluster_schema"', output.getvalue())
+        self.assertIn('"ram_nodes": {"length": 0, "present": true, "type": "str"}', output.getvalue())
+        self.assertFalse(any('restart' in call.args[0] or 'start' in call.args[0] for call in run.call_args_list))
+
+    def test_erlang_ipv4_ipv6_and_mapped_peers_preserve_scope(self):
+        cases = [([127, 0, 0, 1], True), ([172, 19, 169, 1], False),
+                 ([0, 0, 0, 0, 0, 0, 0, 1], True),
+                 ([0, 0, 0, 0, 0, 65535, 32512, 1], True),
+                 ([0, 0, 0, 0, 0, 65535, 44051, 43265], False)]
+        for value, expected in cases:
+            report = setup.rabbit_metadata(self.metadata(), [{'user': 'openstack', 'peer_host': value}], {'config_files': []})
+            self.assertEqual(report['all_connections_loopback'], expected)
+        for value in ([], [127, 0, 1], [True, 0, 0, 1], [256, 0, 0, 1], [-1, 0, 0, 1],
+                      [0, 0, 0, 0, 0, 0, 0, 65536], ['127', 0, 0, 1], 2130706433):
+            with self.assertRaises(setup.RabbitMetadataError):
+                setup.rabbit_peer(value)
+
+    @unittest.skipUnless(shutil.which('erl') and Path('/usr/lib/rabbitmq/lib/rabbitmq_server-3.9.27/escript/rabbitmqctl').is_file(),
+                         'requires installed RabbitMQ 3.9.27 formatter and Erlang')
+    def test_installed_formatter_output_parses_without_live_broker_or_distribution(self):
+        program = '''T=#{running_nodes=>['rabbit@host'],disk_nodes=>['rabbit@host'],ram_nodes=>[]},
+io:format("~ts~n",['Elixir.RabbitMQ.CLI.Formatters.Json':format_output(T,#{})]),
+io:format("~ts~n",['Elixir.RabbitMQ.CLI.Formatters.Json':format_output([{user,<<"openstack">>},{peer_host,{127,0,0,1}}],#{})]),
+io:format("~ts~n",['Elixir.RabbitMQ.CLI.Formatters.Json':format_output(#{config_files=>[]},#{})]),halt().'''
+        with tempfile.TemporaryDirectory(prefix='task11-formatter-test-') as directory:
+            with zipfile.ZipFile('/usr/lib/rabbitmq/lib/rabbitmq_server-3.9.27/escript/rabbitmqctl') as archive:
+                for name in archive.namelist():
+                    if Path(name).name == name and name.endswith('.beam'):
+                        (Path(directory) / name).write_bytes(archive.read(name))
+            output = subprocess.check_output(['erl', '+S', '1:1', '-noshell', '-pa', directory, '-eval', program],
+                cwd=directory, text=True, stderr=subprocess.STDOUT, timeout=20)
+        cluster, connection, status = [json.loads(line) for line in output.splitlines()]
+        self.assertEqual(connection['peer_host'], [127, 0, 0, 1])
+        report = setup.rabbit_metadata(cluster, [connection], status)
         self.assertTrue(report['all_connections_loopback'])
         self.assertTrue(report['only_poc_connection_users'])
 

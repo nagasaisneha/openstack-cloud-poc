@@ -263,23 +263,82 @@ def verify_hooks():
                 parser_debug='PASS', limitation='log reopen hooks only; no forced log rotation or timer activation')
 
 
+class RabbitMetadataError(ValueError):
+    """A fixed diagnostic code, never a raw response value."""
+
+
+def rabbit_peer(value):
+    if isinstance(value, str):
+        try:
+            return ipaddress.ip_address(value)
+        except ValueError:
+            raise RabbitMetadataError('peer_address') from None
+    # The installed 3.9 JSON formatter encodes Erlang inet tuples as arrays:
+    # four octets for IPv4; eight unsigned 16-bit words for IPv6.
+    if isinstance(value, list) and len(value) in (4, 8):
+        maximum = 255 if len(value) == 4 else 65535
+        if all(type(part) is int and 0 <= part <= maximum for part in value):
+            packed = bytes(value) if len(value) == 4 else b''.join(part.to_bytes(2, 'big') for part in value)
+            return ipaddress.ip_address(packed)
+    raise RabbitMetadataError('peer_address')
+
+
+def metadata_shape(value):
+    result = {'type': type(value).__name__}
+    if isinstance(value, (dict, list, str)):
+        result['length'] = len(value)
+    if isinstance(value, list):
+        result['element_types'] = sorted({type(item).__name__ for item in value})
+    return result
+
+
+def rabbit_shapes(cluster, connections, status):
+    report = {'cluster': metadata_shape(cluster), 'connections': metadata_shape(connections),
+              'status': metadata_shape(status), 'cluster_fields': {}, 'status_fields': {}}
+    for key in ('running_nodes', 'disk_nodes', 'ram_nodes'):
+        report['cluster_fields'][key] = (dict(metadata_shape(cluster[key]), present=True)
+            if isinstance(cluster, dict) and key in cluster else {'present': False})
+    report['status_fields']['config_files'] = (dict(metadata_shape(status['config_files']), present=True)
+        if isinstance(status, dict) and 'config_files' in status else {'present': False})
+    if isinstance(connections, list):
+        report['connection_fields'] = {}
+        for key in ('user', 'peer_host'):
+            report['connection_fields'][key] = dict(
+                missing_rows=sum(not isinstance(item, dict) or key not in item for item in connections),
+                types=sorted({type(item[key]).__name__ for item in connections if isinstance(item, dict) and key in item}))
+        valid_ips = 0
+        for item in connections:
+            try:
+                if isinstance(item, dict) and 'peer_host' in item:
+                    rabbit_peer(item['peer_host'])
+                    valid_ips += 1
+            except ValueError:
+                pass
+        report['connection_fields']['valid_ip_rows'] = valid_ips
+    if isinstance(status, dict) and isinstance(status.get('config_files'), list):
+        report['status_fields']['config_files']['absolute_path_rows'] = sum(
+            isinstance(path, str) and path.startswith('/') for path in status['config_files'])
+    return report
+
+
 def rabbit_metadata(cluster, connections, status):
     # RabbitMQ 3.9 CLI JSON flattens the internal Erlang nodes/disc/ram
     # structure into disk_nodes and ram_nodes in result_map/1.
     node_fields = ('running_nodes', 'disk_nodes', 'ram_nodes')
-    if (not isinstance(cluster, dict) or any(not isinstance(cluster.get(key), list) for key in node_fields)
-            or any(not isinstance(node, str) or not re.fullmatch(r'[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+', node)
-                   for key in node_fields for node in cluster[key])):
-        raise ValueError('unsupported RabbitMQ cluster metadata format')
+    if not isinstance(cluster, dict) or any(not isinstance(cluster.get(key), list) for key in node_fields):
+        raise RabbitMetadataError('cluster_schema')
+    if any(not isinstance(node, str) or not re.fullmatch(r'[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+', node)
+           for key in node_fields for node in cluster[key]):
+        raise RabbitMetadataError('node_identity')
     if (not isinstance(connections, list) or any(not isinstance(item, dict)
-            or not isinstance(item.get('user'), str) or not isinstance(item.get('peer_host'), str)
+            or not isinstance(item.get('user'), str) or 'peer_host' not in item
             for item in connections)):
-        raise ValueError('unsupported RabbitMQ connection metadata format')
-    peers = [ipaddress.ip_address(item['peer_host']) for item in connections]
+        raise RabbitMetadataError('connection_schema')
+    peers = [rabbit_peer(item['peer_host']) for item in connections]
     if (not isinstance(status, dict) or not isinstance(status.get('config_files'), list)
             or any(not isinstance(path, str) or not path.startswith('/') or any(ord(char) < 32 for char in path)
                    for path in status['config_files'])):
-        raise ValueError('unsupported RabbitMQ configuration-path metadata format')
+        raise RabbitMetadataError('configuration_paths')
     return dict({key: cluster[key] for key in node_fields}, connection_count=len(connections),
         all_connections_loopback=all(peer.is_loopback or bool(getattr(peer, 'ipv4_mapped', None)
                                         and peer.ipv4_mapped.is_loopback) for peer in peers),
@@ -293,7 +352,14 @@ def rabbit_preflight():
     cluster = json.loads(common.run(['rabbitmqctl', '--quiet', '--formatter', 'json', 'cluster_status'], timeout=30))
     connections = json.loads(common.run(['rabbitmqctl', '--quiet', '--formatter', 'json', 'list_connections', 'user', 'peer_host'], timeout=30))
     status = json.loads(common.run(['rabbitmq-diagnostics', '--quiet', '--formatter', 'json', 'status'], timeout=30))
-    metadata = rabbit_metadata(cluster, connections, status)
+    try:
+        metadata = rabbit_metadata(cluster, connections, status)
+    except RabbitMetadataError as error:
+        # Report every selected field's shape in one pass so the next probe
+        # need not expose payloads or fail serially on several unknown fields.
+        print('Task 11 RabbitMQ metadata structure: ' + json.dumps(
+            dict(validation_code=str(error), structure=rabbit_shapes(cluster, connections, status)), sort_keys=True), flush=True)
+        raise
     hosts = socket.gethostbyname_ex(socket.gethostname())[2]
     return dict(metadata, hostname=socket.gethostname(), hostname_ipv4=hosts, epmd_nodes=entries)
 
