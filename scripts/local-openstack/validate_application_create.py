@@ -6,6 +6,7 @@ Uses member credentials for application APIs; admin only prepares a private
 flavor grant and reads the existing source image/protected inventory.
 """
 import fcntl
+import datetime
 import hashlib
 import ipaddress
 import json
@@ -116,6 +117,128 @@ def source_image(admin):
     return path
 
 
+def register_image_metadata(cloud, state, name):
+    # Resource.create registers metadata only. Unlike Proxy.create_image with
+    # a filename, this public SDK path has no upload-error delete handler.
+    from openstack.image.v2.image import Image
+    return Image(id=state['image_id'], name=name, disk_format='qcow2',
+        container_format='bare', visibility='private',
+        properties={'poc_run_id': state['run_id']}).create(cloud.image)
+
+
+def assert_image_identity(image, state, name):
+    if (image.id != state['image_id'] or image.owner_id != state['project_id']
+            or image.visibility != 'private' or image.name != name
+            or image.disk_format != 'qcow2' or image.container_format != 'bare'
+            or (image.properties or {}).get('poc_run_id') != state['run_id']):
+        raise RuntimeError('application image identity/ownership conflict; preserving it')
+
+
+def verify_image_hashes(image, source):
+    data = source.read_bytes()
+    if len(data) != SOURCE_SIZE or hashlib.sha256(data).hexdigest() != SOURCE_SHA256:
+        raise RuntimeError('application source no longer matches pinned size/SHA256')
+    if image.status != 'active' or image.size != SOURCE_SIZE:
+        raise RuntimeError('application image not active or has incorrect size; preserving it')
+    # Glance checksum is MD5; os_hash_* are an independent secure multihash.
+    # Never compare the legacy field directly with SHA256.
+    legacy = image.checksum
+    if legacy is not None and legacy != hashlib.md5(data, usedforsecurity=False).hexdigest():
+        raise RuntimeError('Glance legacy MD5 does not match source; preserving image')
+    if image.hash_algo not in ('sha256', 'sha512') or image.hash_value != hashlib.new(image.hash_algo, data).hexdigest():
+        raise RuntimeError('Glance secure image multihash is missing/unsupported/mismatched; preserving image')
+
+
+def verify_image_readback(cloud, image):
+    response = cloud.image.download_image(image, stream=True)
+    digest, size = hashlib.sha256(), 0
+    deadline = time.monotonic() + 60
+    try:
+        if response.status_code != 200:
+            raise RuntimeError('image readback did not return HTTP 200')
+        for chunk in response.iter_content(chunk_size=1024 * 1024):
+            if time.monotonic() > deadline:
+                raise RuntimeError('image readback exceeded its bounded deadline; preserving image')
+            size += len(chunk)
+            if size > SOURCE_SIZE:
+                raise RuntimeError('image readback exceeds expected size; preserving image')
+            digest.update(chunk)
+        if size != SOURCE_SIZE or digest.hexdigest() != SOURCE_SHA256:
+            raise RuntimeError('image readback size/SHA256 mismatch; preserving image')
+    finally:
+        response.close()
+
+
+def ensure_application_image(admin, cloud, state, path, name):
+    # Inspect the recorded ID before any registration/upload. Only an actual
+    # 404 permits a fresh registration; an uncertain direct upload is retained.
+    image = missing_only(cloud.image.get_image, state['image_id'])
+    progress('recorded application image: ' + ('absent (HTTP 404)' if image is None else 'present'))
+    source = source_image(admin)
+    phase = state.get('image_upload', {}).get('phase')
+    if image is None:
+        if phase is not None or state.get('create_job_id') or state['ids'].get('server'):
+            raise RuntimeError('recorded direct image operation is unresolved but image is missing; no automatic replacement')
+        matches = [item for item in cloud.image.images(name=name) if item.name == name]
+        if matches:
+            raise RuntimeError('application image name exists under another ID; preserving all images')
+        for attempt in range(2):
+            state['image_upload'] = {'phase': 'register_intent', 'image_id': state['image_id']}
+            launch.atomic_state(path, state)
+            try:
+                registered = register_image_metadata(cloud, state, name)
+                break
+            except Exception as exc:
+                if getattr(exc, 'status_code', None) != 409 or attempt:
+                    raise
+                # A deleted Glance record can retain its UUID. Only an explicit
+                # rejected registration allows a fresh ID, never a timeout.
+                state.setdefault('previous_image_attempts', []).append({
+                    'image_id': state['image_id'], 'lookup_http': 404, 'registration_http': 409})
+                state['image_id'] = str(uuid.uuid4())
+                progress('image registration ID conflict: prior ID retained in manifest; allocating one fresh UUID')
+        if registered.id != state['image_id']:
+            raise RuntimeError('image registration returned a different ID; preserving records')
+        image = cloud.image.get_image(state['image_id'])
+        assert_image_identity(image, state, name)
+        state['image_upload']['phase'] = 'registered'
+        launch.atomic_state(path, state)
+        phase = 'registered'
+    assert_image_identity(image, state, name)
+    if image.status == 'queued':
+        if phase not in ('registered', 'register_intent'):
+            raise RuntimeError('queued image has uncertain prior upload; no automatic upload replay')
+        state['image_upload']['phase'] = 'upload_intent'
+        launch.atomic_state(path, state)
+        with source.open('rb') as data:
+            response = image.upload(cloud.image, data=data)
+            if response.status_code != 204:
+                raise RuntimeError('image upload did not return HTTP 204; image/evidence preserved')
+        state['image_upload']['phase'] = 'submitted'
+        launch.atomic_state(path, state)
+    deadline = time.monotonic() + 90
+    while time.monotonic() < deadline:
+        image = cloud.image.get_image(state['image_id'])
+        assert_image_identity(image, state, name)
+        if image.status == 'active':
+            break
+        if image.status not in ('queued', 'saving', 'uploading', 'importing'):
+            raise RuntimeError('image upload reached an unexpected state; preserving image')
+        time.sleep(2)
+    else:
+        raise RuntimeError('image upload completion unverified; preserving image and upload intent')
+    state['image_upload'] = {'phase': 'verifying', 'image_id': image.id}
+    launch.atomic_state(path, state)
+    verify_image_hashes(image, source)
+    verify_image_readback(cloud, image)
+    state['image_upload'] = {'phase': 'verified', 'image_id': image.id,
+        'sha256': SOURCE_SHA256, 'size_bytes': SOURCE_SIZE, 'secure_hash_algorithm': image.hash_algo,
+        'readback_verified': True, 'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    launch.atomic_state(path, state)
+    progress('application image: active, legacy MD5/secure multihash and downloaded SHA256: PASS')
+    return image
+
+
 def prepare(admin, cloud, original, state, path):
     marker = 'Task 11 application run ' + state['run_id']
     project = state['project_id']
@@ -160,18 +283,7 @@ def prepare(admin, cloud, original, state, path):
         raise RuntimeError('application flavor conflict; preserving it')
     if not any(item['tenant_id'] == project for item in admin.compute.get_flavor_access(flavor)):
         admin.compute.flavor_add_tenant_access(flavor, project)
-    image = missing_only(cloud.image.get_image, state['image_id'])
-    if image is None:
-        source = source_image(admin)
-        image = cloud.image.create_image(name=name + '-image', id=state['image_id'],
-            filename=str(source), disk_format='qcow2', container_format='bare', visibility='private',
-            allow_duplicates=True, wait=True, timeout=90, validate_checksum=True, sha256=SOURCE_SHA256,
-            properties={'poc_run_id': state['run_id']})
-    image = cloud.image.get_image(state['image_id'])
-    if (image.owner_id != project or image.visibility != 'private' or image.status != 'active'
-            or image.name != name + '-image' or image.disk_format != 'qcow2' or image.size != SOURCE_SIZE
-            or image.properties.get('poc_run_id') != state['run_id']):
-        raise RuntimeError('application image conflict or incomplete upload; preserving it')
+    ensure_application_image(admin, cloud, state, path, name + '-image')
     progress('owned tenant subnet/security group/key, private flavor and private image prepared')
     return network, group
 
