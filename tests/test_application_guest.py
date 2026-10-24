@@ -23,6 +23,53 @@ MAC = 'fa:16:3e:11:22:33'
 
 
 class ApplicationGuestTests(unittest.TestCase):
+    def interface_inventory(self):
+        addresses = [{'ifindex': 11, 'ifname': 'tap-test',
+                      'addr_info': [{'family': 'inet', 'local': '172.30.241.2', 'prefixlen': 24}]}]
+        links = [{'ifindex': 11, 'ifname': 'tap-test', 'link_type': 'ether',
+                  'flags': ['BROADCAST', 'UP', 'LOWER_UP'], 'address': MAC}]
+        return addresses, links
+
+    def test_ipv4_inventory_without_mac_uses_explicit_correlated_link_lookup(self):
+        state, _ = self.manifests()
+        addresses, links = self.interface_inventory()
+        self.assertNotIn('address', addresses[0])
+        with patch.object(setup.common, 'run', side_effect=[json.dumps(addresses), json.dumps(links)]) as run:
+            self.assertEqual(setup.namespace_interface(state), {'name': 'tap-test', 'mac': MAC})
+        self.assertEqual(run.call_args_list[1].args[0], ['ip', 'netns', 'exec', state['namespace'],
+                                                        'ip', '-j', 'link', 'show', 'dev', 'tap-test'])
+
+    def test_stale_mac_in_address_dump_does_not_override_current_link_mac(self):
+        state, _ = self.manifests()
+        addresses, links = self.interface_inventory()
+        addresses[0]['address'] = 'fa:16:3e:99:99:99'
+        with patch.object(setup.common, 'run', side_effect=[json.dumps(addresses), json.dumps(links)]):
+            self.assertEqual(setup.namespace_interface(state)['mac'], MAC)
+
+    def test_missing_or_ambiguous_source_interface_stops_before_link_lookup(self):
+        state, _ = self.manifests()
+        addresses, _ = self.interface_inventory()
+        for inventory in ([], [addresses[0], addresses[0]]):
+            with patch.object(setup.common, 'run', return_value=json.dumps(inventory)) as run, self.assertRaises(RuntimeError):
+                setup.namespace_interface(state)
+            run.assert_called_once()
+
+    def test_link_name_index_type_and_up_state_must_match(self):
+        state, _ = self.manifests()
+        for field, value in (('ifindex', 12), ('ifname', 'different'), ('link_type', 'loopback'), ('flags', [])):
+            addresses, links = self.interface_inventory()
+            links[0][field] = value
+            with patch.object(setup.common, 'run', side_effect=[json.dumps(addresses), json.dumps(links)]), self.assertRaises(RuntimeError):
+                setup.namespace_interface(state)
+
+    def test_missing_invalid_multicast_or_zero_link_mac_is_not_guessed(self):
+        state, _ = self.manifests()
+        for mac in (None, 'invalid', 'ff:ff:ff:ff:ff:ff', '00:00:00:00:00:00'):
+            addresses, links = self.interface_inventory()
+            links[0]['address'] = mac
+            with patch.object(setup.common, 'run', side_effect=[json.dumps(addresses), json.dumps(links)]), self.assertRaisesRegex(RuntimeError, 'valid unicast MAC'):
+                setup.namespace_interface(state)
+
     def manifests(self):
         ids = {key: str(uuid4()) for key in ('server', 'network', 'subnet', 'security_group', 'port', 'flavor')}
         state = {'run_id': 'b' * 32, 'project_id': 'project-a', 'user_id': 'user-a', 'ids': ids,

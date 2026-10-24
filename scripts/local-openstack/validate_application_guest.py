@@ -92,12 +92,31 @@ def trust_file():
 def namespace_interface(state):
     interfaces = json.loads(common.run(['ip', 'netns', 'exec', state['namespace'],
                                        'ip', '-j', '-4', 'addr', 'show']))
-    matches = [interface for interface in interfaces if any(
-        address.get('local') == state['metadata_ip'] for address in interface.get('addr_info', []))]
-    if len(matches) != 1 or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,15}', matches[0]['ifname']):
+    if not isinstance(interfaces, list):
+        raise RuntimeError('invalid metadata namespace address inventory')
+    matches = [interface for interface in interfaces if isinstance(interface, dict) and any(
+        isinstance(address, dict) and address.get('local') == state['metadata_ip']
+        for address in (interface.get('addr_info') or []))]
+    if len(matches) != 1:
         raise RuntimeError('expected one metadata interface owning the permitted probe source')
-    mac_bytes(matches[0]['address'])
-    return {'name': matches[0]['ifname'], 'mac': matches[0]['address'].lower()}
+    name, index = matches[0].get('ifname'), matches[0].get('ifindex')
+    if (not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,15}', name)
+            or type(index) is not int or index <= 0):
+        raise RuntimeError('metadata interface name/index is missing or invalid')
+    # IPv4-only address output can omit link-layer attributes. Get the MAC
+    # explicitly and correlate both snapshots; never guess or reuse a cache.
+    links = json.loads(common.run(['ip', 'netns', 'exec', state['namespace'],
+                                  'ip', '-j', 'link', 'show', 'dev', name]))
+    if (not isinstance(links, list) or len(links) != 1 or not isinstance(links[0], dict)
+            or links[0].get('ifname') != name or links[0].get('ifindex') != index
+            or links[0].get('link_type') != 'ether' or 'UP' not in (links[0].get('flags') or [])):
+        raise RuntimeError('metadata link inventory is missing, changed or not an active Ethernet interface')
+    mac = links[0].get('address')
+    try:
+        mac_bytes(mac)
+    except (TypeError, ValueError):
+        raise RuntimeError('metadata link inventory has no valid unicast MAC; no probes sent') from None
+    return {'name': name, 'mac': mac.lower()}
 
 
 def application_attachment(admin, cloud, state, original):
