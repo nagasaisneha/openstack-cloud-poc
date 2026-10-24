@@ -1,7 +1,7 @@
 # Task 11 — Caracal package-impact review
 
 **Assessment date:** 2026-10-24
-**Status:** Package-resolution simulation complete; installation not approved or performed.
+**Status:** Caracal package impact re-simulated against the enabled Jammy Cloud Archive; OpenStack service-package installation is authorized but not yet performed.
 
 ## Method and scope
 
@@ -17,6 +17,16 @@ openvswitch-switch ovn-central ovn-host
 ```
 
 This models a single-node Nova/Neutron-with-OVN POC without Cinder, Swift, Horizon, Heat, or other optional services. `apt-get -s` does not install or configure packages and does not prove that service startup or the deployment will succeed.
+
+## Actual host package-source bootstrap and simulation — 2026-10-24
+
+The operator installed `ubuntu-cloud-keyring` from Jammy, enabled `jammy-updates/caracal` at `/etc/apt/sources.list.d/cloudarchive-caracal.list`, and refreshed the Jammy and Cloud Archive package indexes. The operator then ran the exact `apt-get -s --no-install-recommends install ...` service package set above against the live host package state. This changed the keyring package, apt source configuration, and apt indexes only; the OpenStack service packages were not installed in this step. No `apt autoremove` was run.
+
+The current-host simulation returned **11 upgraded, 228 newly installed, 0 to remove, and 22 not upgraded**. The separate keyring bootstrap was one additional newly installed package, making 229 new packages across both phases. The 11 upgrades are OVS 2.17.12→3.3.9, OVN 22.03.8→24.03.6, and the same seven Python/documentation packages listed in the solver table. Nova 29.2.0, Neutron 24.1.0, Glance 28.1.0, Keystone 25.0.0, and Placement 11.0.0 packages are among the selected new service packages. The transaction still plans zero removals, but the OVS/OVN package upgrades can restart active services.
+
+The protected inventory found `/etc/placement/placement.conf` owned by `stack:stack`, and `dpkg-query -S` confirmed it is not currently owned by an installed package. Inspection of the downloaded `placement-common` package metadata (downloaded to `/tmp`, not installed) shows that it declares this path as a conffile; its `postinst` also changes ownership and modes under `/etc/placement` to `root:placement` and `0640` for files. The backup archive contains the existing file. Install with `--force-confold` to retain local conffile content; expect the package maintainer script to change its ownership/mode. Verify the resulting file hash/content against the protected backup and review runtime configuration before service configuration.
+
+The `placement-api` package metadata declares `/etc/apache2/sites-available/placement-api.conf` as a conffile and enables that Apache site in its post-install script. Apache and mod_wsgi were already installed. Package installation may therefore activate the Placement virtual host and restart/reload Apache; verify the result after installation.
 
 ## Solver result
 
@@ -65,4 +75,4 @@ mysql-common mariadb-common galera-4 libdbi-perl libconfig-inifiles-perl libmari
 4. If deployment fails, do not run autoremove or broad package removal. Stop only task-installed OpenStack services after approval; restore the saved databases and configuration; then use an explicit, reviewed downgrade plan for the recorded OVS/OVN and Python package versions. Verify the original OVS/OVN topology and libvirt network before any service is resumed.
 5. If database or package downgrade cannot be proven safe, use only a separately approved recovery from the verified pre-install snapshot. Package removal alone is not a rollback because OVS/OVN database migrations and service state may persist.
 
-**Installation gate:** this review does not authorize enabling UCA on the host, installing packages, upgrading OVS/OVN, configuring services, starting VTEP, or changing the logrotate timer. The exact package transaction and rollback snapshot require user review and approval first.
+**Installation gate:** the master execution instruction authorizes installation after the verified backup. The host is now at the package-install stage. The exact service-package transaction remains unperformed; no `apt autoremove` is authorized. Preserve the existing stopped `logrotate.timer` and inactive VTEP state unless package behavior changes them, then verify both. The installed package configuration and actual service restarts must be recorded after the operator executes the privileged command.
