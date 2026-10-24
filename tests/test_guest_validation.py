@@ -77,6 +77,24 @@ class GuestValidationTests(unittest.TestCase):
         self.assertEqual(command[command.index('-F') + 1], '/dev/null')
         self.assertEqual(command[-3:], ['172.30.240.154', 'sh', '-s'])
 
+    def test_application_guest_name_is_explicit_and_still_bound_to_same_metadata_uuid(self):
+        metadata = json.loads(setup.frame(self.report(), 'METADATA'))
+        metadata['name'] = 'openstack-job-' + 'b' * 32
+        text = self.report(METADATA=json.dumps(metadata))
+        with self.assertRaises(RuntimeError):
+            setup.parse_guest_report(text, self.state(), 1442, 'fa:16:3e:12:34:56')
+        setup.parse_guest_report(text, self.state(), 1442, 'fa:16:3e:12:34:56', expected_name=metadata['name'])
+        metadata['uuid'] = 'foreign-instance'
+        with self.assertRaises(RuntimeError):
+            setup.parse_guest_report(self.report(METADATA=json.dumps(metadata)), self.state(), 1442,
+                                     'fa:16:3e:12:34:56', expected_name=metadata['name'])
+
+    def test_explicit_application_trust_file_preserves_default_original_path(self):
+        default = setup.ssh_command(self.state())
+        alternate = setup.ssh_command(self.state(), known_hosts='/protected/application-known_hosts')
+        self.assertIn('UserKnownHostsFile=/protected/application-known_hosts', alternate)
+        self.assertIn('UserKnownHostsFile=' + str(setup.launch.DATA_DIR / 'known_hosts'), default)
+
     def test_mtu_ping_uses_payload_with_headers_and_requires_all_replies(self):
         with patch.object(setup.common, 'run', return_value='3 packets transmitted, 3 received, 0% packet loss') as run:
             setup.probe_ping(self.state(), 1442)

@@ -62,7 +62,7 @@ def frame(text, name):
     return matches[0].strip()
 
 
-def parse_guest_report(text, state, expected_mtu, expected_mac):
+def parse_guest_report(text, state, expected_mtu, expected_mac, *, expected_name=None):
     interface = frame(text, 'INTERFACE')
     if not re.fullmatch(r'[A-Za-z0-9_.:-]{1,15}', interface):
         raise RuntimeError('guest interface name is invalid')
@@ -83,7 +83,7 @@ def parse_guest_report(text, state, expected_mtu, expected_mac):
     metadata = json.loads(frame(text, 'METADATA'))
     if metadata.get('uuid') != state['ids']['server']:
         raise RuntimeError('guest metadata UUID differs from the task Nova instance')
-    name = 'task11-' + state['run_id'][:12] + '-vm'
+    name = expected_name if expected_name is not None else 'task11-' + state['run_id'][:12] + '-vm'
     if metadata.get('name') != name:
         raise RuntimeError('guest metadata name differs from this task instance')
     if 'project_id' in metadata and metadata['project_id'] != state['project_id']:
@@ -171,7 +171,7 @@ def validate_attachment(cloud, state):
     return found['network'], port
 
 
-def ssh_command(state):
+def ssh_command(state, *, known_hosts=None):
     return ['ip', 'netns', 'exec', state['namespace'], 'ssh',
             '-F', '/dev/null',
             '-i', str(launch.DATA_DIR / 'id_ed25519'),
@@ -182,20 +182,20 @@ def ssh_command(state):
             '-o', 'ConnectTimeout=5', '-o', 'ConnectionAttempts=1',
             '-o', 'ServerAliveInterval=3', '-o', 'ServerAliveCountMax=1',
             '-o', 'StrictHostKeyChecking=accept-new',
-            '-o', 'UserKnownHostsFile=' + str(launch.DATA_DIR / 'known_hosts'),
+            '-o', 'UserKnownHostsFile=' + str(known_hosts if known_hosts is not None else launch.DATA_DIR / 'known_hosts'),
             '-o', 'GlobalKnownHostsFile=/dev/null', state['guest_ip'], 'sh', '-s']
 
 
-def inspect_guest(state, mtu, mac):
+def inspect_guest(state, mtu, mac, *, expected_name=None, known_hosts=None):
     deadline = time.monotonic() + 180
     diagnostic = 'SSH not ready'
     attempt = 0
     while time.monotonic() < deadline:
         try:
-            result = subprocess.run(ssh_command(state), input=GUEST_PROBE, text=True,
+            result = subprocess.run(ssh_command(state, known_hosts=known_hosts), input=GUEST_PROBE, text=True,
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=25)
             if result.returncode == 0:
-                return parse_guest_report(result.stdout, state, mtu, mac)
+                return parse_guest_report(result.stdout, state, mtu, mac, expected_name=expected_name)
             diagnostic = result.stdout[-1000:]
             if result.returncode != 255:
                 raise RuntimeError(f'guest inspection command failed (exit {result.returncode}): {diagnostic}')

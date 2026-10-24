@@ -1,6 +1,6 @@
 # Task 11 — real application provider integration
 
-Status: implemented and offline-tested; privileged host acceptance pending. The successful infrastructure and member-project tests are recorded separately in [live deployment evidence](task11-live-deployment-evidence.md). No real application job/VM outcome is claimed yet.
+Status: real application create/inspect, catalog, image integrity, KVM and Neutron binding passed in the operator terminal. Guest/packet, application stop/start/delete and cleanup remain pending. Infrastructure and member-project results are recorded in [live deployment evidence](task11-live-deployment-evidence.md).
 
 ## Application boundary
 
@@ -88,3 +88,27 @@ The replacement path performs the following checks and bounded actions:
 Retry the normal command above. It first reports whether the recorded image is present or absent and safely reuses the existing subnet, group, key and flavor. A later blocked queued/uploading state requires inspection rather than another upload request. Credentials and pre-Caracal recovery assets remain protected.
 
 Verification after this correction: **27 application safety tests** passed, including 15 new tests for algorithm-aware hashes, complete readback, identity checks, separate registration/upload, retained failed uploads, exact conflict handling and refusal to replay uncertain requests. All **296 offline tests** passed. The installed SDK's metadata request serialization was inspected using nonsecret sample fields without endpoint contact. The non-root guard and whitespace check passed. Actual image integrity and live application acceptance remain pending.
+
+## Verified application create result
+
+The operator's next run found the prior image absent (HTTP 404), observed registration HTTP 409 and preserved that ID before allocating a fresh one. Image `active`, MD5/secure multihash and full downloaded SHA256 checks passed. The conflict is compatible with an ID retained after deletion; its actual database cause remains unverified.
+
+The application catalog, scope rejection and accepted job `openstack-job-171247d792da4aeeb6e2e1cd64e62706` passed. The job progressed `running` to `succeeded` with Nova server `db0d12b8-3bf4-4e53-9a63-4bbea9971831`. Synchronous inspect, duplicate same-job lookup, actual KVM and active Neutron binding passed. These are live operator-reported results. The source image and infrastructure-test VM remain distinct resources. This stage does not establish the new guest's DHCP/metadata/packets, application stop/start/delete or cleanup.
+
+## Prepared application guest and ARP observations
+
+Run in the existing Ubuntu 22.04 terminal:
+
+```bash
+sudo /usr/bin/python3 -B /home/sneha/projects/openstack-cloud-poc/scripts/local-openstack/validate_application_guest.py
+```
+
+The script checks the root-only application manifest against a read-only SQLite lookup of the completed create job, actor/project/run and resource references. It checks current Nova metadata/ownership, Neutron network/subnet/port/group relationships, permitted probe rules and the metadata port/source namespace. It reuses the retained SSH private key, creates a dedicated 0600 `application-known_hosts` file without replacing existing trust, and verifies the application guest's DHCP lease, IPv4/MAC/MTU and metadata UUID/name. Existing guest helper defaults are preserved; the application supplies its own expected server name and trust path explicitly.
+
+After successful guest checks and MTU-sized ping, the script uses both task guests as positive controls. It reads `arp_ignore` and `arp_filter` for each guest's `all` and active interface settings and requires zero values; configured off-subnet ARP suppression would make the intended negative test inconclusive. It requires three same-network ARP reply windows matching each known Neutron guest MAC. It then sends three layer-2 ARP requests per direction from each metadata namespace to the other guest's recorded IPv4 address, requiring no matching replies. It repeats the same-network controls, guest identity/boot continuity and MTU pings afterward. Any foreign reply, incomplete observation, unavailable raw socket, failed control or reboot keeps the packet result unverified.
+
+The [standard-library ARP child](../../openstack_cloud_poc/packet_probe.py) binds only the previously validated metadata interface, uses its actual hardware address and assigned metadata source IPv4, and emits at most three requests per invocation. Socket deadlines, frame receive limits and subprocess timeouts bound execution. It validates Ethernet/ARP types, operation, hardware/protocol lengths, sender/target IPv4 and MAC consistency. Unlike a routed cross-subnet ping, the ARP probe does not depend on a missing IP route; no temporary address, route, router or security-group change is needed. The namespace access path is described in [Neutron's OVN reference architecture](https://docs.openstack.org/neutron/2024.1/admin/ovn/refarch/refarch.html).
+
+This is limited active evidence about ARP resolution from the two metadata namespaces to these two IPv4 targets, with positive controls. It is not proof of all IPv4/IPv6/protocol isolation, hostile-tenant resistance, routed/external connectivity, all project pairs or multi-host overlays. Guest readiness and packet evidence have separate success fields in `application.json`; failures retain both VMs, policies, topology, pinned keys and diagnostics. No infrastructure configuration or VM lifecycle is changed by this stage. Unsuccessful ARP tests do not trigger speculative network fixes.
+
+Verification: all **310 offline tests** passed. Fourteen added tests cover unchanged/default versus explicit guest identity/trust behavior, ARP frame validation, completed send/receive observations, manifest/journal scope, separate protected trust files, malformed/failed probes, ARP suppression, before/after controls and guest continuity. The tests use doubles and send no packets. The non-root guard and whitespace check passed. Live execution of this new stage remains pending.
