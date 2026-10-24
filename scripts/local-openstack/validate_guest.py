@@ -99,7 +99,7 @@ def protected_file(path, mode):
         raise RuntimeError(f'{path.name} must be a root-owned regular file with mode {mode:04o}')
 
 
-def load_run(cloud):
+def load_run(cloud, *, require_ssh=True):
     directory = launch.DATA_DIR
     info = directory.lstat()
     if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or stat.S_IMODE(info.st_mode) != 0o700:
@@ -120,10 +120,16 @@ def load_run(cloud):
     for key in ('guest_ip', 'metadata_ip'):
         if ipaddress.IPv4Address(state[key]) not in subnet:
             raise RuntimeError('manifest IPv4 address is outside the test subnet')
-    protected_file(directory / 'id_ed25519', 0o600)
-    known_hosts = directory / 'known_hosts'
-    if known_hosts.exists() or known_hosts.is_symlink():
-        protected_file(known_hosts, 0o600)
+    if require_ssh:
+        protected_file(directory / 'id_ed25519', 0o600)
+        known_hosts = directory / 'known_hosts'
+        if known_hosts.exists() or known_hosts.is_symlink():
+            protected_file(known_hosts, 0o600)
+        else:
+            # Create our dedicated trust file with the intended permissions
+            # before OpenSSH opens it. Never replace an existing trust file.
+            descriptor = os.open(known_hosts, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+            os.close(descriptor)
     return state, path
 
 
@@ -240,7 +246,8 @@ def main(argv=None):
                 or not re.search(r'^VERSION_ID="22\.04"$', release, re.M)
                 or 'microsoft' not in platform.release().lower()):
             raise RuntimeError('this stage is scoped to Ubuntu 22.04 WSL')
-        for command in ('ip', 'ssh', 'ping'):
+        commands = ('ip', 'ping') if args.ping_only else ('ip', 'ssh', 'ping')
+        for command in commands:
             if not shutil.which(command):
                 raise RuntimeError('required host command missing: ' + command)
         descriptor = os.open('/root/.openstack-poc-nova-prerequisites.lock',
@@ -249,7 +256,7 @@ def main(argv=None):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             secrets = common.read_secrets(common.SECRET_FILE)
             with common.connection(secrets) as cloud:
-                state, state_path = load_run(cloud)
+                state, state_path = load_run(cloud, require_ssh=not args.ping_only)
                 progress('BEGIN; server=' + state['ids']['server'])
                 network, port = validate_attachment(cloud, state)
                 if args.ping_only:

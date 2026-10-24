@@ -1,6 +1,7 @@
 """Offline checks for truthful guest evidence and restricted SSH/probe scope."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -135,6 +136,64 @@ class GuestValidationTests(unittest.TestCase):
         self.assertTrue(stored['results']['mtu_ping']['verified'])
         self.assertEqual(stored['results']['existing'], 'retained')
         self.assertNotIn('guest', stored['results'])
+
+    def manifest(self):
+        state = self.state()
+        state['ids'] = {name: value for name, value in zip(
+            ('server', 'network', 'subnet', 'security_group'),
+            ('82382430-4b64-4386-a55b-8468e04da011',
+             '6ee5ad82-efc5-405d-bf5c-a4953e9a063b',
+             '25f8362e-436b-405e-8158-2e2d552cd2e7',
+             '5a3b3c35-d5d6-4cbe-bf62-41ca04aec923'))}
+        state['namespace'] = 'ovnmeta-' + state['ids']['network']
+        state['image_id'] = setup.launch.IMAGE_ID
+        return state
+
+    def fake_root_lstat(self):
+        original = Path.lstat
+        def lstat(path):
+            values = list(original(path))
+            values[4] = 0  # Test protected-file policy without actual root access.
+            return os.stat_result(values)
+        return lstat
+
+    def test_ping_only_manifest_does_not_require_or_touch_ssh_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            directory.chmod(0o700)
+            manifest = directory / 'run.json'
+            manifest.write_text(json.dumps(self.manifest()))
+            manifest.chmod(0o600)
+            known_hosts = directory / 'known_hosts'
+            known_hosts.write_text('retained public host key\n')
+            known_hosts.chmod(0o644)
+            cloud = SimpleNamespace(session=SimpleNamespace(get_project_id=lambda: 'project-id'))
+            with patch.object(setup.launch, 'DATA_DIR', directory), \
+                 patch.object(Path, 'lstat', self.fake_root_lstat()):
+                state, _ = setup.load_run(cloud, require_ssh=False)
+            self.assertEqual(state['ids']['server'], self.manifest()['ids']['server'])
+            self.assertFalse((directory / 'id_ed25519').exists())
+            self.assertEqual(known_hosts.read_text(), 'retained public host key\n')
+            self.assertEqual(known_hosts.stat().st_mode & 0o777, 0o644)
+
+    def test_ssh_manifest_still_rejects_wrong_known_hosts_mode(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            directory.chmod(0o700)
+            for name, content, mode in (
+                ('run.json', json.dumps(self.manifest()), 0o600),
+                ('id_ed25519', 'test-key', 0o600),
+                ('known_hosts', 'retained public host key\n', 0o644),
+            ):
+                path = directory / name
+                path.write_text(content)
+                path.chmod(mode)
+            cloud = SimpleNamespace(session=SimpleNamespace(get_project_id=lambda: 'project-id'))
+            with patch.object(setup.launch, 'DATA_DIR', directory), \
+                 patch.object(Path, 'lstat', self.fake_root_lstat()):
+                with self.assertRaisesRegex(RuntimeError, 'known_hosts must be'):
+                    setup.load_run(cloud)
+            self.assertEqual((directory / 'known_hosts').read_text(), 'retained public host key\n')
 
 
 if __name__ == '__main__':
