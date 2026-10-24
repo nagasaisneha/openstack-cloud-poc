@@ -33,7 +33,7 @@ def progress(message):
     print(f'Task 11 Nova configuration: {message}', flush=True)
 
 
-def read_secrets(path):
+def read_secrets(path, required_keys=REQUIRED_KEYS):
     metadata = path.lstat()
     if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != 0:
         raise RuntimeError('secret file must be a regular root-owned file')
@@ -42,12 +42,12 @@ def read_secrets(path):
     values = {}
     for line in path.read_text().splitlines():
         key, separator, value = line.partition('=')
-        if key not in REQUIRED_KEYS:
+        if key not in required_keys:
             continue
         if not separator or key in values or not re.fullmatch('[0-9a-f]{64}', value):
             raise RuntimeError(f'invalid or duplicate credential entry: {key}')
         values[key] = value
-    if set(values) != set(REQUIRED_KEYS):
+    if set(values) != set(required_keys):
         raise RuntimeError('required credentials are missing; run the prerequisite stage')
     return values
 
@@ -94,12 +94,12 @@ def edit_ini(text, updates):
     return result
 
 
-def update_config(path, backup, updates):
+def update_text_file(path, backup, transform):
     metadata = path.lstat()
     if not stat.S_ISREG(metadata.st_mode):
         raise RuntimeError(f'{path} must be a regular file, not a symlink')
     original = path.read_text()
-    updated = edit_ini(original, updates)
+    updated = transform(original)
     if backup.exists() or backup.is_symlink():
         backup_stat = backup.lstat()
         if not stat.S_ISREG(backup_stat.st_mode) or backup_stat.st_uid != 0 or stat.S_IMODE(backup_stat.st_mode) != 0o600:
@@ -125,6 +125,10 @@ def update_config(path, backup, updates):
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)  # Only the temporary file created above.
+
+
+def update_config(path, backup, updates):
+    update_text_file(path, backup, lambda original: edit_ini(original, updates))
 
 
 def run(command, *, input_text=None, timeout=180):
