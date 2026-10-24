@@ -20,7 +20,9 @@ secret_file=/root/openstack-poc-keystone-secrets
 [[ -f $secret_file && ! -L $secret_file ]] || fail 'protected Keystone secret file missing or symlinked.'
 [[ $(stat -c '%u:%a' "$secret_file") == 0:600 ]] || fail 'secret file must be owned by root with mode 0600.'
 
-exec 9>/run/lock/openstack-poc-nova-prerequisites.lock
+lock_file=/root/.openstack-poc-nova-prerequisites.lock
+[[ ! -L $lock_file ]] || fail 'the task lock path is a symlink.'
+exec 9>>"$lock_file"
 flock -n 9 || fail 'another Nova prerequisite run holds the lock.'
 progress BEGIN
 
