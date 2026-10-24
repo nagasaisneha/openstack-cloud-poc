@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """Backed-up local API bindings and bounded logrotate hook validation.
 
-Restarts Apache and Glance only. Preserves legacy Apache configurations/port
-80, RabbitMQ/EPMD, VM resources and networking. Keeps logrotate.timer stopped.
+Apply mode restarts Apache and Glance only. Preserves legacy Apache configurations/port
+80, RabbitMQ/EPMD, VM resources and networking. Apply mode keeps the timer
+stopped; a separate mode resumes it only after verified runtime review.
 """
 import argparse
 import datetime
@@ -262,19 +263,39 @@ def verify_hooks():
                 parser_debug='PASS', limitation='log reopen hooks only; no forced log rotation or timer activation')
 
 
+def rabbit_metadata(cluster, connections, status):
+    # RabbitMQ 3.9 CLI JSON flattens the internal Erlang nodes/disc/ram
+    # structure into disk_nodes and ram_nodes in result_map/1.
+    node_fields = ('running_nodes', 'disk_nodes', 'ram_nodes')
+    if (not isinstance(cluster, dict) or any(not isinstance(cluster.get(key), list) for key in node_fields)
+            or any(not isinstance(node, str) or not re.fullmatch(r'[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+', node)
+                   for key in node_fields for node in cluster[key])):
+        raise ValueError('unsupported RabbitMQ cluster metadata format')
+    if (not isinstance(connections, list) or any(not isinstance(item, dict)
+            or not isinstance(item.get('user'), str) or not isinstance(item.get('peer_host'), str)
+            for item in connections)):
+        raise ValueError('unsupported RabbitMQ connection metadata format')
+    peers = [ipaddress.ip_address(item['peer_host']) for item in connections]
+    if (not isinstance(status, dict) or not isinstance(status.get('config_files'), list)
+            or any(not isinstance(path, str) or not path.startswith('/') or any(ord(char) < 32 for char in path)
+                   for path in status['config_files'])):
+        raise ValueError('unsupported RabbitMQ configuration-path metadata format')
+    return dict({key: cluster[key] for key in node_fields}, connection_count=len(connections),
+        all_connections_loopback=all(peer.is_loopback or bool(getattr(peer, 'ipv4_mapped', None)
+                                        and peer.ipv4_mapped.is_loopback) for peer in peers),
+        only_poc_connection_users=all(item['user'] == 'openstack' for item in connections),
+        config_files=status['config_files'])
+
+
 def rabbit_preflight():
     names = common.run(['epmd', '-names'], timeout=15)
     entries = [dict(name=match[0], port=int(match[1])) for match in re.findall(r'^name (\S+) at port ([0-9]+)$', names, re.M)]
     cluster = json.loads(common.run(['rabbitmqctl', '--quiet', '--formatter', 'json', 'cluster_status'], timeout=30))
     connections = json.loads(common.run(['rabbitmqctl', '--quiet', '--formatter', 'json', 'list_connections', 'user', 'peer_host'], timeout=30))
     status = json.loads(common.run(['rabbitmq-diagnostics', '--quiet', '--formatter', 'json', 'status'], timeout=30))
+    metadata = rabbit_metadata(cluster, connections, status)
     hosts = socket.gethostbyname_ex(socket.gethostname())[2]
-    return dict(hostname=socket.gethostname(), hostname_ipv4=hosts, epmd_nodes=entries,
-        running_nodes=cluster['running_nodes'], disk_nodes=cluster['nodes']['disc'],
-        ram_nodes=cluster['nodes'].get('ram', []), connection_count=len(connections),
-        all_connections_loopback=all(ipaddress.ip_address(item['peer_host']).is_loopback for item in connections),
-        only_poc_connection_users=all(item['user'] == 'openstack' for item in connections),
-        config_files=status['config_files'])
+    return dict(metadata, hostname=socket.gethostname(), hostname_ipv4=hosts, epmd_nodes=entries)
 
 
 def verify_apis(secrets, state):
@@ -338,21 +359,121 @@ def apply_configuration(record):
     launch.atomic_state(STATE, record)
 
 
+def rotation_state():
+    fields = {'ActiveState', 'Result', 'ExecMainStatus', 'InvocationID', 'Job', 'ExecMainStartTimestampMonotonic'}
+    text = common.run(['systemctl', '--no-pager', 'show', 'logrotate.service',
+                       '--property=' + ','.join(sorted(fields))], timeout=15)
+    values = {}
+    for line in text.splitlines():
+        key, separator, value = line.partition('=')
+        if key not in fields or not separator or not re.fullmatch(r'[A-Za-z0-9_-]*', value):
+            raise RuntimeError('unexpected rotation service properties')
+        values[key] = value
+    if set(values) != fields:
+        raise RuntimeError('incomplete rotation service state')
+    return values
+
+
+def monitor_timer(before, *, deadline_seconds=330):
+    deadline = time.monotonic() + deadline_seconds
+    stable = 0
+    new_run = False
+    last_notice = time.monotonic()
+    while time.monotonic() < deadline:
+        timer = review.systemd_state('logrotate.timer')
+        current = rotation_state()
+        new_run |= bool(current['InvocationID'] and current['InvocationID'] != before['InvocationID'])
+        new_run |= current['ExecMainStartTimestampMonotonic'] not in ('', '0', before['ExecMainStartTimestampMonotonic'])
+        if timer['ActiveState'] != 'active' or current['ActiveState'] == 'failed':
+            raise RuntimeError('timer/rotation activation failed')
+        idle = current['ActiveState'] == 'inactive' and current['Job'] in ('', '0') and timer['SubState'] == 'waiting'
+        if idle:
+            if current['Result'] != 'success' or (new_run and current['ExecMainStatus'] != '0'):
+                raise RuntimeError('rotation completion was not successful')
+            stable += 1
+            if stable >= 3:
+                return dict(timer_active=True, new_rotation_observed=new_run, rotation_state=current,
+                    limitation='no forced rotation; absence of a new invocation does not prove scheduled rotation')
+        else:
+            stable = 0
+            if time.monotonic() - last_notice >= 15:
+                print('Task 11 logrotate timer: waiting for bounded job completion; state=' + current['ActiveState'], flush=True)
+                last_notice = time.monotonic()
+        time.sleep(2)
+    raise RuntimeError('rotation activation did not settle within the bounded monitor')
+
+
+def resume_timer():
+    print('Task 11 logrotate timer: BEGIN; validating reviewed runtime evidence and recovery point', flush=True)
+    guest.protected_file(STATE, 0o600)
+    record = json.loads(STATE.read_text())
+    if not record.get('verified') or any(record.get('logrotate_validation', {}).get(field) != 'PASS'
+            for field in ('ovs_postrotate', 'ovn_postrotate', 'parser_debug')):
+        raise RuntimeError('verified current hook runtime evidence is required')
+    verify_backup(record)
+    for filename in (str(TARGETS[3]), str(DROPIN)):
+        protected_regular(Path(filename))
+        if backup.checksum(Path(filename)) != record['files'][filename]['new_sha256']:
+            raise RuntimeError('verified hook/timeout configuration drift')
+    ovn = Path('/etc/logrotate.d/ovn-common')
+    protected_regular(ovn)
+    if backup.checksum(ovn) != '92658854cf515358aadae10f63d16135f4ff98ffb15ed314a578424d248e58b4':
+        raise RuntimeError('OVN hook changed since the reviewed runtime validation')
+    for field, expected in (('TimeoutStartUSec', '5min'), ('TimeoutStopUSec', '15s')):
+        if common.run(['systemctl', '--no-pager', 'show', 'logrotate.service', '--value', '--property=' + field], timeout=15).strip() != expected:
+            raise RuntimeError('whole-job timeout safeguards differ')
+    timer = review.systemd_state('logrotate.timer')
+    before = rotation_state()
+    if timer.get('UnitFileState') != 'enabled' or timer['ActiveState'] not in ('inactive', 'active'):
+        raise RuntimeError('unexpected timer enablement/state; no enablement changed')
+    if before['ActiveState'] != 'inactive' or before['Job'] not in ('', '0') or before['Result'] != 'success':
+        raise RuntimeError('existing rotation requires review; no timer activation attempted')
+    started_here = timer['ActiveState'] == 'inactive'
+    try:
+        print('Task 11 logrotate timer: safeguards PASS; activating/monitoring the existing enabled timer', flush=True)
+        if started_here:
+            common.run(['systemctl', 'start', 'logrotate.timer'], timeout=30)
+        result = monitor_timer(before)
+    except Exception:
+        if started_here:
+            common.run(['systemctl', 'stop', 'logrotate.timer'], timeout=30)
+        raise
+    result['checked_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    destination = launch.DATA_DIR / ('logrotate-timer-review-' + uuid.uuid4().hex + '.json')
+    launch.atomic_state(destination, result)
+    print('Task 11 logrotate timer: ' + json.dumps(result, sort_keys=True), flush=True)
+    print('Task 11 logrotate timer: protected evidence=' + str(destination), flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--apply', required=True, action='store_true')
-    parser.parse_args()
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument('--apply', action='store_true')
+    modes.add_argument('--rabbitmq-preflight-only', action='store_true',
+                       help='read-only broker/EPMD metadata; no backups, hooks, OpenStack credential reads or service changes')
+    modes.add_argument('--resume-logrotate-timer', action='store_true',
+                       help='verify reviewed hook/timeouts, activate the existing enabled timer, monitor without forcing rotation')
+    args = parser.parse_args()
     if os.geteuid() != 0:
         print('STOP: run with sudo /usr/bin/python3 -B in the actual Ubuntu terminal.', file=sys.stderr)
         return 1
     try:
-        os.umask(0o077)
-        logging.disable(logging.CRITICAL)
         release = Path('/etc/os-release').read_text()
         if not re.search(r'^ID=ubuntu$', release, re.M) or not re.search(r'^VERSION_ID="22\.04"$', release, re.M) or 'microsoft' not in platform.release().lower():
             raise RuntimeError('existing Ubuntu 22.04 WSL required')
+        if args.rabbitmq_preflight_only:
+            print('Task 11 RabbitMQ preflight: BEGIN (read-only metadata; no configuration/service changes)', flush=True)
+            metadata = rabbit_preflight()
+            print('Task 11 RabbitMQ preflight: ' + json.dumps(metadata, sort_keys=True), flush=True)
+            print('Task 11 RabbitMQ preflight: COMPLETE (metadata only; timer unchanged)', flush=True)
+            return 0
+        os.umask(0o077)
+        logging.disable(logging.CRITICAL)
         with os.fdopen(os.open('/root/.openstack-poc-nova-prerequisites.lock', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600), 'a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            if args.resume_logrotate_timer:
+                resume_timer()
+                return 0
             if review.systemd_state('logrotate.timer')['ActiveState'] != 'inactive' or review.systemd_state('logrotate.service')['ActiveState'] != 'inactive':
                 raise RuntimeError('timer/rotation job must remain inactive before this stage')
             secrets = common.read_secrets(common.SECRET_FILE)
@@ -378,7 +499,12 @@ def main():
             progress('COMPLETE (API/logrotate scope; RabbitMQ/EPMD and timer reactivation remain pending)')
             return 0
     except Exception as exc:
-        print('STOP: API/logrotate stage failed (' + type(exc).__name__ + '). Protected backups/state retained; timer not enabled.', file=sys.stderr)
+        if args.rabbitmq_preflight_only:
+            print('STOP: read-only RabbitMQ preflight failed (' + type(exc).__name__ + '); no configuration/service changes executed.', file=sys.stderr)
+        elif args.resume_logrotate_timer:
+            print('STOP: timer activation/monitor failed (' + type(exc).__name__ + '); backups preserved; no forced rotation or failed-unit reset executed.', file=sys.stderr)
+        else:
+            print('STOP: API/logrotate stage failed (' + type(exc).__name__ + '). Protected backups/state retained; timer not enabled.', file=sys.stderr)
         return 1
 
 

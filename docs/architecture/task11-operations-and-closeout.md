@@ -1,6 +1,6 @@
 # Task 11 — deployed architecture and operational closeout
 
-Status on 2026-10-24: real core-cloud/application acceptance, temporary dependency cleanup, current core service/API/agent checks and the retained guest CPU smoke test passed in the operator terminal. Listener corrections, bounded logrotate runtime validation and timer disposition remain pending. This is a local POC, not staging or production acceptance. The [chronological host evidence](task11-live-deployment-evidence.md) and [application evidence](task11-application-integration.md) distinguish real results from offline tests.
+Current status: real core-cloud/application acceptance, temporary cleanup and guest CPU checks passed. The operator also verified the backed-up API loopback/alias correction and actual bounded OVN/OVS postrotate execution. RabbitMQ preflight parsing needed correction; broker/EPMD bindings and timer activation remain pending. Earlier dated sections retain their original observations. This is a local POC, not staging or production acceptance. The [chronological host evidence](task11-live-deployment-evidence.md) and [application evidence](task11-application-integration.md) distinguish real results from offline tests.
 
 ## Actual architecture and release boundary
 
@@ -128,7 +128,28 @@ It then issues bounded `vlog/reopen` probes to current core OVN/OVS control sock
 
 Finally it collects selected read-only RabbitMQ cluster/client/configuration-path metadata, EPMD node names and hostname resolution, without dumping configuration contents, cookies or environment values. This informs the remaining broker/EPMD correction. Hostname resolution matters: limiting distribution to loopback can break CLI access if the existing Erlang nodename resolves to the underlay address. Node renaming/Mnesia replacement is outside this stage. RabbitMQ 3.9.27's [installed-release schema](https://raw.githubusercontent.com/rabbitmq/rabbitmq-server/v3.9.27/deps/rabbit/priv/schema/rabbit.schema) supports explicit AMQP and distribution interfaces; the live preflight is needed before choosing the exact transition.
 
-All **373 offline tests** passed. Eleven added tests cover scoped/idempotent Apache, Glance and hook edits; preservation of unrelated/authentication settings; conflicting authorization/timeout refusal; file drift/symlink rejection; missing backup/socket gates; exact restart ordering; and allowlisted broker metadata. These tests do not apply host changes, restart services or prove the live correction. Non-root execution and whitespace checks passed. RabbitMQ/EPMD bindings, preserved shared port-80 exposure and timer activation remain explicit review items.
+All **373 offline tests** passed at preparation. Eleven added tests covered scoped/idempotent edits, preservation, conflict/drift refusal, backup/socket gates, restart ordering and selected broker metadata. Subsequent live results and parser/timer corrections follow; the preparation tests alone did not prove host behavior.
+
+## Verified API/hook correction; remaining read-only preflight and timer activation
+
+The operator completed the API/logrotate stage. Consistent metadata/configuration backup checks passed at `/root/openstack-poc-acceptance/api-hardening-recovery-bgle6n2j`. Apache syntax passed; Apache and Glance restarted; actual API/provider/guest recovery passed. Ports 5000/8778/9292 were loopback-only and both shared aliases rejected the host non-loopback address. Bounded core OVN/OVS control probes, execution of both actual postrotate sections, parser debug mode and the configured five-minute whole-job timeout passed. The timer remained inactive as required. Protected state is `/root/openstack-poc-acceptance/api-hardening.json`. No RabbitMQ/EPMD change was made.
+
+The final broker preflight stopped with `KeyError`. The original parser expected nested `nodes.disc/ram`; the RabbitMQ 3.9.27 [release formatter](https://raw.githubusercontent.com/rabbitmq/rabbitmq-server/v3.9.27/deps/rabbitmq_cli/lib/rabbitmq/cli/ctl/commands/cluster_status_command.ex) emits flat `disk_nodes` and `ram_nodes`. The earlier test used an incorrect nested fixture. The [release status formatter](https://raw.githubusercontent.com/rabbitmq/rabbitmq-server/v3.9.27/deps/rabbitmq_cli/lib/rabbitmq/cli/ctl/commands/status_command.ex) supplies `config_files`. The correction validates these explicit structures and never treats missing/malformed fields as empty consumers. Only selected metadata is returned; other response data, configuration contents, cookies and environment values are not printed. Actual successful broker inventory remains pending.
+
+The successful hook/time-limit results have now been reviewed, satisfying the previous condition to hold the timer stopped. Run these two separate scoped commands in the Ubuntu terminal:
+
+```bash
+sudo /usr/bin/python3 -B /home/sneha/projects/openstack-cloud-poc/scripts/local-openstack/harden_local_apis.py --rabbitmq-preflight-only
+sudo /usr/bin/python3 -B /home/sneha/projects/openstack-cloud-poc/scripts/local-openstack/harden_local_apis.py --resume-logrotate-timer
+```
+
+The first mode only contacts the existing broker/EPMD CLI, resolves the host name and prints validated metadata. It reads no OpenStack credentials, makes no configuration/backup/evidence-file write and performs no API restarts or hook replay. Existing RabbitMQ CLI authentication is used internally; no cookie is exposed. It is independent of timer activation.
+
+The second mode verifies the preserved recovery point, successful stored runtime checks, unchanged OVS/OVN hook and timeout files, and active systemd limits of five minutes/start and fifteen seconds/stop. It requires the existing timer enablement and an idle successful rotation unit. It starts only `logrotate.timer`, without changing enablement, forcing rotation, resetting failed units, restarting APIs or changing broker/network/VM state. A normal persistent-timer catch-up may run existing rotation policy. The mode monitors at most 330 seconds, with progress while a job runs, and requires three stable idle/waiting observations. If its new activation fails, it stops only the timer it started; it does not stop/kill the rotation service or unrelated processes.
+
+Systemd on this host reports an idle `Job` as an empty value. The monitor accepts that or `0`, and uses invocation ID plus monotonic start timestamp to distinguish the old successful cancellation (`ExecMainStatus=15`) from a new invocation, which must exit zero. A successful timer start with no new job is explicitly reported as `new_rotation_observed=false`; it does not establish an actual scheduled rotation. A new protected `logrotate-timer-review-<UUID>.json` records success; all prior evidence/backups remain intact. Full global rotation is not forced for testing. Timer activation results remain pending.
+
+All **386 offline tests** passed. Six added broker regressions cover the release-specific flat format, missing/malformed data rejection, unexpected consumers, valid zero connections, sensitive-field exclusion and a read-only mode that cannot enter the apply/backup/hook path. Seven timer regressions cover observed systemd formatting, old/new invocation distinction, failed/nonzero jobs, backup gates, scoped rollback and activation without forced rotation or enablement changes. Read-only systemd property inspection confirmed the idle format independently; no timer was started from Codex. Non-root execution and whitespace checks passed. Shared Apache port 80 and broker/EPMD binding changes remain separate review items; do not rerun `--apply` to obtain broker metadata.
 
 ## Starting and pausing this POC
 
@@ -198,6 +219,7 @@ Rerun the operations review to observe current service/guest behavior. A Nova st
 - App VM offline disk/domain/SQL/SQLite/live OVSDB/configuration recovery: `/root/openstack-poc-acceptance/recovery-db0d12b8-3bf4-4e53-9a63-4bbea9971831-lu4cuzr1`.
 - Pre-dependency snapshot: `/root/openstack-poc-acceptance/dependency-recovery-b0a2694420364856a755347a048ea36a-wfk7feoy`.
 - Supplemental default-group snapshot: `/root/openstack-poc-acceptance/dependency-recovery-b0a2694420364856a755347a048ea36a-eiocsu57`.
+- API/logrotate configuration/metadata snapshot: `/root/openstack-poc-acceptance/api-hardening-recovery-bgle6n2j`.
 
 Integrity checks passed for these points at their recorded stages. Full service/database restore and guest boot from the recovery disk have not been rehearsed; this is the explicit restore limitation, not disaster-recovery acceptance. Sequential consistent SQL/OVSDB snapshots are not one distributed transaction. Prefer a separately scoped new-image/new-UUID recovery; whole-cloud rollback requires write quiescence, compatible schemas and preservation of newer state. Follow the protected `RECOVERY.md` and [backup procedure](task11-ovs-ovn-backup-procedure.md); never overwrite live databases or an existing VM disk. These backups share the laptop's failure domain; offsite/bare-metal recovery is not implemented.
 

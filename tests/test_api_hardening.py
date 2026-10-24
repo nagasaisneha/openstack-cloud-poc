@@ -1,5 +1,8 @@
 """API/hook transformations and recovery gates without host/cloud mutation."""
 import importlib.util
+import contextlib
+import io
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -126,7 +129,7 @@ class ApiHardeningTests(unittest.TestCase):
 
     def test_rabbit_preflight_reports_only_selected_metadata_without_configuration_contents(self):
         outputs = ['epmd: up and running on port 4369 with data:\nname rabbit at port 25672\n',
-                   '{"running_nodes":["rabbit@host"],"nodes":{"disc":["rabbit@host"],"ram":[]}}',
+                   '{"running_nodes":["rabbit@host"],"disk_nodes":["rabbit@host"],"ram_nodes":[]}',
                    '[{"user":"openstack","peer_host":"127.0.0.1"}]',
                    '{"config_files":[],"unrelated":"not-for-report"}']
         with patch.object(setup.common, 'run', side_effect=outputs), \
@@ -137,6 +140,140 @@ class ApiHardeningTests(unittest.TestCase):
         self.assertTrue(report['all_connections_loopback'])
         self.assertNotIn('not-for-report', repr(report))
         self.assertEqual(report['hostname_ipv4'], ['172.19.169.140'])
+
+    def metadata(self, **extra):
+        return dict(running_nodes=['rabbit@host'], disk_nodes=['rabbit@host'], ram_nodes=[], **extra)
+
+    def test_release_39_flat_fields_are_used_without_exposing_other_fields(self):
+        report = setup.rabbit_metadata(self.metadata(unrelated='private-value'),
+            [{'user': 'openstack', 'peer_host': '127.0.0.1', 'password': 'private-value'}],
+            {'config_files': ['/etc/rabbitmq/rabbitmq.conf'], 'environment': 'private-value'})
+        self.assertEqual(report['disk_nodes'], ['rabbit@host'])
+        self.assertEqual(report['ram_nodes'], [])
+        self.assertNotIn('private-value', repr(report))
+
+    def test_missing_or_nested_cluster_fields_are_not_assumed_empty(self):
+        for cluster in ({}, {'running_nodes': [], 'nodes': {'disc': [], 'ram': []}},
+                        dict(self.metadata(), disk_nodes=None), dict(self.metadata(), ram_nodes=['malformed'])):
+            with self.assertRaises(ValueError):
+                setup.rabbit_metadata(cluster, [], {'config_files': []})
+
+    def test_external_or_unexpected_consumers_are_reported_as_flags(self):
+        report = setup.rabbit_metadata(self.metadata(),
+            [{'user': 'another-app', 'peer_host': '172.19.169.1'}], {'config_files': []})
+        self.assertFalse(report['all_connections_loopback'])
+        self.assertFalse(report['only_poc_connection_users'])
+        self.assertEqual(report['connection_count'], 1)
+        local = setup.rabbit_metadata(self.metadata(), [{'user': 'openstack', 'peer_host': '::ffff:127.0.0.1'}], {'config_files': []})
+        remote = setup.rabbit_metadata(self.metadata(), [{'user': 'openstack', 'peer_host': '::ffff:172.19.169.1'}], {'config_files': []})
+        self.assertTrue(local['all_connections_loopback'])
+        self.assertFalse(remote['all_connections_loopback'])
+
+    def test_malformed_connections_or_config_paths_stop_before_output(self):
+        for connections, status in (({}, {'config_files': []}), ([{'user': 'openstack'}], {'config_files': []}),
+                                    ([], {}), ([], {'config_files': 'contents'}),
+                                    ([], {'config_files': ['https://unexpected.invalid']})):
+            with self.assertRaises(ValueError):
+                setup.rabbit_metadata(self.metadata(), connections, status)
+
+    def test_empty_valid_connections_are_distinct_from_missing_metadata(self):
+        report = setup.rabbit_metadata(self.metadata(), [], {'config_files': []})
+        self.assertEqual(report['connection_count'], 0)
+        self.assertTrue(report['all_connections_loopback'])
+        self.assertTrue(report['only_poc_connection_users'])
+
+    def test_preflight_only_mode_never_reads_secrets_or_repeats_apply_and_hooks(self):
+        output = io.StringIO()
+        with patch.object(sys, 'argv', ['harden_local_apis.py', '--rabbitmq-preflight-only']), \
+             patch.object(setup.os, 'geteuid', return_value=0), \
+             patch.object(Path, 'read_text', return_value='ID=ubuntu\nVERSION_ID="22.04"\n'), \
+             patch.object(setup.platform, 'release', return_value='microsoft-standard-WSL2'), \
+             patch.object(setup, 'rabbit_preflight', return_value={'connection_count': 0}), \
+             patch.object(setup.os, 'open', side_effect=AssertionError('no lock/configuration files')), \
+             patch.object(setup.common, 'read_secrets', side_effect=AssertionError('no credentials')), \
+             patch.object(setup, 'prepare', side_effect=AssertionError('no backup replay')), \
+             patch.object(setup, 'apply_configuration', side_effect=AssertionError('no service changes')), \
+             patch.object(setup, 'verify_hooks', side_effect=AssertionError('no hook replay')), \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(setup.main(), 0)
+        self.assertIn('metadata only; timer unchanged', output.getvalue())
+
+    def idle_rotation(self, **extra):
+        return dict(dict(ActiveState='inactive', Result='success', ExecMainStatus='15', InvocationID='old',
+                         Job='', ExecMainStartTimestampMonotonic='10'), **extra)
+
+    def test_rotation_state_accepts_observed_systemd_empty_idle_job_format(self):
+        text = ('Result=success\nExecMainStartTimestampMonotonic=79436492966\nExecMainStatus=15\n'
+                'ActiveState=inactive\nJob=\nInvocationID=' + 'a' * 32 + '\n')
+        with patch.object(setup.common, 'run', return_value=text):
+            observed = setup.rotation_state()
+        self.assertEqual(observed['Job'], '')
+        self.assertEqual(observed['ExecMainStartTimestampMonotonic'], '79436492966')
+
+    def test_timer_monitor_distinguishes_old_cancelled_invocation_from_new_rotation(self):
+        before = self.idle_rotation()
+        with patch.object(setup.review, 'systemd_state', return_value={'ActiveState': 'active', 'SubState': 'waiting'}), \
+             patch.object(setup, 'rotation_state', return_value=before), patch.object(setup.time, 'sleep'):
+            result = setup.monitor_timer(before)
+        self.assertFalse(result['new_rotation_observed'])
+        self.assertTrue(result['timer_active'])
+
+    def test_timer_monitor_tracks_new_start_timestamp_when_invocation_id_is_retained(self):
+        before = self.idle_rotation()
+        after = self.idle_rotation(ExecMainStatus='0', ExecMainStartTimestampMonotonic='20')
+        with patch.object(setup.review, 'systemd_state', return_value={'ActiveState': 'active', 'SubState': 'waiting'}), \
+             patch.object(setup, 'rotation_state', return_value=after), patch.object(setup.time, 'sleep'):
+            self.assertTrue(setup.monitor_timer(before)['new_rotation_observed'])
+
+    def test_timer_monitor_rejects_failure_and_new_nonzero_completion(self):
+        before = self.idle_rotation()
+        for after in (self.idle_rotation(ActiveState='failed'), self.idle_rotation(Result='timeout'),
+                      self.idle_rotation(ExecMainStartTimestampMonotonic='20')):
+            with patch.object(setup.review, 'systemd_state', return_value={'ActiveState': 'active', 'SubState': 'waiting'}), \
+                 patch.object(setup, 'rotation_state', return_value=after), self.assertRaises(RuntimeError):
+                setup.monitor_timer(before)
+
+    def test_timer_damaged_backup_prevents_activation(self):
+        record = {'verified': True, 'logrotate_validation': dict(ovs_postrotate='PASS', ovn_postrotate='PASS', parser_debug='PASS')}
+        with patch.object(setup.guest, 'protected_file'), patch.object(Path, 'read_text', return_value=json.dumps(record)), \
+             patch.object(setup, 'verify_backup', side_effect=RuntimeError('damaged backup')), \
+             patch.object(setup.common, 'run') as run, contextlib.redirect_stdout(io.StringIO()), self.assertRaises(RuntimeError):
+            setup.resume_timer()
+        run.assert_not_called()
+
+    def timer_activation(self, *, fail=False):
+        record = {'verified': True, 'logrotate_validation': dict(ovs_postrotate='PASS', ovn_postrotate='PASS', parser_debug='PASS'),
+                  'files': {str(setup.TARGETS[3]): {'new_sha256': 'new'}, str(setup.DROPIN): {'new_sha256': 'new'}}}
+        result = {'timer_active': True, 'new_rotation_observed': False, 'rotation_state': self.idle_rotation()}
+        observed_exception = None
+        with patch.object(setup.guest, 'protected_file'), patch.object(Path, 'read_text', return_value=json.dumps(record)), \
+             patch.object(setup, 'verify_backup'), patch.object(setup, 'protected_regular'), \
+             patch.object(setup.backup, 'checksum', side_effect=['new', 'new', '92658854cf515358aadae10f63d16135f4ff98ffb15ed314a578424d248e58b4']), \
+             patch.object(setup.review, 'systemd_state', return_value={'UnitFileState': 'enabled', 'ActiveState': 'inactive'}), \
+             patch.object(setup, 'rotation_state', return_value=self.idle_rotation()), \
+             patch.object(setup, 'monitor_timer', return_value=result, side_effect=RuntimeError('rotation failed') if fail else None), \
+             patch.object(setup.common, 'run', side_effect=['5min', '15s', '', '']) as run, \
+             patch.object(setup.launch, 'atomic_state') as save, contextlib.redirect_stdout(io.StringIO()):
+            try:
+                setup.resume_timer()
+            except RuntimeError as exc:
+                observed_exception = exc
+        return run, save, observed_exception
+
+    def test_new_timer_failure_rolls_back_only_its_activation(self):
+        run, save, error = self.timer_activation(fail=True)
+        self.assertIsInstance(error, RuntimeError)
+        self.assertEqual([call.args[0] for call in run.call_args_list][-2:],
+                         [['systemctl', 'start', 'logrotate.timer'], ['systemctl', 'stop', 'logrotate.timer']])
+        save.assert_not_called()
+
+    def test_timer_success_preserves_enablement_and_does_not_force_rotation(self):
+        run, save, error = self.timer_activation()
+        self.assertIsNone(error)
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(commands[-1], ['systemctl', 'start', 'logrotate.timer'])
+        self.assertFalse(any('enable' in command or 'reset-failed' in command or 'logrotate' == command[0] for command in commands))
+        self.assertTrue(save.call_args.args[1]['timer_active'])
 
 
 if __name__ == '__main__':
