@@ -150,10 +150,13 @@ def decode_diagnostic(text):
         frame = re.fullmatch(r'  File "([^"\n]+)", line ([0-9]{1,7}), in ([a-zA-Z_][a-zA-Z0-9_]*)', line)
         if frame and Path(frame[1]).name in modules:
             origin = {'module': Path(frame[1]).name, 'function': frame[3], 'line': int(frame[2])}
-        if line.startswith('RuntimeError: '):
+        if line.startswith(('RuntimeError: ', 'ReadinessError: ')):
             # Only safe_error's fixed mappings/command metadata are emitted;
             # unknown message bodies remain private, even if they contain secrets.
-            result = safe_error(RuntimeError(line[len('RuntimeError: '):]))
+            if line.startswith('ReadinessError: '):
+                result = safe_error(ReadinessError(line[len('ReadinessError: '):]))
+            else:
+                result = safe_error(RuntimeError(line[len('RuntimeError: '):]))
             if origin is not None:
                 result['origin'] = origin
             return result

@@ -341,6 +341,16 @@ class RestartReadinessTests(unittest.TestCase):
         result = setup.decode_diagnostic('RuntimeError: PRIVATE_TOKEN_SENTINEL\nPRIVATE_BODY_SENTINEL\n')
         self.assertEqual(result['category'], 'observation_failed')
         self.assertNotIn('PRIVATE_', repr(result))
+
+    def test_saved_readiness_guard_is_decoded_without_exposing_traceback(self):
+        trace = ('Traceback (most recent call last):\n'
+                 '  File "/private/root/review_restart_readiness.py", line 311, in resume_demo\n'
+                 'ReadinessError: demo stopped again after the recorded start; a new start requires review\n')
+        result = setup.decode_diagnostic(trace)
+        self.assertEqual(result['category'], 'prerequisite_guard')
+        self.assertEqual(result['reason'], 'demo stopped again after the recorded start; a new start requires review')
+        self.assertEqual(result['origin'], {'module': 'review_restart_readiness.py', 'function': 'resume_demo', 'line': 311})
+        self.assertNotIn('/private/root', json.dumps(result))
         result = setup.decode_diagnostic('RuntimeError: ip failed (exit 255): PRIVATE_GUEST_OUTPUT\n')
         self.assertEqual(result['command'], 'ip')
         self.assertEqual(result['exit_code'], 255)
