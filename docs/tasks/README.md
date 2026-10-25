@@ -1,18 +1,18 @@
 # Implementation task backlog
 
-**Current acceptance follow-up (2026-10-25):** The newer [operational closeout](../architecture/task11-operations-and-closeout.md) records real core-cloud/application, guest/network/isolation, cleanup and hardening success; older no-service blockers below are historical. In the approved [restore → restart → documentation → final acceptance sequence](../architecture/task11-recovery-and-restart.md), T27's isolated restore/recovered guest boot, restart readiness, controlled service cycle and guarded WSL distribution restart passed. Codex independently validated the protected restart report and recovery hashes. Current documentation reconciles the earlier T15–T17 blockers. Core local functional acceptance passed. The task crosswalk and sanitized POC code are committed as `d07edefb0044797d09de42cfc83f22d88c9a48b0` and pushed to `origin/main`; the protected recovery artifacts were not published. Explicitly unavailable/deferred capabilities remain outside the verified core scope. Preserve task IDs and historical evidence.
+**Current goal update (2026-10-25):** The user expanded the definition of done to a browser-ready, secure, multi-tenant self-service platform with administration, project-level usage/billing, and auditability. The Task 11 core-cloud acceptance remains useful baseline evidence, but it is **not** final platform acceptance. Horizon, web login, complete project administration, real metering, pricing, bill statements, billing visibility roles, and application audit history remain open. See the [goal audit](../architecture/browser-ready-cloud-goal.md). Historical statements that the original API-focused POC was complete are preserved as dated evidence and do not override this new goal.
 
-**Status: Original local POC implementation history and task traceability.** The local OpenStack POC is the current development scope and contributes evidence to the separate [`staging-release-plan.md`](../staging-release-plan.md). This file preserves original POC requirement mappings, T01–T28 identifiers, implementation records, and previously recorded acceptance evidence. This scope decision does not automatically reactivate T01–T28 as an execution sequence; select and scope future tasks explicitly. Staging is a separate environment, and no local POC result alone passes a staging or production gate. AWS provisioning, AWS-hosted OpenStack, and AWS-native tenant provisioning are outside the approved POC implementation scope. Cloud access and changes still require scoped authorization.
+**Status: Original T01–T28 implementation history plus active T29–T41 browser-platform delivery.** This file preserves original requirement mappings and evidence, and adds the current goal's dependency-ordered tasks. Staging is separate; local results do not pass staging or production gates. AWS provisioning, AWS-hosted OpenStack, and AWS-native tenant provisioning remain outside scope.
 
-This is the preserved 28-task breakdown of the original local POC requirements in [`requirements-specification.md`](../requirements/requirements-specification.md), refined into independently verifiable units. The architecture source is [`architecture-diagram.png.jpeg`](../architecture/architecture-diagram.png.jpeg), preserving the supplied actual filename. Task IDs and recorded implementation history remain unchanged. Coverage labels describe traceability, not completion or staging acceptance. The dependency ordering is historical planning context, not automatic authorization or reactivation. This backlog does not authorize installation, configuration, external access, or cloud changes.
+This preserves the original 28-task breakdown and adds the active 13-task browser-platform track below. Coverage labels in the older T01–T28 crosswalk describe traceability to the original requirements only. They do not mean the new goal is accepted. The supplied architecture image is preserved at its actual path, [`architecture-diagram.png.jpeg`](../architecture/architecture-diagram.png.jpeg); the current target and its deviations are documented in the [goal audit](../architecture/browser-ready-cloud-goal.md).
 
 ## Required workflow for every approved task
 
-1. Obtain explicit approval for the task and its scope. Inspect `git status` and preserve unrelated work.
+1. For this user-authorized goal, repository edits, offline tests, documentation, and local Git commits are in scope. Inspect `git status` and preserve unrelated work. Live cloud access/mutations, system package installation, service reconfiguration/restart, port exposure, and remote pushes remain separately scoped actions.
 2. Implement only the task scope. Run its listed tests and record actual results and whether the capability is real, simulated, or unavailable.
 3. Update relevant documentation with results, limitations, cleanup, and decisions.
 4. Review the complete diff, including staged changes, for secrets and unrelated changes. Do not stage credentials, tokens, generated state, or unrelated existing files.
-5. After verification passes, create a focused local commit for reviewed task-owned files and record its full SHA. The core POC history is published to `origin/main`; for future task commits, push only reviewed sanitized repository files and record the actual remote result. Never include credentials, runtime state, or protected recovery artifacts.
+5. After verification passes, create a focused local commit for reviewed task-owned files and record its full SHA. Push only when the user explicitly requests it. Never include credentials, runtime state, or protected recovery artifacts.
 6. Do not proceed to another task until its required record is complete.
 
 ### Initial Git state and first-commit procedure
@@ -23,7 +23,29 @@ For each future task, preserve the existing branch and remote, stage only review
 
 ### Cloud and system mutation approval gate
 
-No task may create, update, or delete a cloud resource, change a quota/flavor, change local system configuration, expose a port, install software, or apply infrastructure automation without explicit user approval for that task. Approval must identify the operation, resource scope, expected cost/quota, and cleanup action. Task-level approval covers only the operations and resources it explicitly names. Read-only API contact also requires approval of the endpoint/scope; no cloud endpoint may be contacted in the current review. Never delete pre-existing resources. Test cleanup deletions require explicit authorization as part of the approved task scope.
+The current user request authorizes implementation of the browser-ready goal and its acceptance workflow, but it does not identify a deployment target, service change window, package/service impact, test quota/cost ceiling, or disposable cloud resource IDs. Before changing the existing host/OpenStack installation, contacting an authenticated endpoint, creating test resources, or deleting anything, record the exact action, affected scope, expected capacity/cost, preservation checks, and cleanup plan, then obtain any missing task-specific approval. Never delete pre-existing resources.
+
+## Browser-ready platform delivery track
+
+The detailed acceptance map and live-state limits are in the [goal audit](../architecture/browser-ready-cloud-goal.md). Individual records define measurable acceptance, dependencies, scope, and blockers.
+
+| Order | Task | Depends on | Acceptance evidence | Status |
+|---|---|---|---|---|
+| 29 | [Repository and local installation audit](T29.md) | None | Feature-by-feature evidence map; exact repo/runtime observations; unknown service state clearly marked | Complete (read-only; runtime visibility limited) |
+| 30 | [Horizon fit, service catalogue, and target architecture](T30.md) | T29 | Native Horizon versus custom billing/audit work mapped; service catalogue and architecture flows documented | Complete (target design; not deployed) |
+| 31 | [Billing domain and immutable statement model](T31.md) | T29–T30 | Decimal pricing contract, effective-dated rates, project aggregation, immutable statement snapshots, denied cross-project reads, synthetic provenance | Complete (offline domain; no real usage/UI) |
+| 32 | [Horizon deployment and secure browser login](T32.md) | T30 | Verified browser URL; TLS/session/CSRF configuration; admin and tenant logins; existing Apache/OpenStack paths preserved | Blocked; protected host inspection/reconfiguration unavailable here |
+| 33 | [Keystone administration, project roles, and quotas](T33.md) | T32 | Admin creates two projects/users, assigns least-privilege roles and quotas; backend accepts intended actions and denies unauthorized ones | Blocked by T32 |
+| 34 | [Tenant compute, image, network, and access workflow](T34.md) | T32–T33 | Project-scoped instance/key/image/network/security-group lifecycle, truthful job errors/status, verified console or SSH path | Blocked by T32–T33 |
+| 35 | [Cinder volumes and snapshots](T35.md) | T33–T34; supported backend | Create/attach/read-write/detach/snapshot/restore and cleanup verified, or service explicitly unavailable | Blocked; no verified local backend |
+| 36 | [Swift object storage](T36.md) | T33; supported service | Project-scoped object put/get/hash/delete and cleanup verified, or service explicitly unavailable | Blocked; no verified local service |
+| 37 | [Real usage metering and attribution](T37.md) | T33–T36 as applicable | Source-backed intervals, units, project/resource lineage, freshness/completeness and controlled workload reconciliation | Blocked; no verified meter source |
+| 38 | [Rate administration and project billing statements](T38.md) | T31, T37 | Admin configures versioned rates; complete real samples produce reproducible project bills; deletion preserves history; incomplete data stays provisional | Partial; offline domain complete, T37 pending |
+| 39 | [Horizon billing and audit experience](T39.md) | T32–T33, T37–T38 | Role-scoped usage/pricing/charges/downloads; admin views all projects; action audit is retained and redacted | Blocked by T32/T37 |
+| 40 | [Two-tenant browser acceptance and security verification](T40.md) | T32–T39 | Full requested browser workflow; positive/negative project tests, quotas, usage, bills, admin comparison, cleanup evidence | Blocked by T32–T39 |
+| 41 | [Reproducible staging and operations](T41.md) | T30–T40 | Separately deployable configuration, HTTPS, secret management, monitoring, backup/restore, troubleshooting, and staging evidence | Partial; target and approvals unselected |
+
+T29 and T30 are complete as audit/design work. T31's offline billing domain and focused tests are complete using synthetic samples. No real meter or UI integration is claimed; T32 and later live acceptance remain separate.
 
 ## Original requirement coverage
 
@@ -41,46 +63,46 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | POC-006 — Glance image workflow | T07, T16 | Covered | Read image metadata; trusted test image use only with approval in a VM test. |
 | POC-007 — Neutron network workflow | T07, T15, T17 | Covered | Inspect networks/subnets/routers/security groups/floating IPs, prepare an approved path, then test guest connectivity without disrupting existing networks. |
 | POC-008 — Nova instance lifecycle | T16, T17 | Covered | Small instance create/inspect/start/stop/delete, recorded states, authorized cleanup. |
-| POC-009 — Horizon and API consistency | T07 | Covered | Compare dashboard visibility with scoped API/CLI results when Horizon exists. |
+| POC-009 — Horizon and API consistency | T07, T32 | Partially covered | Historical core APIs exist; Horizon is absent and browser/API consistency has not been tested. |
 | POC-010 — Flavors and quotas | T08 | Covered | Inspect actual capacity; change only safe, explicitly approved values. |
 | POC-011 — Repeatable VM lifecycle workflow | T16, T17 | Covered | Repeat runs and failure reporting are tested in the repeatable workflow. |
-| POC-012 — Cinder storage workflow | T18 | Covered | Backend-gated volume lifecycle or documented unsupported blocker. |
+| POC-012 — Cinder storage workflow | T18, T35 | Partially covered | No verified local Cinder backend; staging remains disabled until an approved backend passes volume and recovery tests. |
 | POC-013 — Network and security acceptance tests | T15, T17, T25 | Covered | Positive/negative connectivity, security groups, SSH, routing and floating IPs where available; exposed ports/auditability in T25. |
 | POC-014 — Resource catalog | T08, T10 | Covered | Catalog uses observed images/flavors/networks/storage and labels unavailable items. |
 | POC-015 — Management API design and skeleton | T12 | Covered | Contract, auth, schemas, errors, and tests precede implementation. |
 | POC-016 — OpenStack SDK integration | T13 | Covered | Scoped read/provision operations; cloud mutations need explicit task-specific approval. |
 | POC-017 — Job tracking | T14, T16, Task 11 | Covered for the accepted local application path | The real SDK application records durable job/phase/idempotency state and observed Nova provider results. The separate fixture service remains simulated; this does not claim a general distributed worker platform or staging behavior. |
-| POC-018 — Usage data collection | T20 | Covered | Metering compatibility, source, interval, units, and limitations. |
-| POC-019 — Monitoring and dashboards | T26 | Covered | Only compatible sources within the resource budget; validate values against source. |
-| POC-020 — Usage reporting and automation | T21, T22 | Covered | Labelled reports and optional approved Heat/Terraform/Ansible automation with dry-run/cleanup. |
+| POC-018 — Usage data collection | T20, T37 | Partially covered | Fixture samples preserve project, unit and provenance; no real meter is installed or verified. |
+| POC-019 — Monitoring and dashboards | T26, T41 | Partially covered | Staging profile and resource gate are prepared; no live source, dashboard, alert or logging validation exists. |
+| POC-020 — Usage reporting and automation | T21, T22, T31, T38 | Partially covered | Fixture summaries, a configurable offline billing domain and staging automation package exist; no real meter-backed demonstration bill has passed. |
 | POC-021 — GPU feasibility assessment | T23 | Covered | Separates RTX host/container checks from Nova passthrough; no MIG assumption. |
-| POC-022 — Sample AI workload | T24 | Covered | Supported approved host/container/VM route only; record resource use and limitations. |
-| POC-023 — Security validation | T11, T25, T26 | Covered | Project/API isolation, secret handling, exposed ports, auditability, and safe negative cases. |
+| POC-022 — Sample AI workload | T24 | Partially covered | T23 feasibility only; no approved/pinned model or inference result, and guest GPU path remains unverified. See [T24](T24.md). |
+| POC-023 — Security validation | T11, T25, T26 | Partially covered | Offline authorization and configuration-hardening tests pass; live TLS, firewall/port, browser session, audit and staging security checks remain pending in [T25](T25.md) and the [security report](../security-validation-report.md). |
 | POC-024 — Backup and recovery test | T27 | Covered | Backup plus restore evidence or a specific limitation. |
-| POC-025 — End-to-end demonstration | T28 | Covered | Auth through cleanup, with networking/storage/workload/monitoring/usage where supported and simulation labels. |
+| POC-025 — End-to-end demonstration | T28, T40 | Partially covered | The prior real Nova/Neutron core acceptance passed; the required browser, storage, metering, billing, monitoring and audit workflow remains open. |
 
 ### Remaining requirement crosswalk
 
 | Requirement group | Task IDs | Status | Reason / disposition |
 |---|---|---|---|
 | Project goal, source-file preservation, small tasks and no production claims (§1–2) | T01–T03, T28 | Covered | Audit and mapping retain the actual image path; production/H100 equivalence is excluded. |
-| Layer 1 — Keystone, Horizon, CLI/SDK, optional portal/mobile, honest billing | T06–T14, T21, T28 | Covered | Keystone is the OpenStack identity source, not a full Keycloak equivalent; mobile is deferred, portal optional, demo pricing non-production. |
-| Layer 2 — local security controls and TLS | T07, T15, T25 | Covered | Private-by-default access, Neutron/host firewall rules, required ports, TLS and endpoint configuration checks are planned. |
+| Layer 1 — Keystone, required Horizon/browser portal, CLI/SDK, honest billing | T06–T14, T21, T28; active T32–T40 | Partially covered | Keystone is the OpenStack identity source, not a full Keycloak equivalent; mobile is deferred. The original portal-optional scope is superseded; browser login, billing UI, and complete audit remain open. |
+| Layer 2 — local security controls and TLS | T07, T15, T25, T32 | Partially covered | Offline policy/configuration tests exist; live TLS, listener, firewall and browser-session review remain pending. |
 | Layer 2 — Cloudflare/DDoS, WAF, separate gateway, Octavia | T28 | Deferred | Requirements make these optional; no public ingress or external protection is assumed. Reconsider only if a required workflow and supported deployment justify it. |
 | Layer 3 — catalog, provisioning, jobs, database/queue restraint, metering, demo price/payment | T08–T14, T20–T22 | Partially covered | PostgreSQL/Redis/Celery remain conditional, not defaults. Local asynchronous lifecycle jobs are integrated with fixture execution, but state/idempotency are process-local and no real provider operation is tracked. Metering and pricing remain subject to their existing source and limitation requirements. |
 | Layer 4 — Nova/Glance/Neutron/Cinder and repeatable orchestration | T07–T19, T22 | Partially covered | Real local Nova/Glance/Neutron lifecycle and isolation passed. Cinder remains unavailable; staging must independently validate selected services and topology. |
 | Layer 4 — Kubernetes/JupyterHub/Harbor/Ceph, GPU scheduler/MIG | T22–T24, T28 | Deferred | Requirements make these optional and this laptop does not support H100 MIG or production multi-tenant GPU scheduling. |
-| Layer 5 — CPU VM, AI workload, block/object storage | T16–T19, T23–T24 | Covered | Each service is conditional on verified support; host GPU is kept distinct from guest GPU. |
+| Layer 5 — CPU VM, AI workload, block/object storage | T16–T19, T23–T24, T35–T36 | Partially covered | Core CPU VM is verified; no AI inference result or Cinder/Swift round-trip is verified. |
 | Layer 5 — H100/MIG profiles, GPU isolation, managed academy stack | T23–T24, T28 | Deferred | H100/MIG and multi-tenant GPU isolation are unsupported; JupyterHub/academy environments are optional follow-on work. |
 | Layer 6 — laptop/network record; no physical data center build | T01–T03 | Covered | Laptop/network evidence is recorded; H100 server, future servers, facility and power/cooling construction are explicitly out of scope. |
-| Layer 7 — verified monitoring, automation, backup/restore, logging and alerts | T14, T22, T26–T27 | Covered | Lightweight only, based on named sources and within budget; full SIEM/offsite/production incident response deferred. |
+| Layer 7 — verified monitoring, automation, backup/restore, logging and alerts | T14, T22, T26–T27, T41 | Partially covered | Staging automation and scoped recovery exist; live monitoring/logging/alerts and production incident response remain pending. |
 | Layer 8 — payment, DNS, email, offsite storage | T04, T21, T26, T28 | Deferred | External integrations are not active by assumption; no payments or uploads without separate approval; missing credentials must fail safely; local logs/mail catcher or test hostnames remain optional. |
 | Cross-cutting requirements 1, 2, 4, 5, 7–10 (§4) | T04, T06, T10–T17, T25–T28 | Covered | Retains the prior planned coverage status for identity, resource lifecycle, safe errors, idempotency, documentation, resource safety, configuration, and security; this row excludes provisioning status and observability below. |
 | Cross-cutting requirement 3 — Provisioning status (§4) | T10, T14, T16–T17 | Partially covered | Local fixture create/start/stop/delete jobs are tied to background execution and instance state; real long-running OpenStack operations and durable status remain unverified. |
 | Cross-cutting requirement 6 — Observability (§4) | T10, T14, T16–T17, T26 | Partially covered | Simulated jobs record IDs, project/actor, state, timestamps, outcomes, and fixture instance association. Real provider operation traceability and production observability remain pending. |
 | Non-functional requirements (§5) | T01–T03, T28 | Covered | WSL2 support, read-only initial audit, preservation, small tasks, reproducible evidence, compatibility, no production claims, and real/simulated distinction. |
 | Suggested repository structure (§9) | T01, T04 | Covered | Adapt the suggested structure to existing paths; do not duplicate files or stage unrelated untracked content. |
-| Final acceptance criteria (§10) | T01, T11, T16–T28 | Covered | Aggregate acceptance requires evidence or explicit limitation for identity/isolation, VM/network/storage, API/jobs, usage/monitoring, AI, security, backup/restore, end-to-end, and successful Git gates. |
+| Final acceptance criteria (§10) | T01, T11, T16–T28, T32–T40 | Partially covered | Core VM/network/recovery evidence passes; browser, storage, metering, billing, monitoring, audit and full end-to-end gates remain open. |
 | Task-record fields and Git/GitHub workflow (§7–8) | All T01–T28 | Partially covered | The backlog requires per-POC records with required fields and commit/push evidence. Repository publication is complete through `d07edef`; extended task execution records and evidence remain pending for T18–T28 as applicable. |
 | Requested repository deliverables and architecture-layer classifications (§11) | T01 | Partially covered | T01 includes `local-poc-architecture.md`; the file and individual POC execution records do not yet exist. |
 
@@ -387,9 +409,11 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T28 — End-to-end demonstration and final acceptance
 
-- **Prerequisites:** Core tasks accepted; user confirms whether a minimal portal is needed and explicitly approves the demonstration scope, any cloud operations, and cleanup/deletion.
+**Historical record:** T28's earlier statement that a portal was optional is superseded by the active browser-ready goal and T29–T41 acceptance track above. T28 remains useful only for its original fixture/core demonstration evidence.
+
+- **Prerequisites:** Historical T28 prerequisites; active browser workflow acceptance is defined by T40.
 - **Dependencies:** T10, T11, T14, T17, and applicable T18-T27 tasks.
-- **Implementation steps:** Demonstrate authentication → project selection → catalog/provisioning → networking → storage where available → workload → monitoring/usage → cleanup. Add a minimal portal only if approved. Clearly identify simulated/deferred steps; do not contact optional external integrations unless specifically approved and configured, and fail safely when credentials are absent.
+- **Implementation steps:** Original T28 demonstrated the fixture/core scope available at that time. The active browser, usage, billing, and audit demonstration is specified by T40; clearly label simulated/deferred steps.
 - **Tests:** Run the documented end-to-end sequence against real or fixture adapters; verify authorization, failure states, evidence, resource cleanup, and final status.
 - **Acceptance criteria:** Every step has evidence; unsupported steps are labelled; task cleanup is confirmed; all applicable requirements are satisfied or recorded as blocked/unavailable.
 - **Rollback/cleanup:** Stop/remove only portal and task-created resources/state; preserve all pre-existing cloud resources.
