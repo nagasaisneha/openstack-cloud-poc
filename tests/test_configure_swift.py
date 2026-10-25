@@ -1,5 +1,6 @@
 """Safety boundaries for local Swift setup, without privileged host mutations."""
 import configparser
+from contextlib import contextmanager
 import copy
 import importlib.util
 import io
@@ -24,6 +25,20 @@ finally:
 
 
 class SwiftSetupTests(unittest.TestCase):
+    @contextmanager
+    def root_metadata(self):
+        # Exercise actual mkdir/open/fchmod and umask on disposable local
+        # files. Only ownership metadata is simulated for a nonroot test run.
+        lstat = Path.lstat
+        fstat = os.fstat
+        def root(info):
+            fields = list(info)
+            fields[4] = fields[5] = 0
+            return os.stat_result(fields)
+        with patch.object(Path, 'lstat', lambda path: root(lstat(path))), \
+                patch.object(os, 'fstat', lambda descriptor: root(fstat(descriptor))):
+            yield
+
     def state(self):
         return {'run_id': '1' * 32, 'filesystem_uuid': '11111111-1111-1111-1111-111111111111',
                 'files': {}, 'file_intents': {}, 'steps': []}
@@ -87,6 +102,160 @@ class SwiftSetupTests(unittest.TestCase):
             path = Mock(lstat=Mock(return_value=NS(st_mode=mode, st_uid=uid, st_gid=0)))
             with self.assertRaises(setup.GuardError):
                 setup.protected_file(path)
+
+    def test_new_directories_receive_exact_mode_under_protective_umask(self):
+        with tempfile.TemporaryDirectory() as directory:
+            previous = os.umask(0o077)
+            try:
+                with self.root_metadata():
+                    for mode in (0o700, 0o750, 0o755):
+                        path = Path(directory) / str(mode)
+                        setup.safe_directory(path, mode)
+                        self.assertEqual(stat.S_IMODE(path.stat().st_mode), mode)
+                        # Existing correct directories need no permission write.
+                        with patch.object(os, 'fchmod') as chmod:
+                            setup.safe_directory(path, mode)
+                            chmod.assert_not_called()
+            finally:
+                os.umask(previous)
+
+    def test_existing_wrong_mode_directory_is_not_widened(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'existing'
+            path.mkdir(mode=0o700)
+            with self.root_metadata(), patch.object(os, 'fchmod') as chmod:
+                with self.assertRaises(setup.GuardError) as raised:
+                    setup.safe_directory(path, 0o755)
+                self.assertEqual(raised.exception.context['directory'], str(path))
+                self.assertEqual(raised.exception.context['observed_mode'], '0700')
+                chmod.assert_not_called()
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o700)
+
+    def test_symlink_directory_does_not_change_target_permissions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'target'
+            target.mkdir(mode=0o700)
+            link = Path(directory) / 'link'
+            link.symlink_to(target, target_is_directory=True)
+            with self.root_metadata(), patch.object(os, 'fchmod') as chmod:
+                with self.assertRaises(setup.GuardError):
+                    setup.safe_directory(link, 0o755)
+                chmod.assert_not_called()
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o700)
+
+    def test_directory_owned_by_another_user_is_not_opened_or_changed(self):
+        path = Mock()
+        path.mkdir.side_effect = FileExistsError()
+        path.lstat.return_value = NS(st_mode=stat.S_IFDIR | 0o755, st_uid=1000)
+        with patch.object(os, 'open') as opened, patch.object(os, 'fchmod') as chmod:
+            with self.assertRaises(setup.GuardError):
+                setup.safe_directory(path, 0o755)
+            opened.assert_not_called()
+            chmod.assert_not_called()
+
+    @contextmanager
+    def umask_repair_fixture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            devices = root / 'swift-poc'
+            devices.mkdir(mode=0o700)
+            image = root / 'image'
+            image.write_bytes(b'\0' * 4096)
+            image.chmod(0o600)
+            report = root / ('swift-readiness-' + '1' * 32 + '.json')
+            report.write_text(json.dumps({'installation': {'status': 'ready_for_guarded_setup'},
+                                         'host': {'paths': {str(devices): {'present': False}}}}))
+            report.chmod(0o600)
+            state = dict(self.state(), phase='mount_and_xattrs', steps=['packages', 'filesystem'],
+                         readiness_report=str(report), filesystem_verified=True, format_intent=True,
+                         image_created=True, image_create_intent=True,
+                         failure={'reason': 'unsafe_directory_metadata', 'stage': 'mount_and_xattrs'})
+            with patch.object(setup, 'DATA', root), patch.object(setup, 'DEVICES', devices), \
+                    patch.object(setup, 'MOUNT', devices / 'poc1'), patch.object(setup, 'IMAGE', image), \
+                    patch.object(setup, 'SIZE', 4096), patch.object(setup, 'MOUNT_UNIT_PATH', root / 'unit.mount'), \
+                    patch.object(setup, 'filesystem_signature', return_value={
+                        'TYPE': 'ext4', 'LABEL': 'swift-poc', 'UUID': state['filesystem_uuid']}), \
+                    patch.object(setup.common, 'run', return_value=''), \
+                    patch.object(setup.subprocess, 'run', return_value=NS(returncode=1, stdout='')), \
+                    patch.object(setup, 'save'), self.root_metadata():
+                yield state, devices, report
+
+    def test_recorded_empty_premount_directory_can_be_corrected_once(self):
+        with self.umask_repair_fixture() as (state, devices, report):
+            snapshots = []
+            with patch.object(setup, 'save', side_effect=lambda value: snapshots.append(copy.deepcopy(value))):
+                setup.repair_umask_directory(state)
+            self.assertEqual(stat.S_IMODE(devices.stat().st_mode), 0o755)
+            self.assertEqual(snapshots[0]['umask_directory_repair']['phase'], 'intent')
+            self.assertEqual(state['umask_directory_repair']['phase'], 'applied')
+            # Repeating the same command after successful continuation performs
+            # no chmod and requires no empty-directory adoption.
+            state['phase'] = 'service_ready_pending_object_acceptance'
+            (devices / 'poc1').mkdir()
+            with patch.object(os, 'fchmod') as chmod:
+                setup.repair_umask_directory(state)
+                chmod.assert_not_called()
+
+    def test_repair_refuses_nonempty_or_preexisting_directory(self):
+        for scenario in ('nonempty', 'preexisting', 'different_failure', 'missing_format_intent', 'already_widened'):
+            with self.umask_repair_fixture() as (state, devices, report):
+                if scenario == 'nonempty':
+                    (devices / 'preserved-data').write_text('keep')
+                elif scenario == 'preexisting':
+                    data = json.loads(report.read_text())
+                    data['host']['paths'][str(devices)]['present'] = True
+                    report.write_text(json.dumps(data))
+                elif scenario == 'different_failure':
+                    state['failure']['reason'] = 'different'
+                elif scenario == 'missing_format_intent':
+                    state['format_intent'] = False
+                else:
+                    devices.chmod(0o755)
+                before = stat.S_IMODE(devices.stat().st_mode)
+                with patch.object(os, 'fchmod') as chmod:
+                    with self.assertRaises(setup.GuardError):
+                        setup.repair_umask_directory(state)
+                    chmod.assert_not_called()
+                self.assertEqual(stat.S_IMODE(devices.stat().st_mode), before)
+
+    def test_repair_refuses_attached_image_or_existing_mount_unit(self):
+        with self.umask_repair_fixture() as (state, devices, report):
+            with patch.object(setup.common, 'run', return_value='loop device already attached'), \
+                    patch.object(os, 'fchmod') as chmod:
+                with self.assertRaisesRegex(setup.GuardError, 'image_already_attached'):
+                    setup.repair_umask_directory(state)
+                chmod.assert_not_called()
+        with self.umask_repair_fixture() as (state, devices, report):
+            setup.MOUNT_UNIT_PATH.write_text('existing')
+            with patch.object(os, 'fchmod') as chmod:
+                with self.assertRaisesRegex(setup.GuardError, 'mount_unit_already_exists'):
+                    setup.repair_umask_directory(state)
+                chmod.assert_not_called()
+
+    def test_interrupted_directory_repair_reuses_its_recorded_inode_and_failure(self):
+        with self.umask_repair_fixture() as (state, devices, report):
+            info = devices.stat()
+            state['umask_directory_repair'] = {
+                'directory': str(devices), 'device': info.st_dev, 'inode': info.st_ino, 'phase': 'intent',
+                'original_failure': state['failure'].copy(), 'readiness_report_sha256': setup.digest_file(report)}
+            state['failure'] = {'stage': 'owned_directory_resume', 'reason': 'interrupted'}
+            # Model termination after fchmod but before the applied record.
+            devices.chmod(0o755)
+            setup.repair_umask_directory(state)
+            self.assertEqual(state['umask_directory_repair']['phase'], 'applied')
+            self.assertEqual(stat.S_IMODE(devices.stat().st_mode), 0o755)
+
+    def test_interrupted_repair_refuses_a_changed_preflight_report(self):
+        with self.umask_repair_fixture() as (state, devices, report):
+            info = devices.stat()
+            state['umask_directory_repair'] = {
+                'directory': str(devices), 'device': info.st_dev, 'inode': info.st_ino, 'phase': 'intent',
+                'original_failure': state['failure'].copy(), 'readiness_report_sha256': setup.digest_file(report)}
+            report.write_text(report.read_text() + '\n')
+            with patch.object(os, 'fchmod') as chmod:
+                with self.assertRaisesRegex(setup.GuardError, 'readiness_report_changed'):
+                    setup.repair_umask_directory(state)
+                chmod.assert_not_called()
 
     def test_new_file_records_intent_before_write_and_detects_later_drift(self):
         state = self.state()

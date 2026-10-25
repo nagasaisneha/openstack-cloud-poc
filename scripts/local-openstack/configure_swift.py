@@ -45,6 +45,7 @@ DEVICE = 'poc1'
 DEVICES = Path('/srv/swift-poc')
 MOUNT = DEVICES / DEVICE
 MOUNT_UNIT = r'srv-swift\x2dpoc-poc1.mount'
+MOUNT_UNIT_PATH = Path('/etc/systemd/system') / MOUNT_UNIT
 CONF = Path('/etc/swift')
 TEMPLATES = Path(__file__).resolve().parents[2] / 'deploy/local-swift'
 VERSION = '2.33.0-0ubuntu1.1~cloud0'
@@ -90,11 +91,31 @@ def protected_json(path):
 
 
 def safe_directory(path, mode=0o700):
-    if not path.exists() and not path.is_symlink():
+    created = False
+    try:
         path.mkdir(mode=mode)
+        created = True
+    except FileExistsError:
+        pass
     info = path.lstat()
-    require(stat.S_ISDIR(info.st_mode) and info.st_uid == 0
-            and stat.S_IMODE(info.st_mode) == mode, 'unsafe_directory_metadata')
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or (not created and stat.S_IMODE(info.st_mode) != mode):
+        error = GuardError('unsafe_directory_metadata')
+        error.context = {'directory': str(path), 'expected_mode': format(mode, '04o'),
+                         'observed_mode': format(stat.S_IMODE(info.st_mode), '04o'),
+                         'root_owned': info.st_uid == 0, 'is_directory': stat.S_ISDIR(info.st_mode)}
+        raise error
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        current = os.fstat(descriptor)
+        require((current.st_dev, current.st_ino) == (info.st_dev, info.st_ino), 'directory_changed_during_open')
+        if created:
+            # mkdir's mode is filtered by the protective process umask. Apply
+            # the exact mode only to the new directory, through its open fd.
+            os.fchmod(descriptor, mode)
+            os.fsync(descriptor)
+        require(stat.S_IMODE(os.fstat(descriptor).st_mode) == mode, 'directory_mode_not_applied')
+    finally:
+        os.close(descriptor)
 
 
 def save(state):
@@ -341,14 +362,81 @@ def mounted_image():
     return True
 
 
+def repair_umask_directory(state):
+    """Review and correct only the old installer's empty pre-mount directory.
+
+    This migration requires the protected failure journal and original absent-
+    path preflight. It does not adopt arbitrary existing directories, alter the
+    backend image, or relax the usual guard for existing directories.
+    """
+    review = state.get('umask_directory_repair')
+    info = DEVICES.lstat()
+    require(stat.S_ISDIR(info.st_mode) and info.st_uid == 0 and info.st_gid == 0,
+            'repair_directory_not_root_owned_directory')
+    if review:
+        require(review.get('directory') == str(DEVICES)
+                and review.get('phase') in {'intent', 'applied'}
+                and (review.get('device'), review.get('inode')) == (info.st_dev, info.st_ino),
+                'repair_directory_identity_changed')
+        if review['phase'] == 'applied':
+            require(stat.S_IMODE(info.st_mode) == 0o755, 'repaired_directory_mode_changed')
+            return
+        failure = review['original_failure']
+    else:
+        failure = state.get('failure', {})
+    require(state.get('phase') == 'mount_and_xattrs' and state.get('steps') == ['packages', 'filesystem']
+            and failure.get('stage') == 'mount_and_xattrs'
+            and failure.get('reason') == 'unsafe_directory_metadata'
+            and state.get('filesystem_verified') is True and state.get('format_intent') is True
+            and state.get('image_created') is True and state.get('image_create_intent') is True,
+            'repair_not_the_recorded_premount_failure')
+    report_path = Path(state['readiness_report'])
+    require(report_path.parent == DATA and re.fullmatch(r'swift-readiness-[0-9a-f]{32}\.json', report_path.name),
+            'repair_readiness_report_path_invalid')
+    report = protected_json(report_path)
+    require(report.get('installation', {}).get('status') == 'ready_for_guarded_setup'
+            and report.get('host', {}).get('paths', {}).get(str(DEVICES)) == {'present': False},
+            'repair_directory_was_not_verified_absent')
+    require(not review or review.get('readiness_report_sha256') == digest_file(report_path),
+            'repair_readiness_report_changed')
+    require(protected_file(IMAGE).st_size == SIZE, 'repair_image_size_changed')
+    verify_signature(filesystem_signature(), state)
+    require(not common.run(['losetup', '-j', str(IMAGE)], timeout=15).strip(), 'repair_image_already_attached')
+    require(not MOUNT.exists() and not MOUNT.is_symlink(), 'repair_mount_path_already_exists')
+    unit = MOUNT_UNIT_PATH
+    require(not unit.exists() and not unit.is_symlink(), 'repair_mount_unit_already_exists')
+    mount = subprocess.run(['findmnt', '--noheadings', '--mountpoint', str(DEVICES)],
+                           text=True, capture_output=True, timeout=15, check=False)
+    require(mount.returncode == 1 and not mount.stdout.strip(), 'repair_directory_is_mounted_or_unknown')
+    descriptor = os.open(DEVICES, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        current = os.fstat(descriptor)
+        require((current.st_dev, current.st_ino) == (info.st_dev, info.st_ino)
+                and stat.S_IMODE(current.st_mode) in ({0o700, 0o755} if review else {0o700}),
+                'repair_directory_metadata_changed')
+        require(os.listdir(descriptor) == [], 'repair_directory_not_empty')
+        if not review:
+            review = {'directory': str(DEVICES), 'device': current.st_dev, 'inode': current.st_ino,
+                      'original_mode': '0700', 'target_mode': '0755', 'phase': 'intent',
+                      'original_failure': failure.copy(), 'readiness_report_sha256': digest_file(report_path)}
+            state['umask_directory_repair'] = review
+            save(state)
+        os.fchmod(descriptor, 0o755)
+        os.fsync(descriptor)
+        require(stat.S_IMODE(os.fstat(descriptor).st_mode) == 0o755, 'repair_directory_mode_not_applied')
+        review['phase'] = 'applied'
+        review['applied_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        save(state)
+    finally:
+        os.close(descriptor)
+
+
 def mount_storage(state):
     safe_directory(DEVICES, 0o755)
     if not mounted_image():
-        if not MOUNT.exists() and not MOUNT.is_symlink():
-            MOUNT.mkdir(mode=0o755)
         safe_directory(MOUNT, 0o755)
         require(next(MOUNT.iterdir(), None) is None, 'nonempty_unmounted_storage_directory')
-    unit = Path('/etc/systemd/system') / MOUNT_UNIT
+    unit = MOUNT_UNIT_PATH
     write_owned(unit, mount_text(), state)
     common.run(['systemctl', 'daemon-reload'], timeout=30)
     common.run(['systemctl', 'enable', '--now', MOUNT_UNIT], timeout=90)
@@ -613,6 +701,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--readiness-report', type=Path, required=True,
                         help='Protected ready_for_guarded_setup Swift report')
+    parser.add_argument('--repair-umask-directory', action='store_true',
+                        help='Review/correct the old installer\'s empty owned pre-mount directory, then resume')
     args = parser.parse_args()
     if os.geteuid() != 0:
         print('STOP: run with sudo /usr/bin/python3 -B in the Ubuntu terminal.', file=sys.stderr)
@@ -635,9 +725,16 @@ def main():
             base = common.read_secrets(common.SECRET_FILE)
             with common.connection(base) as cloud:
                 stage = 'initial_inventory'
+                if args.repair_umask_directory:
+                    require(STATE.exists(), 'repair_requires_existing_setup_journal')
                 state = begin_or_load(args.readiness_report, cloud)
                 safe_directory(PRIVATE)
                 check_core(cloud, state, baseline=not bool(state.get('retained_server_id')))
+                if args.repair_umask_directory:
+                    stage = 'owned_directory_resume'
+                    progress(stage + ': BEGIN')
+                    repair_umask_directory(state)
+                    progress(stage + ': PASS')
                 values = dict(base, **setup_secrets(state))
                 for stage, action in (
                     ('packages', lambda: install_packages(state)),
@@ -673,6 +770,8 @@ def main():
             failure['origin'] = {'module': Path(frame.filename).name, 'function': frame.name, 'line': frame.lineno}
         if isinstance(error, GuardError):
             failure['reason'] = str(error)
+            if getattr(error, 'context', None):
+                failure['context'] = error.context
         if state is not None:
             state['failure'] = failure
             save(state)
