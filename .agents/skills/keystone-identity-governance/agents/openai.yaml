@@ -1,0 +1,3 @@
+interface:
+  display_name: "Keystone Identity Governance"
+  short_description: "Design Keystone roles and tenant scope"

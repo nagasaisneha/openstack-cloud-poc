@@ -1,0 +1,3 @@
+interface:
+  display_name: "Openstack Service Engineering"
+  short_description: "Integrate OpenStack services safely"

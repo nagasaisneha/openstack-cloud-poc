@@ -1,6 +1,10 @@
 # Implementation task backlog
 
-This is a 28-task breakdown of the requirements in [`requirements-specification.md`](../requirements/requirements-specification.md), refined from the earlier grouped plan into independently verifiable and committable units. The architecture source is [`architecture-diagram.png.jpeg`](../architecture/architecture-diagram.png.jpeg), preserving the supplied actual filename. Tasks are ordered by dependency; tasks marked optional or conditional may be skipped with the reason recorded. Coverage labels below describe planned traceability, not completed implementation. This backlog does not authorize installation, configuration, external access, or cloud changes.
+**Current acceptance follow-up (2026-10-25):** The newer [operational closeout](../architecture/task11-operations-and-closeout.md) records real core-cloud/application, guest/network/isolation, cleanup and hardening success; older no-service blockers below are historical. In the approved [restore → restart → documentation → final acceptance sequence](../architecture/task11-recovery-and-restart.md), T27's isolated restore/recovered guest boot, restart readiness, controlled service cycle and guarded WSL distribution restart passed. Codex independently validated the protected restart report and recovery hashes. Current documentation reconciles the earlier T15–T17 blockers. Core local functional acceptance passed; aggregate repository sign-off remains open because no remote push was authorized. The focused implementation/tests/runbook commit is `523e3ff`. Explicitly unavailable/deferred capabilities remain outside the verified core scope. Preserve task IDs and historical evidence.
+
+**Status: Original local POC implementation history and task traceability.** The local OpenStack POC is the current development scope and contributes evidence to the separate [`staging-release-plan.md`](../staging-release-plan.md). This file preserves original POC requirement mappings, T01–T28 identifiers, implementation records, and previously recorded acceptance evidence. This scope decision does not automatically reactivate T01–T28 as an execution sequence; select and scope future tasks explicitly. Staging is a separate environment, and no local POC result alone passes a staging or production gate. AWS provisioning, AWS-hosted OpenStack, and AWS-native tenant provisioning are outside the approved POC implementation scope. Cloud access and changes still require scoped authorization.
+
+This is the preserved 28-task breakdown of the original local POC requirements in [`requirements-specification.md`](../requirements/requirements-specification.md), refined into independently verifiable units. The architecture source is [`architecture-diagram.png.jpeg`](../architecture/architecture-diagram.png.jpeg), preserving the supplied actual filename. Task IDs and recorded implementation history remain unchanged. Coverage labels describe traceability, not completion or staging acceptance. The dependency ordering is historical planning context, not automatic authorization or reactivation. This backlog does not authorize installation, configuration, external access, or cloud changes.
 
 ## Required workflow for every approved task
 
@@ -8,12 +12,12 @@ This is a 28-task breakdown of the requirements in [`requirements-specification.
 2. Implement only the task scope. Run its listed tests and record actual results and whether the capability is real, simulated, or unavailable.
 3. Update relevant documentation with results, limitations, cleanup, and decisions.
 4. Review the complete diff, including staged changes, for secrets and unrelated changes. Do not stage credentials, tokens, generated state, or unrelated existing files.
-5. After verification passes, create a focused commit, push it to the existing GitHub remote, and record the full commit SHA and push result in the task record.
-6. If no remote exists, do not invent one and do not claim a push. Stop and report that pushing is pending remote configuration/approval; the user decides whether to configure one. Do not proceed to the next task until the required task record is complete.
+5. After verification passes, create a focused local commit for reviewed task-owned files and record its full SHA. A remote named `origin` currently exists, but remote push was not authorized in this continuation; do not attempt it. Record `push not authorized` accurately.
+6. Do not proceed to another task until its required record is complete.
 
 ### Initial Git state and first-commit procedure
 
-Read-only inspection found branch `main` with no `HEAD` commit (an unborn branch), no configured remote names, zero tracked files, and existing untracked `README.md` and `docs/`. Preserve all of these files. No GitHub URL, branch strategy, credentials, or push permission is assumed.
+The initial read-only inspection before the POC implementation found branch `main` with no `HEAD` commit, no configured remote, zero tracked files, and existing untracked `README.md` and `docs/`. That state is historical: the current branch has prior local commits and a remote named `origin`. The current worktree also contains untracked project work, and this continuation did not stage or commit it. Remote credentials/URLs are not recorded here, and push remains unauthorized.
 
 For the first approved task, agree the branch strategy and remote with the user. If the user has configured a remote, inspect its name without printing a credential-bearing URL. Stage only the explicitly approved task paths; never use broad staging to sweep in the existing untracked tree. Review the proposed root commit diff for secrets and unrelated files before committing. A root commit may be made only after task approval and passing verification. If no remote is configured, do not invent one: report `locally committed; push pending` if a local commit was authorized and created, mark the task incomplete, and stop before starting the next task. Do not claim push success or test permission by attempting a push without an approved remote.
 
@@ -30,9 +34,9 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | Original requirement | Task IDs | Status | Coverage note / reason |
 |---|---|---|---|
 | POC-001 — Read-only laptop and virtualization audit | T01, T02 | Covered | Includes Windows/WSL context where available, OS, CPU/RAM/disk/GPU/driver, KVM, Docker, Git, listening ports, and resource constraints; missing evidence is labelled unknown. |
-| POC-002 — Git/GitHub audit and project baseline | T01, T02 | Partially covered | Status/branch/remotes/ignore rules are inspected safely; this repository has no remote, so push permissions cannot be verified until the user configures one. |
+| POC-002 — Git/GitHub audit and project baseline | T01, T02 | Partially covered | Branch/history and remote-name inventory are recorded. Local commits exist and `origin` is configured; remote push remains unauthorized in this continuation. |
 | POC-003 — OpenStack availability and deployment inventory | T02, T07 | Covered | Local package/container/service/config and endpoint-presence checks plus approved read-only API inventory; credential presence may be recorded, values are never printed, and no resources are changed. |
-| POC-004 — OpenStack and VM-launch feasibility | T02, T03, T06, T07 | Partially covered | Management-layer-first and fixture-first scope is selected. Real endpoint integration and VM-launch feasibility remain conditional on a verified endpoint or separately approved deployment plan; Nova VM lifecycle execution remains a later gated task. |
+| POC-004 — OpenStack and VM-launch feasibility | T02, T03, T06, T07, T16, T17 | Covered for the local POC | Real local OpenStack integration and Nova/KVM VM launch passed. The initial deployment gate is historical; staging support and remote endpoint feasibility require separate evidence. |
 | POC-005 — Keystone project and role validation | T06, T11, T25 | Covered | Project/user/role scope and authorized/unauthorized cases; creating identities requires explicit approval. |
 | POC-006 — Glance image workflow | T07, T16 | Covered | Read image metadata; trusted test image use only with approval in a VM test. |
 | POC-007 — Neutron network workflow | T07, T15, T17 | Covered | Inspect networks/subnets/routers/security groups/floating IPs, prepare an approved path, then test guest connectivity without disrupting existing networks. |
@@ -45,7 +49,7 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | POC-014 — Resource catalog | T08, T10 | Covered | Catalog uses observed images/flavors/networks/storage and labels unavailable items. |
 | POC-015 — Management API design and skeleton | T12 | Covered | Contract, auth, schemas, errors, and tests precede implementation. |
 | POC-016 — OpenStack SDK integration | T13 | Covered | Scoped read/provision operations; cloud mutations need explicit task-specific approval. |
-| POC-017 — Job tracking | T14 | Covered | Job IDs, pending/running/succeeded/failed/cancelled states where applicable, timestamps, and failure reasons. |
+| POC-017 — Job tracking | T14, T16, Task 11 | Covered for the accepted local application path | The real SDK application records durable job/phase/idempotency state and observed Nova provider results. The separate fixture service remains simulated; this does not claim a general distributed worker platform or staging behavior. |
 | POC-018 — Usage data collection | T20 | Covered | Metering compatibility, source, interval, units, and limitations. |
 | POC-019 — Monitoring and dashboards | T26 | Covered | Only compatible sources within the resource budget; validate values against source. |
 | POC-020 — Usage reporting and automation | T21, T22 | Covered | Labelled reports and optional approved Heat/Terraform/Ansible automation with dry-run/cleanup. |
@@ -63,15 +67,17 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | Layer 1 — Keystone, Horizon, CLI/SDK, optional portal/mobile, honest billing | T06–T14, T21, T28 | Covered | Keystone is the OpenStack identity source, not a full Keycloak equivalent; mobile is deferred, portal optional, demo pricing non-production. |
 | Layer 2 — local security controls and TLS | T07, T15, T25 | Covered | Private-by-default access, Neutron/host firewall rules, required ports, TLS and endpoint configuration checks are planned. |
 | Layer 2 — Cloudflare/DDoS, WAF, separate gateway, Octavia | T28 | Deferred | Requirements make these optional; no public ingress or external protection is assumed. Reconsider only if a required workflow and supported deployment justify it. |
-| Layer 3 — catalog, provisioning, jobs, database/queue restraint, metering, demo price/payment | T08–T14, T20–T22 | Covered | PostgreSQL/Redis/Celery/payment integrations are not defaults; data source and pricing limits are reported. |
-| Layer 4 — Nova/Glance/Neutron/Cinder and repeatable orchestration | T07–T19, T22 | Partially covered | Core APIs are conditional; diagram's Proxmox/Nova timing needs user decision before VM implementation. |
+| Layer 3 — catalog, provisioning, jobs, database/queue restraint, metering, demo price/payment | T08–T14, T20–T22 | Partially covered | PostgreSQL/Redis/Celery remain conditional, not defaults. Local asynchronous lifecycle jobs are integrated with fixture execution, but state/idempotency are process-local and no real provider operation is tracked. Metering and pricing remain subject to their existing source and limitation requirements. |
+| Layer 4 — Nova/Glance/Neutron/Cinder and repeatable orchestration | T07–T19, T22 | Partially covered | Real local Nova/Glance/Neutron lifecycle and isolation passed. Cinder remains unavailable; staging must independently validate selected services and topology. |
 | Layer 4 — Kubernetes/JupyterHub/Harbor/Ceph, GPU scheduler/MIG | T22–T24, T28 | Deferred | Requirements make these optional and this laptop does not support H100 MIG or production multi-tenant GPU scheduling. |
 | Layer 5 — CPU VM, AI workload, block/object storage | T16–T19, T23–T24 | Covered | Each service is conditional on verified support; host GPU is kept distinct from guest GPU. |
 | Layer 5 — H100/MIG profiles, GPU isolation, managed academy stack | T23–T24, T28 | Deferred | H100/MIG and multi-tenant GPU isolation are unsupported; JupyterHub/academy environments are optional follow-on work. |
 | Layer 6 — laptop/network record; no physical data center build | T01–T03 | Covered | Laptop/network evidence is recorded; H100 server, future servers, facility and power/cooling construction are explicitly out of scope. |
 | Layer 7 — verified monitoring, automation, backup/restore, logging and alerts | T14, T22, T26–T27 | Covered | Lightweight only, based on named sources and within budget; full SIEM/offsite/production incident response deferred. |
 | Layer 8 — payment, DNS, email, offsite storage | T04, T21, T26, T28 | Deferred | External integrations are not active by assumption; no payments or uploads without separate approval; missing credentials must fail safely; local logs/mail catcher or test hostnames remain optional. |
-| Cross-cutting requirements 1–10 (§4) | T04, T06, T10–T17, T25–T28 | Covered | Isolation, lifecycle, full job states, errors, idempotency, observability, docs, resource safety, config separation, and private defaults are assigned. |
+| Cross-cutting requirements 1, 2, 4, 5, 7–10 (§4) | T04, T06, T10–T17, T25–T28 | Covered | Retains the prior planned coverage status for identity, resource lifecycle, safe errors, idempotency, documentation, resource safety, configuration, and security; this row excludes provisioning status and observability below. |
+| Cross-cutting requirement 3 — Provisioning status (§4) | T10, T14, T16–T17 | Partially covered | Local fixture create/start/stop/delete jobs are tied to background execution and instance state; real long-running OpenStack operations and durable status remain unverified. |
+| Cross-cutting requirement 6 — Observability (§4) | T10, T14, T16–T17, T26 | Partially covered | Simulated jobs record IDs, project/actor, state, timestamps, outcomes, and fixture instance association. Real provider operation traceability and production observability remain pending. |
 | Non-functional requirements (§5) | T01–T03, T28 | Covered | WSL2 support, read-only initial audit, preservation, small tasks, reproducible evidence, compatibility, no production claims, and real/simulated distinction. |
 | Suggested repository structure (§9) | T01, T04 | Covered | Adapt the suggested structure to existing paths; do not duplicate files or stage unrelated untracked content. |
 | Final acceptance criteria (§10) | T01, T11, T16–T28 | Covered | Aggregate acceptance requires evidence or explicit limitation for identity/isolation, VM/network/storage, API/jobs, usage/monitoring, AI, security, backup/restore, end-to-end, and successful Git gates. |
@@ -125,11 +131,11 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T05 — Approved development/client prerequisites
 
-- **Prerequisites:** T03 and explicit approval for exact tools, versions, and install method.
+- **Prerequisites:** T03 route selected. Any future installation requires a documented need, exact tool and version, installation method, and explicit approval before execution.
 - **Dependencies:** T04.
-- **Implementation steps:** Install only necessary client/development tools; use a project-local environment where practical. Do not install OpenStack/Kubernetes unless a separately approved task authorizes it.
-- **Tests:** Version/import/smoke checks and provenance/version record; verify credentials are absent from the repository.
-- **Acceptance criteria:** Required tools work at recorded versions and match the selected route.
+- **Implementation steps:** Assess whether client/development tools are needed for the selected fixture-first route. That route does not currently justify installing an OpenStack SDK, OpenStack CLI, Kubernetes tooling, or other new dependencies. T05 covers prerequisite assessment only; Keystone authentication implementation belongs to T06. If a later task establishes a need, document the exact tool, version, and installation method and obtain explicit approval before installing; use a project-local environment where practical. Do not install OpenStack or Kubernetes unless a separately approved task authorizes it.
+- **Tests:** For this documentation-only assessment, verify the recorded decision and approval gate. Version/import/smoke checks and provenance/version records apply only after a separately approved installation; verify credentials are absent from the repository without claiming unperformed checks.
+- **Acceptance criteria:** The fixture-first prerequisite assessment and its no-new-dependency decision are documented; T05 is distinguished from T06 authentication; any future installation is gated on a documented need, exact tool/version/method, and explicit approval. No tools are claimed as installed or verified by this documentation-only task.
 - **Rollback/cleanup:** Use documented uninstall/environment cleanup for only task-installed components; preserve unrelated packages/data.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow; commit manifests, not local environments.
 
@@ -137,19 +143,19 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 - **Prerequisites:** T05; explicit approval for any OpenStack authentication endpoint contact and least-privilege test identity, or approved fixture identity.
 - **Dependencies:** T05.
-- **Implementation steps:** Configure secure local auth input and implement a minimal Keystone authentication check or fixture equivalent. Never print tokens or credential-bearing URLs.
-- **Tests:** Successful auth for the approved scope; safe failure for invalid credentials; inspect logs/output for secret leakage.
-- **Acceptance criteria:** Auth result is reproducible and its real-vs-simulated status is documented.
+- **Implementation steps:** Implemented the fixture equivalent with nonsecret fixture identity references and explicit project/role assignments. `catalog.read` requires `catalog.viewer`; `compute.create` requires `compute.operator`; unlisted operations and cross-project access are denied. All fixture results are labelled `simulated`. Real Keystone authentication and real credentials remain absent; never print tokens or credential-bearing URLs.
+- **Tests:** `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v` — 8 fixture tests passed for known/unknown identities, project scope, role and operation enforcement, simulated status, safe failure, and no socket connection. These tests use no endpoint, network, cloud credentials, or added dependency; they do not validate Keystone.
+- **Acceptance criteria:** Fixture identity and authorization outcomes are reproducible and explicitly simulated; unknown identities, cross-project access, insufficient roles, and unlisted operations fail safely. Real Keystone authentication remains conditional on a separately approved endpoint and least-privilege identity and is not claimed as verified.
 - **Rollback/cleanup:** Remove only task-created local credentials/config; revoke temporary credentials only if authorized.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow; commit placeholders only.
 
 ### T07 — Read-only OpenStack service inventory
 
-- **Prerequisites:** T06 authentication; explicit user approval for the specific endpoint and read-only query scope.
+- **Prerequisites:** T06 fixture authentication is implemented, but it is not real Keystone authentication. Any endpoint query requires explicit user approval naming that endpoint and the read-only query scope, plus an approved real credential path.
 - **Dependencies:** T06.
-- **Implementation steps:** Discover packages, containers, services, configs and endpoint presence/reachability for Keystone, Nova, Glance, Neutron, Cinder, Horizon, and metering. Read image metadata and existing network data; where Horizon is available compare its project/resource views with read-only API/CLI output. Record release/source and scope. Inspect config locations without printing secrets; any endpoint/API query is read-only and limited to the user-approved scope.
-- **Tests:** Approved read-only API/list calls; confirm no creates/updates/deletes; redact identities and endpoints as needed; verify dashboard/API comparison within same project scope.
-- **Acceptance criteria:** Inventory distinguishes present, absent, inaccessible, and unverified services; Horizon/API consistency is checked when both are available.
+- **Implementation steps:** Completed the authorized local-only inventory and recorded fresh, timestamped evidence in [`environment-audit.md`](../architecture/environment-audit.md). OpenStack CLI and queried Python clients/package names were absent; checked standard config paths and conventional service ports were absent. The service manager and Docker daemon were inaccessible; no matching process names were observed. QEMU and `virsh` CLIs and KVM kernel modules were present, but `/dev/kvm` was absent, so current usable KVM is unverified. No endpoint or cloud resource was queried. Remote Keystone, Nova, Glance, Neutron, Cinder, Horizon, and metering inventory, image/network metadata, and Horizon/API comparison remain pending separate endpoint/scope approval and real authentication.
+- **Tests:** Local read-only checks performed at 2026-10-18 22:21:09 +05:30: `command -v openstack`; Python `importlib.util.find_spec` for `openstack`, `novaclient`, and `keystoneauth1`; filtered `dpkg-query`; filtered `systemctl list-units` (inaccessible: system bus permission denied); filtered `ps -eo comm=`; Docker CLI check and `docker ps -a` (inaccessible: local daemon permission denied); formatted `docker info` (empty server fields discarded as invalid); filtered `ss -lntu`; presence-only Python checks for standard config paths; `qemu-system-x86_64 --version`, `virsh --version`, `/dev/kvm` presence and `lsmod`. No configuration contents, environment-variable values, credentials, tokens, or cloud endpoint URLs were displayed. No API/list test or dashboard/API comparison was run.
+- **Acceptance criteria:** The local-only inventory classifies observed local evidence and limits without implying remote availability. Endpoint-dependent service/resource inventory and Horizon/API consistency are **pending/conditional** on an explicitly approved endpoint and read-only scope, usable real authentication, and service availability. This local-only slice does not establish complete OpenStack deployment status.
 - **Rollback/cleanup:** None; read-only.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
@@ -157,9 +163,9 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 - **Prerequisites:** T04 scaffold, T05 approved development prerequisites, and T02 findings; T07 inventory is optional input when separately approved and available.
 - **Dependencies:** T04 and T05; T07 is an optional data source, not a blocker for the local schema/model.
-- **Implementation steps:** Define a manager-independent catalog contract for flavors, images, networks, and storage. For fixture-first development, use illustrative deterministic fixture data explicitly labelled simulated; do not claim it is observed cloud capacity. Later merge only verified read-only inventory from T07. Configure a flavor/quota only if separately approved, safe, and needed for a later test.
-- **Tests:** Unit checks for missing/partial data, accurate units, and available/simulated/unavailable/unverified states; ensure fixture data is labelled and no capacity is represented as observed without evidence. Any quota/flavor change requires separate approval and is not part of this task.
-- **Acceptance criteria:** Catalog schema and fixture path work without a cloud endpoint; every datum has a source/status; real inventory is accepted only after T07 verification; no cloud changes occur.
+- **Implementation steps:** Added a manager-independent catalog record/provider contract for flavors, images, networks, and storage, with deterministic illustrative fixtures. Every record carries a category, stable identifier, source, status, and attributes. Fixture provenance enforces `simulated`; `available` and `unavailable` require evidence; missing data remains missing and remote uncertainty can be `unverified`. Unit-bearing field names use `vcpus` (count), `*_mib` (MiB), and `*_gib` (GiB), with no conversion. No OpenStack provider, endpoint configuration, cloud observation, flavor/quota change, or real-capacity claim was added. Later real data may be merged only after verified read-only T07 evidence and separate endpoint approval.
+- **Tests:** `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v` — 18 tests passed, including 10 catalog tests for all categories, deterministic output, required metadata/provenance, status and evidence semantics, explicit units, and missing/partial data; the existing 8 fixture identity tests also passed. Tests use only the standard library and require no endpoint, network, credentials, or new dependency.
+- **Acceptance criteria:** Catalog schema and fixture path work offline; each fixture datum has a source/status and is marked simulated. Missing records do not imply unavailability, and evidence is required for available/unavailable states. Real inventory remains unverified until supported by approved T07 evidence. No cloud changes occurred.
 - **Rollback/cleanup:** Remove only task-created local test data.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
@@ -167,9 +173,9 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 - **Prerequisites:** T04 scaffold, T05 approved development prerequisites, and T08 manager-independent contract.
 - **Dependencies:** T04, T05, and T08; no real endpoint or VM manager is required.
-- **Implementation steps:** Add deterministic fixture-backed management responses and adapter methods for the approved early POC scope. Keep provider/VM-manager selection behind an independent interface so Nova can be added later without changing management contracts. Do not implement Proxmox integration absent explicit approval.
-- **Tests:** Repeat fixture reads and compare stable outputs; cover missing-service and error responses; assert simulated provenance is visible and adapter contract does not import or require a Nova/Proxmox client.
-- **Acceptance criteria:** The management-layer workflow is usable offline from deterministic fixtures, clearly marked simulated, with a VM-manager-independent boundary; no fixture result is represented as a real cloud resource.
+- **Implementation steps:** Added `openstack_cloud_poc/adapter.py` with a narrow `ManagementAdapter` contract and `FixtureManagementAdapter`. It composes the existing T06 identity provider and T08 catalog provider, exposing catalog list/get, fixture identity authentication, and fixture authorization. Its request allowlist rejects unsupported operations with safe errors. Missing fixture records are reported as simulated missing data with remote availability left unverified. No provider/VM-manager client, job, provisioning, Nova lifecycle, or Proxmox integration was added.
+- **Tests:** Added `tests/test_adapter.py` using standard-library `unittest`. The complete offline suite was run with `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`: 27 tests passed, covering identity/catalog composition, stable repeated reads, project and role policy, metadata/provenance/status preservation, missing records, unsupported and malformed requests, safe errors, and absence of network calls/cloud-client imports. This is fixture evidence only, not proof of Keystone authentication or cloud service availability.
+- **Acceptance criteria:** The identity/catalog management boundary is usable offline from deterministic fixtures, marked simulated, and independent of a VM manager. No fixture outcome is represented as a real cloud resource. Real endpoint behavior, remote missing-service detection, and production identity/catalog verification remain pending and require separately authorized integration work.
 - **Rollback/cleanup:** Delete only task-created fixtures/test outputs if rejected.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
@@ -177,9 +183,9 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 - **Prerequisites:** T08 and T09.
 - **Dependencies:** T09.
-- **Implementation steps:** Expose `available`, `simulated`, `unavailable`, and `unverified` status with source/freshness for each capability.
-- **Tests:** Status mapping for real, fixture, absent, and error cases; verify API/UI text does not imply unsupported features.
-- **Acceptance criteria:** Users can tell real OpenStack data from fixture and unknown data.
+- **Implementation steps:** Added `openstack_cloud_poc/capabilities.py`, reusing T08's `VerificationStatus`. `CapabilityStatusRecord` requires capability name and source, carries optional observation time, and requires evidence for `available` and `unavailable`. `format_capabilities` sorts records deterministically and prints `observed_at=unknown` when no timestamp is supplied. Catalog provenance/status is preserved; fixture identity results remain simulated. Missing evidence and error cases remain unverified or simulated as appropriate. The reporter formats only caller-supplied records and performs no discovery; it defines no freshness threshold or TTL.
+- **Tests:** Added `tests/test_capabilities.py` using standard-library `unittest`. The complete suite was run with `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`: 36 tests passed. Coverage includes every status, source/evidence requirements, known/unknown timestamps, stable formatting, catalog and fixture identity status preservation, missing/error evidence, and safe error formatting. Synthetic available/unavailable records test formatting only and do not establish real service state.
+- **Acceptance criteria:** The formatter distinguishes supplied available, simulated, evidence-backed unavailable, and unverified records with provenance and observation time or explicit unknown freshness. Missing records/errors do not imply remote unavailability. No API/UI, endpoint discovery, credentials, or real OpenStack provider was added; real capability verification remains conditional on separately authorized evidence.
 - **Rollback/cleanup:** Remove only task-created local state.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
@@ -187,9 +193,9 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 - **Prerequisites:** T06; two approved test scopes/projects or fixture scopes.
 - **Dependencies:** T10.
-- **Implementation steps:** Exercise allowed project-scoped reads and prohibited cross-project access using the selected adapter.
-- **Tests:** Positive authorized request and negative unauthorized request; secret-redacted logs.
-- **Acceptance criteria:** Real Keystone authorization is proven when available; fixture-only checks are labelled simulation.
+- **Implementation steps:** Updated `openstack_cloud_poc/adapter.py` so `read_catalog`, `catalog.list`, and `catalog.get` require an authentication result and explicit project ID. The adapter applies the existing `catalog.read` policy before returning catalog data. Denied, unknown-identity, cross-project, and missing-role results are marked `simulated` and contain no catalog records. Raw fixture-provider access is private (`_get_catalog_fixture`); the former public unscoped `get_catalog` and `get_record` methods are absent.
+- **Tests:** Added `tests/test_isolation.py` using standard-library `unittest`; updated T09 adapter tests for the scoped read contract. The complete suite was run with `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`: 43 tests passed. Isolation tests cover an authorized same-project read, cross-project denial, unknown identity, missing role, no unscoped public path, denied results without catalog data, simulated status, and a sensitive sentinel absent from results and standard output/error. The fixture emits no logs; these tests do not establish real Keystone behavior.
+- **Acceptance criteria:** Fixture-only project-scope checks are explicitly simulated. The adapter withholds catalog records unless the existing fixture identity and role policy authorizes `catalog.read` for the requested project. Real Keystone authentication and cloud-side project isolation remain unverified and require separately approved endpoint/identity access.
 - **Rollback/cleanup:** Remove only task-created identities/projects with explicit approval; otherwise preserve and document them.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow; omit identifying data.
 
@@ -197,9 +203,9 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 - **Prerequisites:** T08-T10 and a demonstrated need for a custom API.
 - **Dependencies:** T10.
-- **Implementation steps:** Define minimal request/status schemas, validation, error codes, and real-vs-simulated adapter contract.
-- **Tests:** Schema validation and contract tests for invalid, unsupported, and accepted requests.
-- **Acceptance criteria:** Contract distinguishes accepted request from completed resource creation.
+- **Implementation steps:** Added [`provisioning-contract.md`](../api/provisioning-contract.md) and `openstack_cloud_poc/api_contract.py`. The framework-independent contract supports only `compute.create`, requires explicit project, image, flavor, and network references, validates fields locally, and uses safe stable error codes. Lifecycle status (`accepted`, `completed`, `rejected`, `failed`) is separate from evidence mode (`simulated`, `real`). The accepted-response factory requires an allowed authorization result and accepted responses cannot include a resource ID. Completed responses require a resource reference and provider-supplied evidence. This deliverable defines an API boundary; it does not demonstrate a need for a running custom server. POC-016 SDK integration and POC-017 job tracking remain deferred.
+- **Tests:** Added `tests/test_api_contract.py` using standard-library `unittest`. `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v` passed all 53 tests. Contract tests cover valid/invalid fields, project scope, unsupported operations, safe errors, authorization, lifecycle/evidence separation, and accepted-versus-completed semantics. Completion examples are synthetic and visibly simulated; no endpoint, provider, queue, or resource operation was used.
+- **Acceptance criteria:** The documented and locally validated contract distinguishes request acceptance from provider-evidenced completion. `accepted` means validation and authorization passed; it does not mean work was queued or a resource created. No server, HTTP routing, real Keystone authentication, or real cloud-side authorization was implemented or claimed. The prerequisite for a running custom API remains unestablished. Identifier semantics depend on execution outcome: an accepted-only request returns neither a job ID nor a resource ID; a synchronous operation may return a resource ID only when provider evidence supports creation; an asynchronous operation may return a job ID and queued/running status only after an execution mechanism accepts the work. Fixture IDs and outcomes are explicitly simulated.
 - **Rollback/cleanup:** Remove only task-created contract files if rejected.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
@@ -207,9 +213,9 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 - **Prerequisites:** T12 and T03 route. Implement/test the fixture adapter first. Real OpenStack integration additionally requires a verified endpoint or a separately approved deployment plan; endpoint contact needs explicit scope approval. Any real adapter that can create/update/delete resources requires approval naming each operation, allowed resource scope, and cleanup. Keep the management contract independent of the VM manager.
 - **Dependencies:** T03, T07, and T12.
-- **Implementation steps:** Implement one narrow service call through SDK or fixture adapter; no database/queue unless justified.
-- **Tests:** Success, service unavailable, permission denied, timeout, and no false-success behavior.
-- **Acceptance criteria:** Adapter returns a clear result and source status; errors preserve diagnosable context without secrets.
+- **Implementation steps:** Added `openstack_cloud_poc/management_service.py`, a synchronous, framework-independent fixture service for the T12 `compute.create` contract. It reuses T12 request validation and T06 authorization (`compute.create` project scope and `compute.operator` role), then checks the referenced image, flavor, and network against existing illustrative fixtures. Success means only validated, authorized fixture handling and returns `accepted` with `simulated` evidence and fixture provenance. It does not create, queue, or identify a resource. Validation, authorization, missing fixture data, unavailable service, service failure, and timeout have stable safe error categories; submitted values and exception text are not echoed. The validator's internal fixture lookup occurs only after authorization and is not exposed as an unscoped adapter operation. No SDK, real provider, endpoint, server, queue, job system, Nova lifecycle, or Proxmox integration was added.
+- **Tests:** Added `tests/test_management_service.py` using standard-library `unittest`. The complete suite passed **61 tests** with `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`. T13 tests cover accepted simulated handling without creation claims, invalid input, unknown/cross-project and missing-role denial, missing fixture data, injected service-unavailable/timeout/provider-error outcomes, safe diagnostics, and simulated status. All checks use local fixtures or injected test doubles; no endpoint, credentials, network, or new dependency is required.
+- **Acceptance criteria:** The fixture service returns an explicit simulated result and safe diagnosable errors. `accepted` does not mean a resource was created or queued. No `completed` result or resource ID is produced; completion remains gated on provider-supplied evidence. T07's local observations do not establish remote service status, and POC-016 real SDK integration and POC-008 Nova lifecycle remain deferred pending their endpoint/deployment gates and task-specific approval. T14 provides a standalone simulated job model only; integrated POC-017 tracking remains pending, and this synchronous T13 service does not queue work or return a job or resource identifier.
 - **Rollback/cleanup:** Remove only local test state or explicitly approved resources created by this task.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
@@ -217,13 +223,16 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 - **Prerequisites:** T13 shows an operation that needs asynchronous status tracking; any remote cancellation action is separately authorized in the task scope.
 - **Dependencies:** T13.
-- **Implementation steps:** Add minimal job ID and pending/running/succeeded/failed states, plus cancelled where the operation supports cancellation; add durable storage/queue only if a demonstrated requirement exists.
-- **Tests:** State transitions including cancellation where supported, retry/timeout behavior, idempotency as applicable, restart behavior if persisted, and secret redaction.
-- **Acceptance criteria:** Each long operation is traceable and failure never appears as success.
+- **Implementation steps:** Extended `openstack_cloud_poc/jobs.py` with a thread-safe, in-memory tracker for `compute.create`, `compute.start`, `compute.stop`, and `compute.delete`. Immutable records now retain fixture job/project/actor IDs, operation, state, timestamps, optional fixture instance ID, allowlisted failure code, and simulated provenance. Project-scoped registration and inspection enforce the T1 fixture role policy; denied and cross-project lookups return the same not-found error. Optional idempotency keys are scoped by project and operation and use a canonical request fingerprint; identical duplicates return the existing job, while a payload conflict is rejected. Transitions remain limited to the specified pending/running/succeeded/failed graph and are available only through the module-internal execution path. At T14 completion the tracker was standalone; Task 3 added the bounded local executor, and Task 4 connected jobs to simulated fixture lifecycle execution. No persistence, cancellation, real provider integration, or crash recovery was added.
+- **Compatibility:** The old unscoped `create(operation)`, `get(job_id)`, and direct `transition(...)` tracker calls are intentionally replaced by authorized `register(...)`, project-scoped `get(...)`, and the internal execution path. The serialized `failure_category` field remains for wire compatibility; the record exposes `failure_code` with a `failure_category` property alias. T12's create-only request and T13 synchronous fixture validation remain unchanged.
+- **Tests:** `tests/test_jobs.py` uses standard-library `unittest` for supported operations, role/project isolation, transition and terminal rules, thread safety, idempotency and payload conflicts, safe identifiers, timestamps, and simulated provenance. All **17 focused job tests** passed with `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests.test_jobs -v`; the full **137-test offline suite** passed with `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`. Tests use no endpoint, credentials, network, or added dependency.
+- **Acceptance criteria:** The process-local tracker records scoped simulated jobs for the four mutation operations, enforces the defined state graph, requires role/project authorization on registration and inspection, returns non-disclosing not-found errors across project boundaries, deduplicates identical keyed submissions, rejects conflicting payloads, and refuses non-fixture instance IDs. State changes are not callable through the management API. The Task 4 follow-on integrates simulated fixture execution, while durable execution, restart recovery, and real provider operations remain unproven; T13 remains the separate synchronous validation path.
 - **Rollback/cleanup:** Remove only task-created job records/state; keep required audit records sanitized.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
 ### T15 — Neutron network preparation and security-group validation (conditional)
+
+- **Execution record:** [`T15.md`](T15.md) — currently **Blocked** pending verified local Neutron service/network evidence and resolution of the host readiness gates.
 
 - **Prerequisites:** T03 confirms the approved workflow uses OpenStack/Neutron; T07 confirms Neutron. Explicit approval enumerates any network/subnet/router/security-group/floating-IP creation or change, intended rules, and cleanup. Read-only inspection may be scoped separately.
 - **Dependencies:** T03 and T07.
@@ -235,25 +244,34 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T16 — Nova instance lifecycle (conditional)
 
-- **Prerequisites:** T07 confirms Nova at a verified endpoint or a separately approved deployment plan; T15 provides an approved usable network; explicit approval enumerates image, flavor, quota, cost, instance resources, and cleanup/deletion scope. Implement Nova behind the manager-independent T09 adapter boundary. Proxmox remains deferred unless explicitly approved.
+- **Execution record:** [`T16.md`](T16.md) — currently **Blocked** pending deployment, KVM, Neutron, and approved resource-scope gates.
+
+- **Prerequisites:** T07 confirms Nova at a verified local endpoint or a separately approved local deployment plan; T15 provides an approved usable network; explicit approval enumerates image, flavor, quotas, resource use, and cleanup/deletion scope. Implement Nova behind the manager-independent T09 provider boundary. Proxmox remains deprecated. The approved Task 1–4 contract selects asynchronous create/start/stop/delete with synchronous inspect; no new synchronous-versus-asynchronous decision is pending. Task 4 integrates T14 tracking and execution for fixtures only. Real Nova integration must extend job/resource identifier provenance so a Nova server ID is never accepted or reported as a fixture ID. T16 remains blocked on the real service/network and resource-approval gates.
 - **Dependencies:** T14 and T15.
 - **Implementation steps:** Implement create/inspect/start/stop/delete for one small approved Linux instance.
 - **Tests:** Lifecycle state checks and failure cases; confirm only the task-created instance is deleted. T17 verifies repeat runs and failure reporting.
 - **Acceptance criteria:** Lifecycle works against real Nova or is explicitly reported unavailable with a fixture path.
+- **Local fixture follow-on (Task 4):** `AsynchronousLifecycleManagementService` connects the `FixtureInstanceProvider` to project-scoped jobs and the bounded executor for simulated create/start/stop/delete, with synchronous inspect. This satisfies only the local fixture lifecycle; it does not satisfy T16's real Nova/Neutron prerequisites or claim provider availability.
+- **Task 4 verification:** Added `tests/test_async_lifecycle.py` with 14 integration tests covering lifecycle state changes, failures and partial IDs, synchronous inspect, authorization/isolation, concurrent idempotency, instance mutation conflicts, capacity/submission rejection, worker authorization, network isolation, and T13 compatibility. All 14 integration tests and the full **165-test offline suite** passed with `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`. No cloud endpoint or provider was contacted.
 - **Rollback/cleanup:** Delete only this task's instance and dependencies; preserve all pre-existing resources.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow; include sanitized evidence.
 
 ### T17 — Compute and network end-to-end acceptance
 
+- **Execution record:** [`T17.md`](T17.md) — fixture workflow verified; real Nova/Neutron end-to-end validation remains **Blocked**.
+
 - **Prerequisites:** T15 and T16 pass; user approval covers the specific repeat-run resource operations and cleanup scope.
 - **Dependencies:** T16 (which depends on T15).
-- **Implementation steps:** Build/run the repeatable script or service wrapper for create, inspect, stop/start, and delete through the adapter; capture status and connectivity evidence.
+- **Implementation steps:** The existing lifecycle service is exercised through the fixture adapter for repeatable create, inspect, stop/start, and delete runs. Real Nova/Neutron status and guest connectivity remain unavailable in the inspected local paths.
 - **Tests:** Repeat runs, error reporting, positive/negative connectivity where authorized, and cleanup confirmation.
-- **Acceptance criteria:** A full real workflow is reported as real only if Nova and Neutron operations succeeded; otherwise report simulation/unavailability accurately.
+- **Fixture evidence:** `tests/test_poc_workflow.py` verifies two full in-process fixture lifecycle runs. All outcomes remain simulated; deleted fixtures remain tombstones. This does not verify packets, SSH, or real resource cleanup.
+- **Acceptance criteria:** A full real workflow is reported as real only if Nova and Neutron operations succeeded; otherwise report simulation/unavailability accurately. Current real-path status: **Blocked/unavailable in inspected local paths**.
 - **Rollback/cleanup:** Confirm task-created resources are removed; do not alter unrelated cloud objects.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
 ### T18 — Cinder block-storage validation (conditional)
+
+- **Execution record:** [`T18.md`](T18.md) — no Cinder service/backend found in inspected local paths; real volume validation remains **Blocked**.
 
 - **Prerequisites:** T07 confirms compatible Cinder backend; explicit approval enumerates volume/snapshot create, attach, detach, and delete operations and storage use.
 - **Dependencies:** T07; T16 only if attachment to the approved test instance is required. Do not block standalone backend checks on Neutron/T17.
@@ -265,6 +283,8 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T19 — Object storage validation (optional/conditional)
 
+- **Execution record:** [`T19.md`](T19.md) — no Swift/object-storage service found in inspected local paths; object round-trip remains **Blocked**.
+
 - **Prerequisites:** T07 confirms Swift or another locally approved compatible service; explicit approval enumerates test object/container create and delete operations.
 - **Dependencies:** T07; independent of Cinder unless the approved use case explicitly needs both.
 - **Implementation steps:** Test a small local object put/get/delete; no external/offsite upload.
@@ -275,21 +295,27 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T20 — Usage data source integration
 
+- **Execution record:** [`T20.md`](T20.md) — simulated fixture source implemented and verified; real OpenStack metering remains **Blocked**.
+
 - **Prerequisites:** Named usage source confirmed (Ceilometer/Gnocchi, compatible CloudKitty where present, or scoped API snapshots); explicit approval for any read-only metering endpoint contact and sample data if needed.
 - **Dependencies:** T07; T17 for usage from a test VM, and T18/T19 only for their respective usage dimensions. Fixture data may be used if no real workload is approved/available.
-- **Implementation steps:** Check Ceilometer/Gnocchi compatibility and CloudKitty presence if installed; collect a bounded supported usage sample and record source, period, units, and missing-data behavior.
+- **Implementation steps:** Added `FixtureUsageSource` and project-scoped `FixtureUsageCollector` with explicit source, UTC period, units, simulated provenance, and no implicit conversion or imputation. A separate `usage.viewer` role is required for fixture `usage.read`. No meter endpoint was contacted; actual Ceilometer/Gnocchi/CloudKitty support remains unverified.
 - **Tests:** Source attribution, permissions, time range, repeatability, and incomplete-data handling.
 - **Acceptance criteria:** Reports do not claim billing-grade completeness; simulated usage is labelled.
+- **Verification:** `tests/test_usage.py` — 11 tests passed; the 183-test full offline suite is recorded in `T20.md`.
 - **Rollback/cleanup:** Remove only task-created local samples; do not alter monitoring/cloud data.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
 ### T21 — Usage reporting and demonstration pricing
 
+- **Execution record:** [`T21.md`](T21.md) — simulated usage summary verified; price estimate remains **Blocked** pending owner-approved formula and rates.
+
 - **Prerequisites:** T20 passes; pricing formula and non-production label are agreed.
 - **Dependencies:** T20.
-- **Implementation steps:** Produce a usage summary and optional demonstration-only estimate; no payment integration.
+- **Implementation steps:** Added deterministic fixture usage summaries with per-item source, interval, units, and provenance. Price estimation is omitted because no pricing formula or rates have been approved; no payment integration exists.
 - **Tests:** Deterministic calculation, time-window boundaries, missing usage, and visible non-production labelling.
 - **Acceptance criteria:** Every value cites its source; demo pricing cannot be mistaken for an invoice or charge.
+- **Verification:** `tests/test_usage_reporting.py` — 6 focused tests passed; the 183-test complete offline suite is recorded in `T21.md`.
 - **Rollback/cleanup:** Remove only task-created report outputs if needed; no payment accounts/records are created.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
@@ -305,9 +331,11 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T23 — GPU feasibility assessment (optional)
 
+- **Execution record:** [`T23.md`](T23.md) — existing audit evidence meets the feasibility-report criteria; no fresh GPU probe was performed.
+
 - **Prerequisites:** T01 evidence; explicit approval for any further GPU probe; no model download required for capability checks.
 - **Dependencies:** T01; independent of OpenStack tasks.
-- **Implementation steps:** Record verified RTX 2060 container visibility and assess host/container route, CUDA/runtime compatibility, and the separate unverified Nova PCI passthrough path. Do not configure passthrough or MIG.
+- **Implementation steps:** Recorded prior RTX 2060 Docker-container visibility, failed host NVML check, and unverified Nova PCI passthrough. No passthrough or MIG configuration was attempted; a fresh probe remains approval-gated.
 - **Tests:** Read-only GPU/runtime checks where approved; distinguish Docker visibility from host and guest visibility.
 - **Acceptance criteria:** Evidence-based support matrix; H100/MIG and multi-tenant GPU are explicitly unsupported; Nova passthrough remains unverified unless proven separately.
 - **Rollback/cleanup:** None for read-only checks; remove only task-created diagnostic output.
@@ -335,6 +363,8 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T26 — Lightweight logging and monitoring (optional)
 
+- **Execution record:** [`T26.md`](T26.md) — no verified source or application logging/metrics implementation; monitoring remains **Blocked**.
+
 - **Prerequisites:** Stable workflow and verified metric/log sources; explicit approval for any new service or remote metric endpoint query.
 - **Dependencies:** T14 and relevant operational tasks.
 - **Implementation steps:** Add lightweight structured logs and necessary verified metrics; avoid a full observability stack by default.
@@ -344,6 +374,8 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow.
 
 ### T27 — Backup and restore procedure
+
+- **Execution record:** [`T27.md`](T27.md) — verified real backups plus successful operator isolated restore/recovered guest boot; **In Progress** pending repository closeout. Restart validation and final POC acceptance are separate next checkpoints.
 
 - **Prerequisites:** Identify POC data that matters and approved local backup destination; stable workflow.
 - **Dependencies:** T14 and only the implemented state-bearing tasks (for example T18-T22 and T26); skipped optional tasks do not block a backup of the remaining approved POC data.

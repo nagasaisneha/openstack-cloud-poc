@@ -1,26 +1,25 @@
-# Local OpenStack Cloud Management POC --- Requirements Specification
+# OpenStack Cloud Management Platform --- Requirements Specification
 
-**Version:** 1.0\
-**Status:** Draft for implementation planning\
-**Target:** Windows 11 laptop with WSL2 Ubuntu and an existing OpenStack
-POC\
-**Purpose:** Convert the supplied Cloud Management Software Architecture
-diagram into a testable, laptop-scale implementation plan for Codex.
+**Version:** 1.1\
+**Status:** Original local OpenStack POC is the active development scope. Task 11 records passed core local application, Nova/Neutron guest/isolation, cleanup, recovery and WSL restart acceptance, alongside explicitly blocked/deferred optional capabilities. Staging and production remain separate; staging target is unselected. AWS-hosted OpenStack and AWS-native provisioning are outside the approved implementation scope.\
+**Development environment:** Windows 11 laptop with WSL2 Ubuntu\
+**Staging target:** Not selected or approved\
+**Intended production target:** The organization’s own physical data-center infrastructure running OpenStack\
+**Purpose:** Define the local OpenStack management POC and its acceptance evidence, and connect that evidence to a separate staging release process without treating local results as staging or production proof.
 
 ## 1. Project goal
 
-Build a local proof of concept (POC) that validates the main
-cloud-management workflows shown in the architecture diagram. Codex must
-implement the POC as small, dependency-ordered tasks. Each task must be
-tested, documented, committed to Git, and pushed to GitHub before the
-next task begins.
+Continue the original local OpenStack management POC in the Windows/WSL2 development environment. The local POC includes fixture-backed management workflows and, where a supported local OpenStack environment is available and separately approved for the scoped operation, validation of real OpenStack workflows. Existing fixtures are simulated evidence; the environment audit does not establish a running local OpenStack deployment. The POC contributes requirements, architecture, implementation, and acceptance evidence to the staging release plan but is not the staging environment and does not prove production readiness.
 
-The POC is intended to validate software workflows and OpenStack
-integration. It is **not** a production data center build and must not
-attempt to reproduce an NVIDIA H100 production environment on the
-laptop.
+### 1.1 Local POC scope and environment boundaries
 
-## 1.1 Source files and documentation rules
+- **Local POC:** Continue the original local OpenStack management POC. Use local fixtures for workflows that are not backed by a verified local service and label all such outputs simulated. Do not add AWS provisioning or AWS-hosted OpenStack as POC prerequisites.
+- **Tenant compute:** Nova is the chosen tenant compute path; Proxmox is deprecated. The supplied architecture diagram’s “Proxmox VE (initial)” and “OpenStack Nova (future)” labels are historical wording and do not change this decision.
+- **Staging relationship:** Staging is a separate validation environment. The staging release plan maps local POC requirements, architecture, task history, and acceptance evidence to staging gates, and records which behavior still requires real staging validation. The staging target and deployment approach are not selected here.
+- **Production direction:** The long-term goal remains running the platform on organization-owned physical data-center infrastructure. Local POC or staging success alone does not establish production readiness or portability.
+- The deferred [Option A technical reference design](../architecture/option-a-technical-reference-design.md) and [Gate 1 feasibility package](../architecture/option-a-gate1-feasibility-package.md) are historical evaluations, not approved implementation steps or resource authorization.
+
+## 1.2 Source files and documentation rules
 
 The project must keep both the visual architecture and the written
 requirements under version control:
@@ -45,25 +44,24 @@ verified in the repository.
 
 ### In scope
 
--   Begin from the current Ubuntu-on-WSL2 environment and verify what is
-    actually installed. The user reports that the previous setup has been
-    uninstalled; do not assume OpenStack, Docker, or project files exist.
--   Perform a read-only environment and hardware audit before installation
-    or configuration.
--   Map architecture components to OpenStack-native services or
-    justified external components.
+-   Continue local development and validation of the original OpenStack management POC using the existing requirements and implementation work.
+-   Use local POC evidence as an input to a separate staging release plan; identify and validate any remaining gaps in the selected staging environment.
+-   Preserve the goal of eventual production on organization-owned physical data-center infrastructure; local and staging evidence must not be overstated as production proof.
+-   Map architecture components to OpenStack-native services or justified external components.
 -   Validate identity, project isolation, compute, images, networking,
     storage, APIs, provisioning workflows, usage reporting, monitoring,
     logging, automation, backup procedures, and a small AI workload
     where feasible.
 -   Provide a management API and/or simple portal only where required by
-    the final task backlog.
+    approved product scope.
 -   Keep code, scripts, tests, decisions, and documentation in Git.
--   Commit and push every successfully completed and verified task.
+-   Use small, reviewable tasks and record actual verification evidence; no task or documentation status implies cloud deployment approval.
 
-### Out of scope
+### Out of scope for the approved POC implementation scope
 
--   Production data center deployment.
+-   Creating or changing AWS, OpenStack, or physical data-center resources without separate explicit approval.
+-   AWS infrastructure provisioning, AWS-native EC2 tenant VM provisioning, and AWS-hosted OpenStack are not requirements or implementation paths for this POC.
+-   Treating approval of the architecture design as proof of feasibility, deployment approval, implementation, or production readiness.
 -   Provisioning or purchasing H100 hardware.
 -   Claiming H100 MIG support on the laptop GPU.
 -   Production-grade high availability from a single laptop.
@@ -88,13 +86,13 @@ directly in WSL2 if drivers and memory allow.
 businesses - Partners / enterprises - Administrators - Web portal,
 CLI/SDK, and optional mobile access
 
-**POC requirements** - Use Keystone identities, projects, roles, and
+**Platform requirements** - Use Keystone identities, projects, roles, and
 scoped access where available. - Validate that users can access only
 their authorized projects and resources. - Use Horizon for the existing
 OpenStack dashboard if installed. - Use OpenStackClient and/or OpenStack
 SDK for CLI and programmatic access. - A custom web portal is optional
 and should be implemented only if the specifications/backlog require
-it. - Mobile application is deferred for the laptop POC. - Billing
+it. - Mobile application is deferred unless separately approved and justified. - Billing
 screens must not imply that real payment processing exists unless a
 sandbox integration is implemented.
 
@@ -109,7 +107,7 @@ behavior and limitations are documented.
 application firewall - Load balancer - API gateway - Identity and access
 management
 
-**POC requirements** - Do not expose the local OpenStack environment
+**Platform requirements** - Do not expose the staging OpenStack environment
 publicly by default. - Use existing Neutron security groups and host
 firewall controls. - Verify TLS and endpoint configuration where
 relevant. - Treat Cloudflare, external DDoS protection, a WAF, and a
@@ -130,7 +128,7 @@ marked deferred/simulated.
 and pricing - Provisioning engine - Usage metering and monitoring -
 Billing and payments - Database - Job queue
 
-**POC requirements** - Use Keystone for identity, projects, and roles. -
+**Platform requirements** - Use Keystone for identity, projects, and roles. -
 Read Nova flavors, Glance images, Neutron networks, and supported
 storage options to build a resource catalog. - Use Nova, Glance,
 Neutron, and Cinder APIs for supported resource operations. - Use Heat
@@ -143,8 +141,8 @@ only if the custom application requires persistent application state. Do
 not duplicate OpenStack service databases. - Evaluate Ceilometer/Gnocchi
 for usage data according to the installed OpenStack release and
 deployment. - CloudKitty and payment-provider integrations are optional
-and must be separately verified. - Pricing in the POC may be a clearly
-labelled demonstration calculation based on usage data; it must not be
+and must be separately verified. - Any demonstration pricing must be clearly
+labelled and based on identified usage data; it must not be
 represented as real billing without a validated implementation.
 
 **Acceptance criteria** - Catalog entries reflect resources actually
@@ -153,13 +151,31 @@ identifier and a clear status. - Failed operations are reported and do
 not show false success. - Usage reports identify their data source and
 limitations. - Any demo pricing is clearly labelled as non-production.
 
+**Local POC implementation evidence:** `AsynchronousLifecycleManagementService`
+connects the fixture request contract, role/project authorization, in-memory
+job tracker, bounded local executor, and `FixtureInstanceProvider` for
+simulated create/start/stop/delete jobs; `compute.inspect` remains synchronous.
+Acceptance is returned only after executor submission succeeds. This is
+process-local fixture evidence only: it does not establish HTTP deployment,
+durable jobs, Nova/Neutron integration, or staging/production readiness. The
+legacy T12/T13 synchronous create-validation path remains available.
+
+**Local usage evidence:** `FixtureUsageSource` and `FixtureUsageCollector`
+provide project-scoped, UTC-windowed sample collection with explicit units,
+source, and simulated provenance. The fixture-only `usage.read` operation
+requires a separate `usage.viewer` role. This does not establish
+Ceilometer/Gnocchi/CloudKitty availability, real metering, normalized billing
+data, or production pricing. `format_fixture_usage_summary` reports these
+samples without aggregation or pricing and explicitly marks the output as
+simulated and non-billing. A demonstration rate/formula has not been selected.
+
 ### Layer 4 --- Infrastructure Orchestration
 
 **Diagram components** - VM management - GPU scheduling and
 partitioning - Container orchestration - Virtual networking - Block
 storage - Image registry
 
-**POC requirements** - Use Nova for instances, Glance for VM images,
+**Platform requirements** - Use Nova for tenant instances, Glance for VM images,
 Neutron for networking, and Cinder for block volumes where available. -
 Validate instance lifecycle operations: create, inspect, start, stop,
 and delete. - Validate volume creation, attachment, detachment, and
@@ -179,13 +195,15 @@ is tested with documented security rules. - Storage tests pass only when
 a suitable backend is present. - Unsupported components are recorded
 with evidence and a fallback/simulation plan.
 
+Nova is the selected tenant compute path. Proxmox is deprecated; the diagram wording that labels Proxmox as initial and Nova as future is historical and does not change the selected path.
+
 ### Layer 5 --- Cloud Services
 
 **Diagram components** - CPU virtual machines - GPU instances / MIG
 profiles - AI Academy environments - LLM inference services -
 Object/file storage
 
-**POC requirements** - Demonstrate small Linux VM workflows if Nova
+**Platform requirements** - Demonstrate small Linux VM workflows in an approved staging environment if Nova
 compute works. - Define flavors based on actual available capacity, not
 the H100 example profiles. - Test GPU-enabled containers or small
 inference directly on the host only if the NVIDIA driver/container
@@ -208,16 +226,9 @@ capabilities.
 GPU server - Future compute/storage/management/backup servers - Power,
 cooling, and physical facility controls
 
-**POC requirements** - Do not build or configure physical data center
-infrastructure. - Record the laptop hardware and network topology
-relevant to the POC. - Future servers, UPS, cooling, physical fire
-protection, redundant ISP, and production rack design are deferred. -
-Treat production topology in the diagram as context, not laptop
-implementation scope.
+**Platform requirements** - The intended production environment is the organization’s own physical data center running OpenStack. Its hardware, network, storage, facilities, power, cooling, redundancy, and operational design require separate discovery and approval. - Record laptop hardware only as development-environment context; it is not a production capacity model. - No physical infrastructure purchase or change is authorized by this specification. - Differences between the separately selected staging environment and the data-center target must be documented and must not be represented as validated beyond the evidence actually collected.
 
-**Acceptance criteria** - Hardware and network constraints are
-documented. - No production hardware purchases or facility changes are
-included in the POC tasks.
+**Acceptance criteria** - Production hardware and network requirements and unknowns are documented before deployment approval. - No production hardware purchases or facility changes occur without separate approval.
 
 ### Layer 7 --- Operations, Monitoring, and Security
 
@@ -225,14 +236,14 @@ included in the POC tasks.
 Elasticsearch - Ansible and Terraform - Backup and disaster recovery -
 Alerting and incident management
 
-**POC requirements** - Inspect existing monitoring tools before
+**Platform requirements** - Inspect existing monitoring tools before
 installing new ones. - Add host/OpenStack/application metrics only where
 the relevant exporters and data sources are compatible. - Document which
 metrics are genuine, simulated, or unavailable. - Use Ansible/Terraform
 for repeatable configuration only where practical. - Implement a backup
-procedure for POC configuration and any data that matters; test
+procedure for application and deployment configuration and any data that matters; test
 restoration where feasible. - Add local logging and basic alerting only
-if it does not overload the laptop. - Wazuh, a full SIEM, external
+where appropriate to the environment. - Wazuh, a full SIEM, external
 alerting, offsite backups, and production incident response are
 optional/deferred. - Do not claim disaster recovery based only on
 creating a backup file; perform a restore test.
@@ -248,7 +259,7 @@ operations limitations are listed.
 **Diagram components** - Payment gateway - Domain and DNS -
 Email/notifications - Offsite object storage
 
-**POC requirements** - Keep integrations optional and behind explicit
+**Platform requirements** - Keep integrations optional and behind explicit
 configuration. - Use payment sandbox mode only if payment workflow is
 required; never store payment secrets in Git. - Local DNS or test
 hostnames may be used; public DNS changes are not required. - Email can
@@ -279,15 +290,14 @@ environment configuration or a secrets manager.
     outcomes, and relevant logs.
 7.  **Documentation:** provide setup, execution, verification, known
     limitations, and cleanup instructions.
-8.  **Resource safety:** avoid consuming all laptop RAM/disk or creating
-    uncontrolled cloud resources.
+8.  **Resource safety:** use environment-specific capacity and cost limits; avoid uncontrolled cloud resources.
 9.  **Configuration:** separate environment-specific values from code.
 10. **Security:** do not expose the dashboard or APIs publicly by
     default.
 
 ## 5. Non-functional requirements
 
--   Must be manageable from the existing Windows 11/WSL2 environment.
+-   Development tooling may be managed from Windows 11/WSL2; this does not define the staging or production runtime environment.
 -   Must not install, reset, reconfigure, or delete infrastructure during
     the initial audit.
 -   Must preserve any existing files, Git changes, and resources discovered
@@ -299,10 +309,11 @@ environment configuration or a secrets manager.
 -   Must distinguish verified behavior from mocks, simulations, and
     assumptions.
 
-## 6. Proposed implementation phases and task backlog
+## 6. Original local POC requirements and task references
 
-The IDs below are proposed task IDs. Codex must inspect the environment
-and specifications before finalizing them.
+The phases and original POC-IDs below preserve the local POC requirements and acceptance intent. They inform the active local POC scope and staging evidence crosswalk; they are not staging tasks or proof of staging readiness. The matching T01–T28 identifiers and implementation history are preserved in [`../tasks/README.md`](../tasks/README.md). This scope decision does not silently reactivate all T-IDs as an execution sequence or authorize cloud/system changes; future work must be selected and scoped explicitly.
+
+The IDs below are original local POC requirement IDs. Their implementation evidence is local; real cloud behavior remains unverified unless an evidence record explicitly establishes it. Staging validation is separate.
 
 ### Phase 1 --- Environment and foundation
 
@@ -399,7 +410,9 @@ operations match OpenStack results and reject unauthorized requests.
 
 **POC-017 --- Job tracking** - Track provisioning job IDs, states,
 timestamps, and failure reasons. - Acceptance: successful and failed
-jobs are represented correctly.
+jobs are represented correctly. The local implementation connects jobs
+to simulated lifecycle execution; records and idempotency remain
+process-local and do not represent durable or real provider operations.
 
 **POC-018 --- Usage data collection** - Determine which metering
 services are installed and compatible; collect supported metrics. -
@@ -439,7 +452,7 @@ project selection → resource provisioning → networking → storage where
 available → workload → monitoring/usage → cleanup. - Acceptance: each
 step has evidence and all simulated/deferred steps are clearly labelled.
 
-## 7. Required task record
+## 7. POC task record fields
 
 Every task must have a Markdown task record containing: - ID and title -
 Requirement IDs addressed - Objective and scope - Dependencies -
@@ -448,7 +461,7 @@ Tests and exact commands - Acceptance criteria - Rollback/cleanup plan -
 Risks and limitations - Status: Planned, In Progress, Blocked, Failed,
 or Complete - Commit SHA and GitHub push status - Verification evidence
 
-## 8. Git and GitHub workflow
+## 8. POC Git and GitHub workflow reference
 
 For every task: 1. Check `git status` and preserve unrelated changes. 2.
 Confirm task prerequisites and dependencies. 3. Use the approved branch
@@ -471,7 +484,7 @@ Suggested commit style: -
 `test(neutron): verify tenant network security` -
 `feat(api): add OpenStack provisioning endpoint`
 
-## 9. Suggested repository structure
+## 9. Historical POC suggested repository structure — not active
 
 ``` text
 openstack-cloud-poc/
@@ -500,9 +513,9 @@ openstack-cloud-poc/
 Adapt this layout to the existing repository rather than duplicating a
 structure that already exists.
 
-## 10. Final acceptance criteria
+## 10. Local POC acceptance criteria — staging evidence input, not release acceptance
 
-The POC is accepted when: - The environment and service mapping are
+The local POC acceptance record should address: - The environment and service mapping are
 documented. - Supported identity and project-isolation workflows are
 verified. - A test VM can be provisioned and cleaned up if the compute
 path supports it. - Network and storage capabilities are tested where
@@ -511,10 +524,11 @@ the approved scope. - Usage/monitoring reports use real, identified data
 sources or are labelled simulated. - A feasible AI workload is
 demonstrated or the hardware limitation is documented. - Backup/restore
 and security checks have evidence. - The complete end-to-end workflow is
-demonstrated. - Every completed task has a commit SHA and successful
-GitHub push. - Known limitations and deferred features are documented.
+demonstrated. - Each completed task has its recorded verification evidence and known limitations. Git integration evidence does not establish staging or production readiness.
 
-## 11. First execution instruction for Codex
+## 11. Historical POC first execution instruction — superseded
+
+The instructions below are retained as historical source material and are not the current local POC task sequence. The local POC scope and its relationship to staging are defined at the start of this document and in [`../staging-release-plan.md`](../staging-release-plan.md). Do not treat this section as authorization to access or change any environment.
 
 **Do not install, configure, reset, delete, or modify anything yet.**
 

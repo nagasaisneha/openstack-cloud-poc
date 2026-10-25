@@ -1,0 +1,14 @@
+# Local credentials and environment-specific settings
+.env
+.env.*
+**/.env
+**/.env.*
+config/local.yaml
+
+# Runtime output
+state/
+*.log
+
+# Python runtime cache (no Python dependencies are introduced by T04)
+__pycache__/
+*.py[cod]

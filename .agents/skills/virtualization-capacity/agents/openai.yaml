@@ -1,0 +1,3 @@
+interface:
+  display_name: "Virtualization Capacity"
+  short_description: "Assess KVM capacity and workload fit"

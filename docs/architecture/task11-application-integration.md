@@ -1,6 +1,6 @@
 # Task 11 — real application provider integration
 
-Status: real application create/inspect, catalog, image integrity, KVM, Neutron binding, guest/ARP checks, stop/start, verified recovery backup, deletion and temporary dependency cleanup passed in the operator terminal. Both temporary projects/users and the supplemental default group are removed; original demo remains `ACTIVE`. [Operational closeout](task11-operations-and-closeout.md) remains pending. Earlier commands/results form a chronological record; do not replay completed acceptance or cleanup commands.
+Status: real application create/inspect, catalog, image integrity, KVM, Neutron binding, guest/ARP checks, stop/start, verified recovery backup, deletion and temporary dependency cleanup passed in the operator terminal. Both temporary projects/users and the supplemental default group are removed; the retained demo remains `ACTIVE`. The isolated restore, controlled service cycle and guarded WSL distribution restart also passed; see [operational closeout](task11-operations-and-closeout.md) and [recovery/restart acceptance](task11-recovery-and-restart.md). Earlier commands/results form a chronological record; do not replay completed acceptance or cleanup commands. Local Git closeout remains; staging and production are separate.
 
 ## Application boundary
 

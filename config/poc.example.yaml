@@ -1,0 +1,10 @@
+# Safe starter configuration for the fixture-first management POC.
+# Copy to config/local.yaml for future machine-specific settings.
+# This template contains no endpoint, credential, or machine-specific value.
+
+management:
+  adapter: fixture
+
+integrations:
+  openstack:
+    enabled: false
