@@ -1,9 +1,11 @@
 #!/usr/bin/python3
-"""Prerequisite review for the next scoped POC service-cycle stage.
+"""Prerequisite review and guarded retained-guest recovery for the POC.
 
 Default mode is read-only apart from protected reports. The explicit
 --resume-demo UUID option may start only the exact retained, owned, shut-off
-demo through Nova. Neither mode changes service configuration or reboots WSL.
+demo through Nova. --retry-reviewed-demo is a separate one-shot path guarded by
+a later successful Nova stop and followed by a stability observation. Neither
+mode changes service configuration or reboots WSL.
 """
 import argparse
 import configparser
@@ -74,6 +76,8 @@ KNOWN_ERRORS = {
 NOVA_STATUSES = {'ACTIVE', 'BUILD', 'SHUTOFF', 'ERROR', 'PAUSED', 'SUSPENDED',
                  'RESCUE', 'RESIZE', 'VERIFY_RESIZE', 'REBOOT', 'HARD_REBOOT',
                  'REBUILD', 'MIGRATING', 'SHELVED', 'SHELVED_OFFLOADED', 'DELETED', 'UNKNOWN'}
+RETRY_STABILITY_SECONDS = 360
+RETRY_STABILITY_INTERVAL = 10
 
 
 def safe_error(error):
@@ -359,6 +363,139 @@ def resume_demo(cloud, state):
     raise ReadinessError('demo start completion unverified after 180 seconds; no request replayed')
 
 
+def parse_utc_timestamp(value):
+    if not isinstance(value, str):
+        raise ReadinessError('reviewed retry timestamp is missing or invalid')
+    try:
+        parsed = datetime.datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except ValueError as error:
+        raise ReadinessError('reviewed retry timestamp is missing or invalid') from error
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+
+def confirmed_stop_after_previous_start(cloud, previous_observed_at):
+    response = cloud.compute.get(
+        '/servers/' + DEMO_SERVER + '/os-instance-actions?limit=100', raise_exc=True)
+    body = response.json()
+    actions = body.get('instanceActions', []) if isinstance(body, dict) else []
+    if not actions or not isinstance(actions[0], dict) or actions[0].get('action') != 'stop':
+        raise ReadinessError('latest Nova action is not the reviewed retained-demo stop')
+    stop = actions[0]
+    if parse_utc_timestamp(stop.get('start_time')) <= previous_observed_at:
+        raise ReadinessError('latest Nova stop does not follow the saved active observation')
+    request_id = stop.get('request_id')
+    if not isinstance(request_id, str) or not re.fullmatch(r'req-[0-9a-fA-F-]{36}', request_id):
+        raise ReadinessError('latest Nova stop request identifier is invalid')
+    detail_response = cloud.compute.get(
+        '/servers/' + DEMO_SERVER + '/os-instance-actions/' + request_id,
+        raise_exc=True, microversion='2.51')
+    detail_body = detail_response.json()
+    detail = detail_body.get('instanceAction') if isinstance(detail_body, dict) else None
+    if not isinstance(detail, dict) or detail.get('action') != 'stop':
+        raise ReadinessError('Nova stop action details are unavailable for reviewed retry')
+    events = detail.get('events', [])
+    if not any(isinstance(event, dict) and event.get('event') == 'compute_stop_instance'
+               and event.get('result') == 'Success' for event in events):
+        raise ReadinessError('Nova stop action did not record a successful compute event')
+    return {'action': 'stop', 'start_time': stop.get('start_time'),
+            'compute_stop_instance': 'Success'}
+
+
+def reviewed_retry_demo(cloud, state):
+    """Start once after a reviewed stop; preserve the original active intent."""
+    previous_path = launch.DATA_DIR / 'demo-resume.json'
+    retry_path = launch.DATA_DIR / 'demo-resume-reviewed-retry.json'
+    if not (previous_path.exists() or previous_path.is_symlink()):
+        raise ReadinessError('saved active demo start intent is required for reviewed retry')
+    guest.protected_file(previous_path, 0o600)
+    previous = json.loads(previous_path.read_text())
+    if (previous.get('server_id') != DEMO_SERVER or previous.get('run_id') != state['run_id']
+            or previous.get('phase') != 'active'):
+        raise ReadinessError('saved demo start intent differs from the reviewed active scope')
+    previous_observed_at = parse_utc_timestamp(previous.get('observed_at'))
+    server = owned_demo(cloud, state)
+    if not lifecycle.settled(server, 'SHUTOFF', 4):
+        raise ReadinessError('reviewed retry requires Nova SHUTOFF, power 4 and no pending task')
+    stopped = common.run(['virsh', '--readonly', '--connect', 'qemu:///system',
+                          'list', '--all', '--state-shutoff', '--uuid'], timeout=15).split()
+    domains = common.run(['virsh', '--readonly', '--connect', 'qemu:///system',
+                          'list', '--all', '--uuid'], timeout=15).split()
+    if stopped != [DEMO_SERVER] or domains != [DEMO_SERVER]:
+        raise ReadinessError('reviewed retry requires the sole retained guest shut off in libvirt')
+    stop = confirmed_stop_after_previous_start(cloud, previous_observed_at)
+    if operations.capacity()['meminfo_kib']['MemAvailable'] < 768 * 1024:
+        raise ReadinessError('less than 768 MiB available memory; reviewed retry not submitted')
+    if retry_path.exists() or retry_path.is_symlink():
+        guest.protected_file(retry_path, 0o600)
+        raise ReadinessError('reviewed retry intent already exists; preserve it and do not retry')
+    record = {'server_id': DEMO_SERVER, 'run_id': state['run_id'], 'phase': 'start_intent',
+              'previous_observed_at': previous['observed_at'], 'reviewed_stop': stop,
+              'created_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'stability_seconds': RETRY_STABILITY_SECONDS}
+    launch.atomic_state(retry_path, record)
+    try:
+        cloud.compute.start_server(DEMO_SERVER)
+    except Exception:
+        record.update(phase='unverified', failure='start request outcome uncertain')
+        launch.atomic_state(retry_path, record)
+        raise
+    record['phase'] = 'start_submitted'
+    launch.atomic_state(retry_path, record)
+    print('POC restart readiness: reviewed retained demo start submitted once; awaiting observed completion', flush=True)
+    deadline = time.monotonic() + 180
+    while time.monotonic() < deadline:
+        server = owned_demo(cloud, state)
+        if server.status == 'ERROR':
+            record.update(phase='start_failed', observed_status='ERROR')
+            launch.atomic_state(retry_path, record)
+            raise ReadinessError('reviewed retry guest entered ERROR; preserve intent and diagnose')
+        if lifecycle.settled(server, 'ACTIVE', 1):
+            running = common.run(['virsh', '--readonly', '--connect', 'qemu:///system',
+                                  'list', '--all', '--state-running', '--uuid'], timeout=15).split()
+            if running == [DEMO_SERVER]:
+                record.update(phase='active', observed_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
+                launch.atomic_state(retry_path, record)
+                return {'start_requested': True, 'nova_active': True, 'libvirt_running': True,
+                        'intent_record': str(retry_path)}
+        time.sleep(2)
+    record.update(phase='unverified', failure='start completion unverified; no request replayed')
+    launch.atomic_state(retry_path, record)
+    raise ReadinessError('reviewed retry start completion unverified after 180 seconds; no request replayed')
+
+
+def watch_demo_stability(cloud, state, retry_path, duration=RETRY_STABILITY_SECONDS):
+    guest.protected_file(retry_path, 0o600)
+    deadline = time.monotonic() + duration
+    while time.monotonic() < deadline:
+        server = owned_demo(cloud, state)
+        if not lifecycle.settled(server, 'ACTIVE', 1):
+            record = json.loads(retry_path.read_text())
+            record.update(phase='stability_failed',
+                          last_state={'status': server.status if server.status in NOVA_STATUSES else 'UNKNOWN',
+                                      'task_pending': server.task_state is not None,
+                                      'power_state': server.power_state if type(server.power_state) is int else None},
+                          stability_failed_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
+            launch.atomic_state(retry_path, record)
+            raise ReadinessError('reviewed retry guest stopped during the stability window; preserve the evidence')
+        running = common.run(['virsh', '--readonly', '--connect', 'qemu:///system',
+                              'list', '--all', '--state-running', '--uuid'], timeout=15).split()
+        if running != [DEMO_SERVER]:
+            record = json.loads(retry_path.read_text())
+            record.update(phase='stability_failed',
+                          stability_failed_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                          libvirt_running=False)
+            launch.atomic_state(retry_path, record)
+            raise ReadinessError('reviewed retry guest left libvirt running state; preserve the evidence')
+        time.sleep(min(RETRY_STABILITY_INTERVAL, max(0, deadline - time.monotonic())))
+    record = json.loads(retry_path.read_text())
+    record.update(phase='stable', stability_observed_seconds=duration,
+                  stable_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
+    launch.atomic_state(retry_path, record)
+    return {'verified': True, 'observed_seconds': duration}
+
+
 def wait_guest_cpu(cloud, state):
     deadline = time.monotonic() + 120
     while time.monotonic() < deadline:
@@ -389,7 +526,7 @@ def wait_cloud_state(cloud, state, timeout=60):
             time.sleep(min(2, remaining))
 
 
-def review(cloud, state, *, report=None, path=None, resume=False):
+def review(cloud, state, *, report=None, path=None, resume=False, retry_reviewed=False):
     result = {} if report is None else report
     for name, action in (('exclusive_demo', lambda: exclusive_demo(cloud, state)),
                          ('jobs', journal_quiescent), ('addressing', addressing),
@@ -405,11 +542,18 @@ def review(cloud, state, *, report=None, path=None, resume=False):
         result['units'][unit] = run_check(result, 'service:' + unit, check_unit, path)
     result['demo_state'] = run_check(result, 'demo_state', lambda: demo_state(cloud, state), path)
     print('POC restart readiness: demo_state: ' + json.dumps(result['demo_state'], sort_keys=True), flush=True)
-    if resume:
+    if retry_reviewed:
+        result['reviewed_retry_demo'] = run_check(
+            result, 'reviewed_retry_demo', lambda: reviewed_retry_demo(cloud, state), path)
+        run_check(result, 'guest_kvm', lambda: lifecycle.verify_acceleration(state), path)
+        retry_path = launch.DATA_DIR / 'demo-resume-reviewed-retry.json'
+        result['stability'] = run_check(
+            result, 'stability', lambda: watch_demo_stability(cloud, state, retry_path), path)
+    elif resume:
         result['resume_demo'] = run_check(result, 'resume_demo', lambda: resume_demo(cloud, state), path)
         run_check(result, 'guest_kvm', lambda: lifecycle.verify_acceleration(state), path)
     result['cloud'] = run_check(result, 'cloud', lambda: wait_cloud_state(cloud, state), path)
-    action = (lambda: wait_guest_cpu(cloud, state)) if resume else (lambda: operations.cpu_smoke(state))
+    action = (lambda: wait_guest_cpu(cloud, state)) if (resume or retry_reviewed) else (lambda: operations.cpu_smoke(state))
     result['guest_cpu'] = run_check(result, 'guest_cpu', action, path)
     result['service_cycle_prerequisites_passed'] = True
     result['wsl_restart_ready'] = False
@@ -425,6 +569,8 @@ def main(argv=None):
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--resume-demo', choices=(DEMO_SERVER,), metavar='UUID',
                       help='start only the exact retained demo if Nova/libvirt agree it is shut off')
+    mode.add_argument('--retry-reviewed-demo', action='store_true',
+                      help='one reviewed start after a confirmed later Nova stop, followed by a six-minute stability observation')
     mode.add_argument('--explain-report', type=Path, metavar='REPORT',
                       help='print safe failure metadata from an existing protected report; no APIs or writes')
     args = parser.parse_args(argv)
@@ -437,7 +583,8 @@ def main(argv=None):
             return 1
     path = None
     report = {'verified': False, 'diagnostic_version': 3, 'checks': {},
-              'mode': 'resume_retained_demo' if args.resume_demo else 'read_only',
+              'mode': ('reviewed_retry_retained_demo' if args.retry_reviewed_demo else
+                       'resume_retained_demo' if args.resume_demo else 'read_only'),
               'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}
     try:
         os.umask(0o077)
@@ -464,10 +611,13 @@ def main(argv=None):
                     lambda: stack.enter_context(common.connection(secrets)), path)
                 run_check(report, 'keystone_auth', lambda: cloud.session.get_project_id(), path)
                 state, _ = run_check(report, 'manifest', lambda: guest.load_run(cloud, require_ssh=False), path)
-                review(cloud, state, report=report, path=path, resume=bool(args.resume_demo))
+                review(cloud, state, report=report, path=path, resume=bool(args.resume_demo),
+                       retry_reviewed=args.retry_reviewed_demo)
             report.update(verified=True, current_check=None)
             launch.atomic_state(path, report)
-            scope = 'retained demo running; no service/WSL restart' if args.resume_demo else 'observations only; no restart performed'
+            scope = ('retained demo running and stable; no service/WSL restart' if args.retry_reviewed_demo else
+                     'retained demo running; no service/WSL restart' if args.resume_demo else
+                     'observations only; no restart performed')
             print('POC restart readiness: PASS (' + scope + '); report=' + str(path), flush=True)
             return 0
     except Exception as exc:
@@ -481,7 +631,9 @@ def main(argv=None):
                 print('POC restart readiness: diagnostic persistence unavailable', file=sys.stderr)
             print('POC restart readiness: protected incomplete report=' + str(path), flush=True)
         check = report.get('failed_check', report.get('current_check', 'setup'))
-        boundary = 'no service/WSL changes; inspect saved demo start intent' if args.resume_demo else 'no service/guest changes performed'
+        boundary = ('no service/WSL changes; reviewed retry intent is preserved and never replayed' if args.retry_reviewed_demo else
+                    'no service/WSL changes; inspect saved demo start intent' if args.resume_demo else
+                    'no service/guest changes performed')
         print('STOP: restart prerequisites unverified at ' + str(check) + ': '
               + json.dumps(details, sort_keys=True) + '; ' + boundary + '.', file=sys.stderr)
         return 1

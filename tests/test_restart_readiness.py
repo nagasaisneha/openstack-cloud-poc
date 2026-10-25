@@ -261,6 +261,52 @@ class RestartReadinessTests(unittest.TestCase):
                 cloud.compute.start_server.assert_not_called()
                 self.assertFalse((Path(directory) / 'demo-resume.json').exists())
 
+    def test_reviewed_stop_must_follow_prior_active_observation_and_succeed(self):
+        response = NS(json=Mock(return_value={'instanceActions': [{
+            'action': 'stop', 'start_time': '2026-10-25T12:13:01Z', 'request_id': 'req-12345678-1234-1234-1234-123456789abc'}]}))
+        detail = NS(json=Mock(return_value={'instanceAction': {'action': 'stop', 'events': [
+            {'event': 'compute_stop_instance', 'result': 'Success'}]}}))
+        cloud = NS(compute=NS(get=Mock(side_effect=[response, detail])))
+        previous = setup.parse_utc_timestamp('2026-10-25T12:07:37Z')
+        self.assertEqual(setup.confirmed_stop_after_previous_start(cloud, previous), {
+            'action': 'stop', 'start_time': '2026-10-25T12:13:01Z',
+            'compute_stop_instance': 'Success'})
+        failed_detail = NS(json=Mock(return_value={'instanceAction': {'action': 'stop', 'events': [
+            {'event': 'compute_stop_instance', 'result': 'Error'}]}}))
+        failed_cloud = NS(compute=NS(get=Mock(side_effect=[response, failed_detail])))
+        with self.assertRaises(setup.ReadinessError):
+            setup.confirmed_stop_after_previous_start(failed_cloud, previous)
+
+    def test_reviewed_retry_never_replays_existing_retry_intent(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(setup.launch, 'DATA_DIR', Path(directory)), \
+             patch.object(setup.guest, 'protected_file'), \
+             patch.object(setup, 'owned_demo', return_value=self.demo()), \
+             patch.object(setup.lifecycle, 'settled', return_value=True), \
+             patch.object(setup.common, 'run', return_value=setup.DEMO_SERVER + '\n'), \
+             patch.object(setup, 'confirmed_stop_after_previous_start', return_value={'action': 'stop'}), \
+             patch.object(setup.operations, 'capacity', return_value={'meminfo_kib': {'MemAvailable': 2 * 1024 * 1024}}):
+            root = Path(directory)
+            (root / 'demo-resume.json').write_text(json.dumps({
+                'server_id': setup.DEMO_SERVER, 'run_id': 'run-marker', 'phase': 'active',
+                'observed_at': '2026-10-25T12:07:37Z'}))
+            (root / 'demo-resume-reviewed-retry.json').write_text('{"phase":"start_intent"}')
+            cloud = NS(compute=NS(start_server=Mock()))
+            with self.assertRaisesRegex(setup.ReadinessError, 'already exists'):
+                setup.reviewed_retry_demo(cloud, self.demo_scope())
+            cloud.compute.start_server.assert_not_called()
+
+    def test_stability_watch_records_active_observation_without_sleep_for_zero_window(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(setup.guest, 'protected_file'):
+            path = Path(directory) / 'retry.json'
+            path.write_text(json.dumps({'phase': 'active'}))
+            cloud = NS(compute=NS(get_server=Mock(return_value=self.demo(status='ACTIVE', power=1))))
+            with patch.object(setup, 'owned_demo', return_value=self.demo(status='ACTIVE', power=1)), \
+                 patch.object(setup.common, 'run', return_value=setup.DEMO_SERVER + '\n'):
+                result = setup.watch_demo_stability(cloud, self.demo_scope(), path, duration=0)
+            self.assertTrue(result['verified'])
+            self.assertEqual(json.loads(path.read_text())['phase'], 'stable')
+
     def test_resume_records_intent_before_single_request_and_observes_nova_plus_libvirt(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(setup.launch, 'DATA_DIR', Path(directory)), \
              patch.object(setup.common, 'run', return_value=setup.DEMO_SERVER + '\n'), \
