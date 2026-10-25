@@ -65,7 +65,15 @@ Verification after the diagnostic correction: **13 focused readiness tests passe
 
 The operator's next review passed recovery checks, credentials/Keystone authentication, the manifest, exclusive-demo/job/addressing/KVM checks and all service-unit checks. It then stopped at `cloud` with category `demo_not_active`; protected report: `/root/openstack-poc-acceptance/restart-readiness-f89ff803e4ca42799c6035db3d4e95b7.json`. This category means Nova did not report the combination `ACTIVE`, running power and no task; the supplied output alone does not disclose the exact Nova fields.
 
-A separate outside-sandbox read-only query of exact retained UUID `82382430-4b64-4386-a55b-8468e04da011` returned `shut off (unknown)` from libvirt. No VM was changed by that query. The shutdown cause and exact current Nova state remain unverified; do not infer a service failure from this result.
+A separate outside-sandbox read-only query of exact retained UUID `82382430-4b64-4386-a55b-8468e04da011` returned `shut off (unknown)` from libvirt. Nova action history later showed `SHUTOFF`, power state 4, and no pending task. No VM was changed by these observations.
+
+### Guest self-shutdown after verified WSL restart
+
+The protected service-cycle record reports `verified` at 10:54:13 UTC, with the retained demo `ACTIVE` and libvirt-running. The WSL restart record reports `verified` at 12:07:53 UTC, again with the demo `ACTIVE` and libvirt-running. Nova's action history then records a successful `start` at 12:07:35 UTC and a `stop` at 12:13:01 UTC. The latter has no user attribution. At 12:13:02 UTC, Nova-compute's `_sync_instance_power_state` logged database power state 1 versus hypervisor power state 4 and said the instance had shut down by itself before Nova issued its reconciliation stop. This indicates the Nova stop record followed the shutdown; it does not identify why the hypervisor/guest went off.
+
+Guest `acpid` logs contain `PWRF/00000080` power-button events matching the earlier controlled service-cycle and WSL-preparation stops. No corresponding event appears around guest time 13:13 for the 12:13 UTC self-shutdown. The guest console-output API returned HTTP 404. The guest console contains the normal `NMI watchdog: Perf NMI watchdog permanently disabled` boot notice; this is not evidence of a watchdog timeout. The offline qcow2 overlay reports no corruption, and the root ext4 partition was inspected through a private sparse copy. Its persistent logs did not expose a shutdown, panic, OOM or watchdog fault for the later boot. The source image was not mounted or modified; the attempted NBD mapping exposed zero capacity and was disconnected automatically.
+
+**Current result:** the earlier service-cycle and WSL restart acceptances remain valid for their recorded times, but current restart readiness is blocked because the retained demo is stopped. The guest's later shutdown trigger remains unknown. Preserve the saved `demo-resume.json` intent and do not bypass its guard or submit another start until the trigger is reviewed. No service or guest change was performed during this investigation.
 
 The following command used the already approved retained-demo start scope and has now completed its start/KVM stages; it is retained for traceability, not the next diagnostic action:
 
