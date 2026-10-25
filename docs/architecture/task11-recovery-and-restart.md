@@ -223,7 +223,7 @@ Verification before live restart: **496 discovered, 494 passed, 2 opt-in daemon 
 
 The scoped live sequence is now complete: core application/network/lifecycle and cleanup; recovery rehearsal; read-only readiness; controlled Nova/worker cycle; and WSL distribution restart with service, addressing, KVM and guest recovery. Current results, task mappings and dated historical blockers are being reconciled. Genuine limits remain explicit: whole-cloud distributed rollback and offsite recovery are untested; Cinder and Swift backends, local metering/monitoring integrations, AI/GPU features and optional external services remain unavailable, simulated or deferred as their task records describe. Staging and production are not part of this acceptance.
 
-The working tree still contains pre-existing uncommitted and untracked project work alongside this continuation. No files are staged and no remote push is authorized. Review those exact task-owned files and mixed historical diffs before any local commit; repository/Git closeout is the remaining local step.
+The reviewed recovery/restart tools, tests and this runbook were committed locally as `523e3ffc14f75bee24faa5cf7dec97b179a62241` (`ops: verify local recovery and WSL restart`). Existing task crosswalk, requirements and operational-summary edits remain unstaged alongside pre-existing uncommitted/untracked project work. The branch has a remote named `origin`, but remote push was not authorized and was not attempted; the aggregate repository workflow remains open until its push gate has an approved disposition.
 
 ## Earlier verification history
 
