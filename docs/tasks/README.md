@@ -66,7 +66,7 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | POC-009 — Horizon and API consistency | T07, T32 | Partially covered | Historical core APIs exist; Horizon is absent and browser/API consistency has not been tested. |
 | POC-010 — Flavors and quotas | T08 | Covered | Inspect actual capacity; change only safe, explicitly approved values. |
 | POC-011 — Repeatable VM lifecycle workflow | T16, T17 | Covered | Repeat runs and failure reporting are tested in the repeatable workflow. |
-| POC-012 — Cinder storage workflow | T18, T35 | Partially covered | No verified local Cinder backend; staging remains disabled until an approved backend passes volume and recovery tests. |
+| POC-012 — Cinder storage workflow | T18, T35 | Partially covered | T18 real local create/attach/read-write/detach/snapshot/restore/cleanup passed; application integration, independent recovery and staging backend validation remain. |
 | POC-013 — Network and security acceptance tests | T15, T17, T25 | Covered | Positive/negative connectivity, security groups, SSH, routing and floating IPs where available; exposed ports/auditability in T25. |
 | POC-014 — Resource catalog | T08, T10 | Covered | Catalog uses observed images/flavors/networks/storage and labels unavailable items. |
 | POC-015 — Management API design and skeleton | T12 | Covered | Contract, auth, schemas, errors, and tests precede implementation. |
@@ -90,9 +90,9 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | Layer 2 — local security controls and TLS | T07, T15, T25, T32 | Partially covered | Offline policy/configuration tests exist; live TLS, listener, firewall and browser-session review remain pending. |
 | Layer 2 — Cloudflare/DDoS, WAF, separate gateway, Octavia | T28 | Deferred | Requirements make these optional; no public ingress or external protection is assumed. Reconsider only if a required workflow and supported deployment justify it. |
 | Layer 3 — catalog, provisioning, jobs, database/queue restraint, metering, demo price/payment | T08–T14, T20–T22 | Partially covered | PostgreSQL/Redis/Celery remain conditional, not defaults. Local asynchronous lifecycle jobs are integrated with fixture execution, but state/idempotency are process-local and no real provider operation is tracked. Metering and pricing remain subject to their existing source and limitation requirements. |
-| Layer 4 — Nova/Glance/Neutron/Cinder and repeatable orchestration | T07–T19, T22 | Partially covered | Real local Nova/Glance/Neutron lifecycle and isolation passed. Cinder remains unavailable; staging must independently validate selected services and topology. |
+| Layer 4 — Nova/Glance/Neutron/Cinder and repeatable orchestration | T07–T19, T22 | Partially covered | Real local Nova/Glance/Neutron lifecycle/isolation and scoped Cinder lifecycle/snapshot recovery passed; staging must independently validate selected services and topology. |
 | Layer 4 — Kubernetes/JupyterHub/Harbor/Ceph, GPU scheduler/MIG | T22–T24, T28 | Deferred | Requirements make these optional and this laptop does not support H100 MIG or production multi-tenant GPU scheduling. |
-| Layer 5 — CPU VM, AI workload, block/object storage | T16–T19, T23–T24, T35–T36 | Partially covered | Core CPU VM is verified; no AI inference result or Cinder/Swift round-trip is verified. |
+| Layer 5 — CPU VM, AI workload, block/object storage | T16–T19, T23–T24, T35–T36 | Partially covered | Core CPU VM and T18 Cinder guest I/O/snapshot round trip are verified; AI inference and Swift acceptance remain pending. |
 | Layer 5 — H100/MIG profiles, GPU isolation, managed academy stack | T23–T24, T28 | Deferred | H100/MIG and multi-tenant GPU isolation are unsupported; JupyterHub/academy environments are optional follow-on work. |
 | Layer 6 — laptop/network record; no physical data center build | T01–T03 | Covered | Laptop/network evidence is recorded; H100 server, future servers, facility and power/cooling construction are explicitly out of scope. |
 | Layer 7 — verified monitoring, automation, backup/restore, logging and alerts | T14, T22, T26–T27, T41 | Partially covered | Staging automation and scoped recovery exist; live monitoring/logging/alerts and production incident response remain pending. |
@@ -293,7 +293,7 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T18 — Cinder block-storage validation (conditional)
 
-- **Execution record:** [`T18.md`](T18.md) — the protected read-only preflight found no `volumev3` endpoint, Cinder service units, or backend configuration; real volume validation remains **Blocked**.
+- **Execution record:** [`T18.md`](T18.md) — real local volume lifecycle, guest I/O, snapshot-content recovery and owned cleanup **passed**; local commit closeout is in progress. The loopback MD5 exception and staging/recovery limitations are explicit.
 
 - **Prerequisites:** T07 confirms compatible Cinder backend; explicit approval enumerates volume/snapshot create, attach, detach, and delete operations and storage use.
 - **Dependencies:** T07; T16 only if attachment to the approved test instance is required. Do not block standalone backend checks on Neutron/T17.
