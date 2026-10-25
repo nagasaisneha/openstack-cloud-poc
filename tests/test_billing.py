@@ -144,6 +144,19 @@ class BillingTests(unittest.TestCase):
             self.service.project_statements(project_user("project-a", "member"), "project-a")
         self.assertEqual(raised.exception.code, BillingErrorCode.AUTHORIZATION_DENIED)
 
+    def test_two_users_in_one_project_share_the_same_statement(self):
+        statement = self.generate()
+        binding = (ProjectRoleBinding("project-a", frozenset({"billing_viewer"})),)
+        first_user = BillingPrincipal("user-one", True, project_bindings=binding)
+        second_user = BillingPrincipal("user-two", True, project_bindings=binding)
+
+        first_view = self.service.project_statement(first_user, "project-a", statement.statement_id)
+        second_view = self.service.project_statement(second_user, "project-a", statement.statement_id)
+
+        self.assertEqual(first_view.statement_id, second_view.statement_id)
+        self.assertEqual(first_view.project_id, second_view.project_id)
+        self.assertEqual(first_view.total, second_view.total)
+
     def test_cross_project_statement_lookup_does_not_disclose_statement(self):
         statement = self.generate()
 
@@ -258,15 +271,20 @@ class BillingTests(unittest.TestCase):
 
     def test_statement_history_survives_resource_deletion_and_revisions_append(self):
         first = self.generate()
-        # The billing ledger has no live-resource foreign key. A later
-        # generation is an appended revision rather than an update/delete.
+        # Replaying identical source data is idempotent; a changed meter value
+        # is an appended revision. The ledger has no live-resource foreign key.
         second = self.generate()
+        self.source.samples = (make_sample(quantity=Decimal("3")),)
+        corrected = self.generate()
 
         self.assertEqual(first.lines[0].resource_id, "server-1")
         self.assertEqual(self.service.project_statement(
             project_user("project-a", "billing_viewer"), "project-a", first.statement_id
         ), first)
-        self.assertEqual(second.revision, first.revision + 1)
+        self.assertEqual(second.statement_id, first.statement_id)
+        self.assertEqual(second.revision, first.revision)
+        self.assertEqual(corrected.revision, first.revision + 1)
+        self.assertEqual(corrected.total, Decimal("3.75"))
         self.assertEqual(len(self.service.project_statements(
             project_user("project-a", "billing_viewer"), "project-a"
         )), 2)
@@ -309,6 +327,10 @@ class BillingTests(unittest.TestCase):
             make_rule(rate=1.25)
         with self.assertRaises(ValueError):
             make_card(make_rule(), currency="usd")
+        with self.assertRaises(ValueError):
+            make_card(make_rule(), currency="ZZZ")
+        with self.assertRaises(ValueError):
+            make_card(make_rule(), currency="JPY", minor_units=2)
 
     def test_source_label_rejects_urls_and_credential_like_values(self):
         with self.assertRaises(ValueError):
@@ -318,6 +340,26 @@ class BillingTests(unittest.TestCase):
         with self.assertRaises(BillingError) as raised:
             self.service.project_statements(BillingPrincipal("anonymous", False), "project-a")
         self.assertEqual(raised.exception.code, BillingErrorCode.AUTHENTICATION_REQUIRED)
+
+    def test_billing_period_must_be_a_utc_calendar_month(self):
+        with self.assertRaises(BillingError) as raised:
+            self.service.generate_statement(
+                collector(), "project-a", START + timedelta(days=1), END, "demo-v1"
+            )
+        self.assertEqual(raised.exception.code, BillingErrorCode.INVALID_REQUEST)
+
+    def test_billing_viewer_can_read_rate_card_for_its_project(self):
+        card = self.service.project_rate_card(
+            project_user("project-a", "billing_viewer"), "project-a", "demo-v1"
+        )
+        self.assertEqual(card.currency, "INR")
+
+    def test_regular_member_cannot_read_project_rate_card(self):
+        with self.assertRaises(BillingError) as raised:
+            self.service.project_rate_card(
+                project_user("project-a", "member"), "project-a", "demo-v1"
+            )
+        self.assertEqual(raised.exception.code, BillingErrorCode.AUTHORIZATION_DENIED)
 
 
 if __name__ == "__main__":
