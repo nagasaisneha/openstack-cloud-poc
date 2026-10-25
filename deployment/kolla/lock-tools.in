@@ -1,0 +1,2 @@
+# Tool used to create/check the Python 3.12 dependency lock.
+uv==0.13.5

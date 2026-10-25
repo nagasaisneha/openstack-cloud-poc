@@ -1,0 +1,72 @@
+---
+- name: Read-only staging host and approval preflight
+  hosts: all
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Require Ubuntu 24.04 Noble for the initial staging candidate
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == "Ubuntu"
+          - ansible_facts.distribution_version == "24.04"
+        fail_msg: "Staging host OS is outside the selected Kolla candidate."
+        quiet: true
+
+    - name: Require Kolla's documented minimum host memory
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.memtotal_mb | int >= 8192
+        fail_msg: "Staging host has less than 8 GiB RAM."
+        quiet: true
+
+    - name: Require separate management and provider/overlay interfaces
+      ansible.builtin.assert:
+        that:
+          - (ansible_facts.interfaces | reject("equalto", "lo") | list | length) >= 2
+        fail_msg: "Staging host must expose at least two non-loopback interfaces."
+        quiet: true
+
+    - name: Require the approved Kolla architecture and change record
+      ansible.builtin.assert:
+        that:
+          - staging_architecture_reviewed | default(false) | bool
+          - staging_change_id is defined
+          - staging_change_id is match("^[A-Za-z0-9][A-Za-z0-9._/-]{2,63}$")
+        fail_msg: "Gate 1 review and an approved change ID are required."
+        quiet: true
+
+    - name: Require an existing dedicated storage mount with at least 40 GiB free
+      ansible.builtin.assert:
+        that:
+          - staging_storage_mount is defined
+          - staging_storage_mount is match("^/[^ ]+$")
+          - staging_storage_mount in (ansible_facts.mounts | map(attribute="mount") | list)
+          - (ansible_facts.mounts | selectattr("mount", "equalto", staging_storage_mount) | map(attribute="size_available") | first | int) >= 42949672960
+        fail_msg: "Configure and review a dedicated Kolla storage mount with at least 40 GiB free."
+        quiet: true
+
+    - name: Require a reviewed Cinder backend when Cinder is enabled
+      ansible.builtin.assert:
+        that:
+          - (not (enable_cinder | default(false) | bool)) or (staging_cinder_backend_reviewed | default(false) | bool)
+          - (not (enable_cinder | default(false) | bool)) or (staging_cinder_backend | default("unselected") in ["ceph", "iscsi", "lvm", "nfs"])
+        fail_msg: "Cinder must have a reviewed, target-specific backend before deployment."
+        quiet: true
+
+    - name: Require reviewed Swift rings when Swift is enabled
+      ansible.builtin.assert:
+        that:
+          - (not (enable_swift | default(false) | bool)) or (staging_swift_rings_reviewed | default(false) | bool)
+          - (not (enable_swift | default(false) | bool)) or (groups["storage"] | default([]) | length >= 3)
+          - (not (enable_swift | default(false) | bool)) or (staging_swift_replica_count | default(0) | int == 3)
+        fail_msg: "Swift ring layout and dedicated storage devices must be reviewed first."
+        quiet: true
+
+    - name: Require reviewed metering and observability resource budget
+      ansible.builtin.assert:
+        that:
+          - (not (enable_ceilometer | default(false) | bool)) or (staging_metering_reviewed | default(false) | bool)
+          - (not (enable_gnocchi | default(false) | bool)) or (staging_metering_reviewed | default(false) | bool)
+          - (not (enable_prometheus | default(false) | bool) and not (enable_grafana | default(false) | bool) and not (enable_fluentd | default(false) | bool)) or (staging_monitoring_budget_reviewed | default(false) | bool)
+        fail_msg: "Metering sources and monitoring resource budget must be approved first."
+        quiet: true

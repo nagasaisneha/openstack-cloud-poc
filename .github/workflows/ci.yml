@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run offline regression suite
+        run: PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -v
+      - name: Compile Python sources
+        run: python -m compileall -q openstack_cloud_poc scripts/local-openstack tests
+      - name: Check patch whitespace
+        run: git diff --check
+
+  deployment-syntax:
+    name: Staging deployment syntax
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install pinned staging automation tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --require-hashes -r deployment/kolla/requirements.lock
+      - name: Validate Kolla inventory and read-only preflight syntax
+        run: |
+          ansible-inventory -i deployment/kolla/inventory/multinode.example.ini --list >/dev/null
+          ansible-playbook -i deployment/kolla/inventory/multinode.example.ini deployment/kolla/preflight.yml --syntax-check

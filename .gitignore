@@ -4,6 +4,13 @@
 **/.env
 **/.env.*
 config/local.yaml
+config/local-pricing.json
+deployment/kolla/etc/
+deployment/kolla/inventory/local.ini
+deployment/kolla/.venv/
+deployment/kolla/passwords.yml
+deployment/kolla/clouds.yaml
+deployment/kolla/secrets/
 
 # Runtime output
 state/

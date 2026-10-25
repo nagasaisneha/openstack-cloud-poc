@@ -1,0 +1,45 @@
+---
+# Kolla Ansible 23.0.0 / OpenStack 2026.2 staging candidate.
+# Replace all REPLACE_* values using an approved target-specific inventory.
+# Do not place passwords, tokens, or private key material in this file.
+
+openstack_release: "2026.2"
+kolla_base_distro: "ubuntu"
+kolla_install_type: "binary"
+
+network_interface: "REPLACE_WITH_MANAGEMENT_INTERFACE"
+api_interface: "{{ network_interface }}"
+tunnel_interface: "REPLACE_WITH_OVERLAY_INTERFACE"
+neutron_external_interface: "REPLACE_WITH_UNNUMBERED_PROVIDER_INTERFACE"
+kolla_internal_vip_address: "REPLACE_WITH_RESERVED_PRIVATE_VIP"
+kolla_external_vip_address: "REPLACE_WITH_APPROVED_PRIVATE_API_VIP"
+node_custom_config: "/etc/kolla/config"
+
+# Core services for the customer lifecycle.
+enable_keystone: "yes"
+enable_glance: "yes"
+enable_placement: "yes"
+enable_nova: "yes"
+enable_neutron: "yes"
+enable_horizon: "yes"
+
+# T18/T19/T20/T26 staging services. These are enabled only after their
+# backend, storage topology, resource budget, and Gate 1 review are complete.
+enable_cinder: "no"
+enable_swift: "no"
+enable_ceilometer: "no"
+enable_gnocchi: "no"
+enable_prometheus: "no"
+enable_grafana: "no"
+enable_fluentd: "no"
+
+# Operator-facing guard variables consumed by preflight.yml, not Kolla.
+staging_change_id: "REPLACE_WITH_APPROVED_CHANGE_ID"
+staging_architecture_reviewed: false
+staging_storage_mount: "REPLACE_WITH_DEDICATED_CONTAINER_STORAGE_MOUNT"
+staging_cinder_backend: "unselected"
+staging_cinder_backend_reviewed: false
+staging_swift_rings_reviewed: false
+staging_swift_replica_count: 0
+staging_metering_reviewed: false
+staging_monitoring_budget_reviewed: false
