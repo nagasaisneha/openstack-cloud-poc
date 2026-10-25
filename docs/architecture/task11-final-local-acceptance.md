@@ -28,4 +28,4 @@ Staging is unselected and requires separate evidence. Nothing here establishes p
 
 ## Repository status
 
-The recovery/restart implementation, tests and runbook are in local commit `523e3ffc14f75bee24faa5cf7dec97b179a62241`. The user authorized local closeout but not remote push; no push was attempted. Other existing worktree changes remain outside this acceptance commit and must be reviewed as their own task-owned changes. The remote publication gate therefore remains open.
+The recovery/restart implementation, tests and runbook are in `523e3ffc14f75bee24faa5cf7dec97b179a62241`. The additional sanitized POC implementation and task records were committed as `d07edefb0044797d09de42cfc83f22d88c9a48b0` and pushed to `origin/main`. Protected recovery artifacts and credentials remain outside Git. The published repository does not complete the conditional storage, metering, pricing, automation, AI workload, formal security, monitoring, or extended demonstration criteria listed in the task backlog.
