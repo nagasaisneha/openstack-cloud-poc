@@ -73,9 +73,19 @@ The protected service-cycle record reports `verified` at 10:54:13 UTC, with the 
 
 Guest `acpid` logs contain `PWRF/00000080` power-button events matching the earlier controlled service-cycle and WSL-preparation stops. No corresponding event appears around guest time 13:13 for the 12:13 UTC self-shutdown. The guest console-output API returned HTTP 404. The guest console contains the normal `NMI watchdog: Perf NMI watchdog permanently disabled` boot notice; this is not evidence of a watchdog timeout. The offline qcow2 overlay reports no corruption, and the root ext4 partition was inspected through a private sparse copy. Its persistent logs did not expose a shutdown, panic, OOM or watchdog fault for the later boot. The source image was not mounted or modified; the attempted NBD mapping exposed zero capacity and was disconnected automatically.
 
-**Current result:** the earlier service-cycle and WSL restart acceptances remain valid for their recorded times, but current restart readiness is blocked because the retained demo is stopped. The guest's later shutdown trigger remains unknown. Preserve the saved `demo-resume.json` intent and do not bypass its guard or submit another start until the trigger is reviewed. No service or guest change was performed during this investigation.
+**Historical result:** after the 12:13 UTC reconciliation, the retained demo was `SHUTOFF` and its shutdown trigger was unknown. The earlier service-cycle and WSL restart acceptances remain valid for their recorded times. Subsequent guarded recovery and readiness evidence is recorded below.
 
-The following command used the already approved retained-demo start scope and has now completed its start/KVM stages; it is retained for traceability, not the next diagnostic action:
+The offline CirrOS root filesystem shows `/etc/rc.sysinit` running `/etc/rc3.d/S*` and then executable `/etc/rc.local`. The `S95-cirros-userdata` hook delegates to `cirros-per instance userdata cirros-userdata`; the wrapper itself contains no shutdown command. The repository's retained-VM creation call does not pass a `user_data` argument ([launcher](../../scripts/local-openstack/launch_test_vm.py)), so custom user data is not indicated for this VM. This makes user data an unlikely explanation, but does not establish the cause of the earlier hypervisor shutdown.
+
+### Reviewed one-shot retry and current readiness
+
+After preserving the earlier intent and Nova action evidence, the operator ran the new `--retry-reviewed-demo` mode. It required the saved prior active observation, a later successful Nova `compute_stop_instance` event, settled Nova/libvirt shutoff and sufficient available memory. It persisted a distinct protected intent before submitting exactly one Nova start; it does not replay an existing/uncertain retry intent.
+
+The operator reported the protected readiness run `/root/openstack-poc-acceptance/restart-readiness-4d81f9e891334d2dae0317c963a87aea.json` passed recovery/source and service checks, observed the retained demo `SHUTOFF` before the reviewed start, then passed `reviewed_retry_demo`, `guest_kvm`, a six-minute stability window, full cloud checks and pinned guest CPU smoke. No service or WSL restart was performed by this run. This is current readiness evidence at that observation time; it does not explain the earlier shutdown or prove indefinite guest stability. Do not repeat the service cycle or WSL restart solely on this result.
+
+The reviewed retry implementation and regression tests were committed locally as `440e69f`. Verification: **38 focused restart-readiness and demo-history tests passed**, Python compilation passed, and `git diff --check` passed. No full-suite result is claimed for this change.
+
+The earlier guarded `--resume-demo` invocation is retained for traceability; its later cloud check failed and that result is superseded for current readiness by the reviewed one-shot run above:
 
 ```bash
 sudo /usr/bin/python3 -B /home/sneha/projects/openstack-cloud-poc/scripts/local-openstack/review_restart_readiness.py --resume-demo 82382430-4b64-4386-a55b-8468e04da011
