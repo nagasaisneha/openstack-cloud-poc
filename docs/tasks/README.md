@@ -73,7 +73,7 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | POC-016 — OpenStack SDK integration | T13 | Covered | Scoped read/provision operations; cloud mutations need explicit task-specific approval. |
 | POC-017 — Job tracking | T14, T16, Task 11 | Covered for the accepted local application path | The real SDK application records durable job/phase/idempotency state and observed Nova provider results. The separate fixture service remains simulated; this does not claim a general distributed worker platform or staging behavior. |
 | POC-018 — Usage data collection | T20, T37 | Partially covered | Fixture samples preserve project, unit and provenance; no real meter is installed or verified. |
-| POC-019 — Monitoring and dashboards | T26, T41 | Partially covered | Staging profile and resource gate are prepared; no live source, dashboard, alert or logging validation exists. |
+| POC-019 — Monitoring and dashboards | T26, T41 | Partially covered | Host PCP daemons are active, but no POC/OpenStack metric source, dashboard, alert or application logging was validated. |
 | POC-020 — Usage reporting and automation | T21, T22, T31, T38 | Partially covered | Fixture summaries, a configurable offline billing domain and staging automation package exist; no real meter-backed demonstration bill has passed. |
 | POC-021 — GPU feasibility assessment | T23 | Covered | Separates RTX host/container checks from Nova passthrough; no MIG assumption. |
 | POC-022 — Sample AI workload | T24 | Partially covered | T23 feasibility only; no approved/pinned model or inference result, and guest GPU path remains unverified. See [T24](T24.md). |
