@@ -21,7 +21,7 @@ def bounded(value, limit=100):
     return value[:limit] if re.fullmatch(r'[A-Za-z0-9_.:+-]{1,100}', value) else None
 
 
-def report(server, actions):
+def report(server, actions, stop_detail=None):
     state = {
         'status': bounded(getattr(server, 'status', None), 32),
         'power_state': getattr(server, 'power_state', None),
@@ -39,7 +39,39 @@ def report(server, actions):
         updated = bounded(item.get('updated_at'))
         if action is not None:
             rows.append({'action': action, 'start_time': started, 'updated_at': updated})
-    return {'server': state, 'recent_actions': rows}
+    return {'server': state, 'recent_actions': rows, 'latest_stop_detail': stop_detail}
+
+
+def safe_action_detail(action, admin_user_id):
+    if not isinstance(action, dict):
+        return None
+    actor = action.get('user_id')
+    if actor is None:
+        actor_class = 'system_or_unattributed'
+    elif actor == admin_user_id:
+        actor_class = 'authenticated_admin'
+    else:
+        actor_class = 'other_user'
+    events = []
+    for item in action.get('events', [])[:50]:
+        if not isinstance(item, dict):
+            continue
+        event = bounded(item.get('event'), 80)
+        result = item.get('result')
+        if event is not None:
+            events.append({
+                'event': event,
+                'result': result if result in ('Success', 'Error') else None,
+                'start_time': bounded(item.get('start_time')),
+                'finish_time': bounded(item.get('finish_time')),
+            })
+    return {
+        'action': bounded(action.get('action'), 32),
+        'start_time': bounded(action.get('start_time')),
+        'updated_at': bounded(action.get('updated_at')),
+        'actor_class': actor_class,
+        'events': events,
+    }
 
 
 def main():
@@ -67,7 +99,18 @@ def main():
                     raise_exc=True)
                 body = response.json()
                 actions = body.get('instanceActions', []) if isinstance(body, dict) else []
-                print('POC demo history: ' + json.dumps(report(server, actions), sort_keys=True), flush=True)
+                stop = next((item for item in actions if isinstance(item, dict)
+                             and item.get('action') == 'stop'), None)
+                detail = None
+                if (stop is not None and isinstance(stop.get('request_id'), str)
+                        and re.fullmatch(r'[A-Za-z0-9-]{1,64}', stop['request_id'])):
+                    detail_response = cloud.compute.get(
+                        '/servers/' + readiness.DEMO_SERVER + '/os-instance-actions/'
+                        + stop['request_id'], raise_exc=True, microversion='2.51')
+                    detail_body = detail_response.json()
+                    action = detail_body.get('instanceAction') if isinstance(detail_body, dict) else None
+                    detail = safe_action_detail(action, cloud.session.get_user_id())
+                print('POC demo history: ' + json.dumps(report(server, actions, detail), sort_keys=True), flush=True)
         return 0
     except Exception as error:
         details = readiness.safe_error(error)
