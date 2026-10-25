@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from enum import Enum
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -342,8 +343,10 @@ class BillingLedger:
                     period_start TEXT NOT NULL,
                     period_end TEXT NOT NULL,
                     revision INTEGER NOT NULL,
+                    fingerprint TEXT NOT NULL,
                     payload TEXT NOT NULL,
-                    UNIQUE(project_id, period_start, period_end, revision)
+                    UNIQUE(project_id, period_start, period_end, revision),
+                    UNIQUE(project_id, period_start, period_end, fingerprint)
                 );
                 CREATE INDEX IF NOT EXISTS statements_project_period
                     ON statements(project_id, period_start, period_end);
@@ -400,6 +403,16 @@ class BillingLedger:
         try:
             with self._lock:
                 self._db.execute("BEGIN IMMEDIATE")
+                fingerprint = _statement_fingerprint(statement)
+                previous = self._db.execute(
+                    "SELECT payload FROM statements WHERE project_id=? AND period_start=? "
+                    "AND period_end=? AND fingerprint=?",
+                    (statement.project_id, statement.period_start.isoformat(),
+                     statement.period_end.isoformat(), fingerprint),
+                ).fetchone()
+                if previous is not None:
+                    self._db.commit()
+                    return _statement_from_wire(json.loads(previous["payload"]))
                 row = self._db.execute(
                     "SELECT COALESCE(MAX(revision), 0) + 1 AS next_revision FROM statements "
                     "WHERE project_id=? AND period_start=? AND period_end=?",
@@ -407,10 +420,10 @@ class BillingLedger:
                 ).fetchone()
                 saved = replace(statement, revision=row["next_revision"])
                 self._db.execute(
-                    "INSERT INTO statements(statement_id, project_id, period_start, period_end, revision, payload) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO statements(statement_id, project_id, period_start, period_end, revision, fingerprint, payload) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (saved.statement_id, saved.project_id, saved.period_start.isoformat(),
-                     saved.period_end.isoformat(), saved.revision, _encode(saved.to_wire())),
+                     saved.period_end.isoformat(), saved.revision, fingerprint, _encode(saved.to_wire())),
                 )
                 self._db.commit()
                 return saved
@@ -636,6 +649,14 @@ def _statement_from_wire(value: object) -> BillingStatement:
 
 def _encode(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
+
+def _statement_fingerprint(statement: BillingStatement) -> str:
+    payload = statement.to_wire()
+    payload.pop("statement_id")
+    payload.pop("created_at")
+    payload.pop("revision")
+    return hashlib.sha256(_encode(payload).encode("utf-8")).hexdigest()
 
 
 def _valid_money(value: object) -> bool:
