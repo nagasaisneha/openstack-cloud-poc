@@ -293,7 +293,7 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T18 — Cinder block-storage validation (conditional)
 
-- **Execution record:** [`T18.md`](T18.md) — a protected read-only endpoint/service/backend/quota preflight is implemented; its live run and real volume validation remain **Blocked/pending**.
+- **Execution record:** [`T18.md`](T18.md) — the protected read-only preflight found no `volumev3` endpoint, Cinder service units, or backend configuration; real volume validation remains **Blocked**.
 
 - **Prerequisites:** T07 confirms compatible Cinder backend; explicit approval enumerates volume/snapshot create, attach, detach, and delete operations and storage use.
 - **Dependencies:** T07; T16 only if attachment to the approved test instance is required. Do not block standalone backend checks on Neutron/T17.
