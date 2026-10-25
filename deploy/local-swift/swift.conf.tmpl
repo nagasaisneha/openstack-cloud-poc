@@ -1,0 +1,11 @@
+[swift-hash]
+swift_hash_path_prefix = $hash_prefix
+swift_hash_path_suffix = $hash_suffix
+
+[storage-policy:0]
+name = poc-replicated
+default = yes
+policy_type = replication
+
+[swift-constraints]
+max_file_size = 67108864

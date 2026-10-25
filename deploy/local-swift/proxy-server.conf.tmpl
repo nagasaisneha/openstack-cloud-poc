@@ -1,0 +1,65 @@
+[DEFAULT]
+bind_ip = 127.0.0.1
+bind_port = 8080
+user = swift
+workers = 1
+max_clients = 64
+swift_dir = /etc/swift
+log_name = swift-poc-proxy
+log_level = INFO
+
+[pipeline:main]
+pipeline = catch_errors gatekeeper healthcheck proxy-logging cache authtoken keystoneauth container-quotas account-quotas proxy-server
+
+[app:proxy-server]
+use = egg:swift#proxy
+account_autocreate = true
+allow_account_management = false
+conn_timeout = 2
+node_timeout = 10
+
+[filter:catch_errors]
+use = egg:swift#catch_errors
+
+[filter:gatekeeper]
+use = egg:swift#gatekeeper
+
+[filter:healthcheck]
+use = egg:swift#healthcheck
+
+[filter:proxy-logging]
+use = egg:swift#proxy_logging
+
+[filter:cache]
+use = egg:swift#memcache
+memcache_servers = 127.0.0.1:11211
+
+[filter:authtoken]
+paste.filter_factory = keystonemiddleware.auth_token:filter_factory
+www_authenticate_uri = http://127.0.0.1:5000/v3
+auth_url = http://127.0.0.1:5000/v3
+auth_type = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = swift
+password = $service_password
+delay_auth_decision = true
+include_service_catalog = false
+cache = swift.cache
+memcached_servers = 127.0.0.1:11211
+service_token_roles = service
+service_token_roles_required = true
+
+[filter:keystoneauth]
+use = egg:swift#keystoneauth
+reseller_prefix = AUTH
+operator_roles = admin,member
+reseller_admin_role = $unused_reseller_role
+system_reader_roles =
+
+[filter:container-quotas]
+use = egg:swift#container_quotas
+
+[filter:account-quotas]
+use = egg:swift#account_quotas

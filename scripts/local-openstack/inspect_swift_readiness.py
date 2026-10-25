@@ -34,7 +34,8 @@ UNITS = ('swift-proxy.service', 'swift-account.service',
 SERVER_PACKAGES = ('swift', 'swift-proxy', 'swift-account',
                    'swift-container', 'swift-object', 'python3-swift')
 PACKAGES = SERVER_PACKAGES + ('python3-swiftclient', 'memcached', 'rsync')
-PATHS = ('/etc/swift', '/srv/node', '/srv/swift-poc', '/var/lib/swift', '/var/lib/swift-poc')
+PATHS = ('/etc/swift', '/srv/node', '/srv/swift-poc', '/var/lib/swift', '/var/lib/swift-poc',
+         '/var/cache/swift', '/var/log/swift', '/run/swift', '/run/lock/swift')
 MIN_AVAILABLE_KIB = 1536 * 1024
 MIN_FREE_BYTES = 12 * 1024**3  # New 8-GiB filesystem image plus host reserve.
 
