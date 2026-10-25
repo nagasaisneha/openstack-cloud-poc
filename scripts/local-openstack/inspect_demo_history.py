@@ -74,6 +74,29 @@ def safe_action_detail(action, admin_user_id):
     }
 
 
+def safe_console_signals(output):
+    if not isinstance(output, str):
+        return []
+    patterns = (
+        (re.compile(r'Reached target (?:Power-Off|System Shutdown)', re.I), 'systemd_poweroff_target'),
+        (re.compile(r'systemd-shutdown', re.I), 'systemd_shutdown'),
+        (re.compile(r'powering off|power down', re.I), 'guest_poweroff'),
+        (re.compile(r'kernel panic', re.I), 'kernel_panic'),
+        (re.compile(r'out of memory|oom-kill|killed process', re.I), 'memory_pressure_or_kill'),
+        (re.compile(r'watchdog', re.I), 'watchdog_signal'),
+        (re.compile(r'cloud-init.*(shutdown|poweroff|halt)', re.I), 'cloud_init_shutdown_signal'),
+    )
+    events = []
+    for line in output.splitlines()[-200:]:
+        for pattern, category in patterns:
+            if pattern.search(line):
+                timestamp = re.match(r'^\[\s*([0-9]{1,3}(?:\.[0-9]+)?)\]', line)
+                events.append({'category': category,
+                               'uptime_seconds': timestamp.group(1) if timestamp else None})
+                break
+    return events[-40:]
+
+
 def main():
     if os.geteuid() != 0:
         print('STOP: run with sudo /usr/bin/python3 -B in the actual Ubuntu terminal.', file=sys.stderr)
@@ -110,7 +133,15 @@ def main():
                     detail_body = detail_response.json()
                     action = detail_body.get('instanceAction') if isinstance(detail_body, dict) else None
                     detail = safe_action_detail(action, cloud.session.get_user_id())
-                print('POC demo history: ' + json.dumps(report(server, actions, detail), sort_keys=True), flush=True)
+                result = report(server, actions, detail)
+                try:
+                    console = cloud.compute.get_server_console_output(server, length=200)
+                    result['console_signals'] = safe_console_signals(
+                        console.get('output') if isinstance(console, dict) else None)
+                except Exception as error:
+                    result['console_signals'] = []
+                    result['console_error'] = readiness.safe_error(error)
+                print('POC demo history: ' + json.dumps(result, sort_keys=True), flush=True)
         return 0
     except Exception as error:
         details = readiness.safe_error(error)

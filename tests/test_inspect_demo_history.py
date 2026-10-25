@@ -55,6 +55,17 @@ class InspectDemoHistoryTests(unittest.TestCase):
         self.assertEqual(result['actor_class'], 'system_or_unattributed')
         self.assertIsNone(result['events'][0]['result'])
 
+    def test_console_signals_are_normalized_and_do_not_echo_guest_output(self):
+        output = ('[    1.234567] PRIVATE_BOOT_ARGUMENT\n'
+                  '[  301.500000] systemd[1]: Reached target Power-Off. PRIVATE_SENTINEL\n'
+                  '[  301.600000] systemd-shutdown[1]: Powering off. PRIVATE_SENTINEL\n')
+        events = inspect_demo.safe_console_signals(output)
+        self.assertEqual(events, [
+            {'category': 'systemd_poweroff_target', 'uptime_seconds': '301.500000'},
+            {'category': 'systemd_shutdown', 'uptime_seconds': '301.600000'},
+        ])
+        self.assertNotIn('PRIVATE_', repr(events))
+
 
 if __name__ == '__main__':
     unittest.main()
