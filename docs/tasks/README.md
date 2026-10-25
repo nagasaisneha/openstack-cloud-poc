@@ -305,7 +305,7 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T19 — Object storage validation (optional/conditional)
 
-- **Execution record:** [`T19.md`](T19.md) — no Swift/object-storage service found in inspected local paths; object round-trip remains **Blocked**.
+- **Execution record:** [`T19.md`](T19.md) — **in progress**; guarded Swift preflight passes 13 offline tests. Protected host observations, real service deployment and project-scoped object acceptance remain pending.
 
 - **Prerequisites:** T07 confirms Swift or another locally approved compatible service; explicit approval enumerates test object/container create and delete operations.
 - **Dependencies:** T07; independent of Cinder unless the approved use case explicitly needs both.
