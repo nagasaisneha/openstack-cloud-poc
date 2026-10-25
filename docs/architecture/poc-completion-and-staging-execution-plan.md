@@ -1,9 +1,27 @@
-# POC completion and staging execution plan
+# Browser-ready POC and staging execution plan
 
 **Updated:** 2026-10-25
-**Purpose:** Track remaining POC acceptance and prepare a separate, reproducible staging release without changing or replacing the existing WSL installation.
+**Purpose:** Deliver the expanded browser-ready, multi-tenant POC goal and prepare a separate, reproducible staging release without changing or replacing the existing WSL installation.
 
-## Verified baseline
+## Active goal and current delivery path
+
+The user-defined platform goal supersedes the prior API-focused definition of done. Task 11 remains valid core infrastructure/recovery evidence, but it does not establish Horizon, browser login, complete identity administration, real metering, billing statements, billing roles, or portal audit history. The [goal audit and target diagrams](browser-ready-cloud-goal.md) record the current requirement map and service evidence.
+
+The active dependency path is [T29–T41](../tasks/README.md#browser-ready-platform-delivery-track):
+
+| Phase | Tasks | Exit evidence | Current boundary |
+|---|---|---|---|
+| Audit and design | T29–T30 | Requirement map, Horizon feature fit, supported service catalogue, target diagrams | Complete as repository work; no deployment claim |
+| Offline billing core | T31 | Decimal/effective-dated rates, project-only access, immutable/idempotent statements, focused and regression tests | Implemented with synthetic usage only |
+| Browser foundation | T32 | Secure Horizon login URL; existing Apache/OpenStack/VM preservation checks | Horizon absent; Apache active on 80, no HTTPS/443 or noVNC/6080; install not run |
+| Tenant administration/resources | T33–T36 | Two projects/users/quotas; compute/network/image access; conditional Cinder/Swift workflows | Requires live protected context and supported service backends |
+| Usage and bills | T37–T38 | Real meters reconciled to controlled workloads; explicit prices and project statements | Ceilometer/Gnocchi/CloudKitty absent from current local inventory |
+| Browser billing/audit and acceptance | T39–T40 | Role-limited downloadable statements, audit events, two-tenant end-to-end browser demo | Not started |
+| Staging and operations | T41 | Separate deployable environment, HTTPS, secrets, monitoring, backup/restore, operator sign-off | Target/owners unselected; Kolla package is a template only |
+
+The current read-only local inventory is in the [goal audit](browser-ready-cloud-goal.md). Core services were active at observation time; tenant inventory, quotas, VM state, and authenticated API health were not checked. Preserve the active Apache service and retained demo VM while planning any browser deployment.
+
+## Historical core baseline (2026-10-25)
 
 - Repository: branch `main`, `HEAD` `d07edefb0044797d09de42cfc83f22d88c9a48b0`; it matched `origin/main` and had a clean worktree at start.
 - Core POC test baseline: `python3 -m unittest discover -s tests -v` — **496 tests discovered, 494 passed, 2 opt-in isolated-daemon tests skipped** (2026-10-25, Python 3.10.12).
@@ -12,7 +30,7 @@
 - Current WSL reports 7.7 GiB RAM total and about 4.0 GiB available. Docker Desktop integration is not available to this WSL command context, and direct WSL GPU access returned `GPU access blocked by the operating system`. Kolla Ansible's [quick start](https://docs.openstack.org/kolla-ansible/2026.2/user/quickstart.html) lists minimums of 8 GiB RAM, two network interfaces, and 40 GiB disk; this host is below the RAM threshold. Capacity and runtime must be rechecked immediately before any additional local service or model deployment.
 - The stale publication claims in T27, the task crosswalk, Task 11 closeout, and the recovery runbook were corrected in this execution branch. Subsequent acceptance updates should preserve the actual pushed SHA.
 
-## Dependency-ordered work
+## Historical dependency-ordered work (superseded by T29–T41)
 
 | Order | Work | Dependencies and acceptance evidence | Environment boundary |
 |---|---|---|---|

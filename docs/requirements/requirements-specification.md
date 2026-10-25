@@ -1,15 +1,17 @@
 # OpenStack Cloud Management Platform --- Requirements Specification
 
-**Version:** 1.1\
-**Status:** Original local OpenStack POC is the active development scope. Task 11 records passed core local application, Nova/Neutron guest/isolation, cleanup, recovery and WSL restart acceptance, alongside explicitly blocked/deferred optional capabilities. Staging and production remain separate; staging target is unselected. AWS-hosted OpenStack and AWS-native provisioning are outside the approved implementation scope.\
+**Version:** 1.2\
+**Status:** The active goal is a browser-ready, multi-tenant self-service cloud platform with administration, supported resource provisioning, real usage tracking, project-level billing and auditability. Existing Task 11 evidence is a core infrastructure baseline only; API-only or Horizon-only completion does not satisfy this specification. Staging and production remain separate; the staging target is unselected. AWS-hosted OpenStack and AWS-native provisioning are outside the approved implementation scope.\
 **Development environment:** Windows 11 laptop with WSL2 Ubuntu\
 **Staging target:** Not selected or approved\
 **Intended production target:** The organization’s own physical data-center infrastructure running OpenStack\
-**Purpose:** Define the local OpenStack management POC and its acceptance evidence, and connect that evidence to a separate staging release process without treating local results as staging or production proof.
+**Purpose:** Define the browser-ready local OpenStack platform and its acceptance evidence, and connect that evidence to a separate staging release process without treating local results as staging or production proof.
 
 ## 1. Project goal
 
-Continue the original local OpenStack management POC in the Windows/WSL2 development environment. The local POC includes fixture-backed management workflows and, where a supported local OpenStack environment is available and separately approved for the scoped operation, validation of real OpenStack workflows. Existing fixtures are simulated evidence; the environment audit does not establish a running local OpenStack deployment. The POC contributes requirements, architecture, implementation, and acceptance evidence to the staging release plan but is not the staging environment and does not prove production readiness.
+Deliver the local OpenStack POC as a browser-ready, secure, multi-tenant self-service platform. Administrators must manage projects, users, roles, quotas, service availability, resource usage, pricing, project billing and audit history. Tenant users must see and manage only their authorized account, projects and resources, with project-level usage and billing shared by authorized project roles. The backend must enforce every authorization decision; hiding controls in the UI is insufficient. Real supported-resource usage must be distinguished from allocation and from calculated charge. Simulated data, estimates, payments and tax-compliant invoices must be labelled accurately and must not be claimed as implemented when absent.
+
+The existing fixture path is simulated. Existing Task 11 operator evidence establishes a real core Keystone/Glance/Placement/Nova/Neutron and guest lifecycle baseline, but not a browser portal, Horizon deployment, real metering, pricing, billing statements, full administrative web workflows, or complete audit history. See the [current goal audit and acceptance map](../architecture/browser-ready-cloud-goal.md) and [T29–T41 delivery track](../tasks/README.md#browser-ready-platform-delivery-track). Local POC completion contributes evidence to a separate staging release; it is not staging or production acceptance.
 
 ### 1.1 Local POC scope and environment boundaries
 
@@ -40,11 +42,29 @@ actual image extension if the supplied file is not JPEG, and update the
 reference accordingly. Do not assume that either file exists until
 verified in the repository.
 
+### 1.3 Mandatory browser-platform acceptance
+
+The browser workflow is required for POC completion. OpenStack APIs and Horizon panels are implementation components, not substitutes for demonstrating the user experience and backend controls. Use Horizon for native OpenStack functions where they meet the requirement; implement a separately authorized Horizon extension or portal service for missing billing, statement, and audit workflows.
+
+**Administrator workflow:** Securely log in through the browser; create/manage projects and users; assign project roles; set quotas and service availability; inspect project resources, allocated capacity, measured usage, and charges; configure pricing; inspect tenant statements; and review redacted user/administrator audit events.
+
+**Tenant workflow:** Log in and see account details, authorized projects, and roles; view quotas, resources, usage, pricing, and bills; manage supported instances, permitted images, networks, security groups, SSH keys, and any enabled volumes, snapshots, or object storage; access authorized VMs through a verified browser console or SSH route; and see resource status, actionable sanitized provisioning errors, itemized charges, and downloadable statements.
+
+**Project billing and visibility:** A project is the default billable unit. Users in one project share its usage and bill. Backend policy must restrict statement and usage visibility by project and billing role; administrator access across tenants must be explicit and audited. Individual user accounts are not billable tenants.
+
+**Isolation and security:** Enforce scope and role checks on every backend operation, including reads, downloads, provisioning, pricing changes, and administrative actions. Deny cross-project resource/account/usage/bill access. Keep admin and tenant identities separate; never expose or commit passwords, tokens, private keys, or authentication headers. Acceptance includes role, quota, and cross-project denial cases.
+
+**Usage and charges:** Report allocation, measured consumption, and calculated charge as separate values. Collect source-backed usage for every resource advertised as billable. Define units, periods, currency, rounding, and state-transition charging rules. Preserve issued history after resource deletion. Reconcile calculations against controlled workloads. Label estimated, simulated, incomplete, and provisional data. Payment collection and tax-compliant invoicing are separate integrations and are not implied by POC statements.
+
+**Completion demonstration:** An administrator creates two projects with distinct users and quotas; each tenant logs in, sees only authorized data, provisions and accesses its own supported resources, and receives backend denial for cross-project requests. Real usage is collected and rated, each tenant views its own bill, and the administrator compares both projects' usage and statements. Local verification and staging verification are recorded separately.
+
+**Delivery and staging:** Provide verified browser URLs and secure login setup, startup/shutdown/recovery/backup/restore/troubleshooting instructions, and reproducible deployment templates. Staging acceptance requires HTTPS, protected secret management, monitoring, security checks, backup/restore, and a documented operator. Record exact laptop resource constraints and blockers. Do not call the POC complete or staging-ready until the corresponding acceptance evidence passes.
+
 ## 2. Scope and constraints
 
 ### In scope
 
--   Continue local development and validation of the original OpenStack management POC using the existing requirements and implementation work.
+-   Deliver the active browser-ready platform goal in §1.3, using prior local POC implementation and evidence where still applicable.
 -   Use local POC evidence as an input to a separate staging release plan; identify and validate any remaining gaps in the selected staging environment.
 -   Preserve the goal of eventual production on organization-owned physical data-center infrastructure; local and staging evidence must not be overstated as production proof.
 -   Map architecture components to OpenStack-native services or justified external components.
@@ -52,8 +72,7 @@ verified in the repository.
     storage, APIs, provisioning workflows, usage reporting, monitoring,
     logging, automation, backup procedures, and a small AI workload
     where feasible.
--   Provide a management API and/or simple portal only where required by
-    approved product scope.
+-   Provide a browser portal as a required user interface, with backend APIs and services enforcing all authorization decisions.
 -   Keep code, scripts, tests, decisions, and documentation in Git.
 -   Use small, reviewable tasks and record actual verification evidence; no task or documentation status implies cloud deployment approval.
 
@@ -87,14 +106,15 @@ businesses - Partners / enterprises - Administrators - Web portal,
 CLI/SDK, and optional mobile access
 
 **Platform requirements** - Use Keystone identities, projects, roles, and
-scoped access where available. - Validate that users can access only
-their authorized projects and resources. - Use Horizon for the existing
-OpenStack dashboard if installed. - Use OpenStackClient and/or OpenStack
-SDK for CLI and programmatic access. - A custom web portal is optional
-and should be implemented only if the specifications/backlog require
-it. - Mobile application is deferred unless separately approved and justified. - Billing
-screens must not imply that real payment processing exists unless a
-sandbox integration is implemented.
+scoped access. - Validate backend authorization for every browser/API
+operation and reject access to other projects. - Deploy and configure
+Horizon as the browser surface for supported OpenStack functions, with a
+custom extension or portal service for required project billing,
+statements, and complete application audit. - Use OpenStackClient and/or
+OpenStack SDK for CLI and programmatic access. - Mobile application is
+deferred unless separately approved and justified. - Billing screens
+must distinguish usage and POC charges from payment processing and
+tax-compliant invoices.
 
 **Acceptance criteria** - Authentication works using the configured
 identity endpoint. - A test user can access the intended project. -
@@ -311,7 +331,7 @@ environment configuration or a secrets manager.
 
 ## 6. Original local POC requirements and task references
 
-The phases and original POC-IDs below preserve the local POC requirements and acceptance intent. They inform the active local POC scope and staging evidence crosswalk; they are not staging tasks or proof of staging readiness. The matching T01–T28 identifiers and implementation history are preserved in [`../tasks/README.md`](../tasks/README.md). This scope decision does not silently reactivate all T-IDs as an execution sequence or authorize cloud/system changes; future work must be selected and scoped explicitly.
+The phases and original POC-IDs below preserve the original local POC requirements and acceptance intent as historical traceability. The active browser-platform tasks are T29–T41 in [`../tasks/README.md`](../tasks/README.md); the old completion labels and the old T28 portal-optional wording do not satisfy or override §1.3. These records are not staging tasks or proof of staging readiness, and do not by themselves authorize cloud/system changes.
 
 The IDs below are original local POC requirement IDs. Their implementation evidence is local; real cloud behavior remains unverified unless an evidence record explicitly establishes it. Staging validation is separate.
 
@@ -454,12 +474,13 @@ step has evidence and all simulated/deferred steps are clearly labelled.
 
 ## 7. POC task record fields
 
-Every task must have a Markdown task record containing: - ID and title -
+Every active task must have a Markdown task record containing: - ID and title -
 Requirement IDs addressed - Objective and scope - Dependencies -
 Prerequisites - Files and resources affected - Implementation plan -
 Tests and exact commands - Acceptance criteria - Rollback/cleanup plan -
 Risks and limitations - Status: Planned, In Progress, Blocked, Failed,
-or Complete - Commit SHA and GitHub push status - Verification evidence
+or Complete - local commit SHA and, only when a push is requested, remote
+push status - Verification evidence
 
 ## 8. POC Git and GitHub workflow reference
 
@@ -468,14 +489,14 @@ Confirm task prerequisites and dependencies. 3. Use the approved branch
 strategy. 4. Implement only the current task. 5. Run relevant tests. 6. Verify actual
 OpenStack behavior where applicable. 7. Review the diff and scan for
 secrets. 8. Update docs and task status. 9. Commit with a descriptive
-message. 10. Push to the configured GitHub remote. 11. Record commit SHA
-and test evidence. 12. Report completion before starting the next task. Do not start the
-next task until the current task's acceptance criteria pass and its
-commit is pushed successfully.
+message. 10. Record the local commit SHA and test evidence. 11. Push only
+when explicitly requested and record the actual remote result. 12. Report
+completion before starting the next task. Do not start the next task until
+the current task's acceptance criteria pass and its local commit is reviewed.
 
-If tests fail, do not mark the task complete. If push fails, report
-"locally committed; push pending," not complete. Avoid destructive Git
-commands and broad staging that could include unrelated files.
+If tests fail, do not mark the task complete. If a requested push fails,
+report "locally committed; push pending." Avoid destructive Git commands
+and broad staging that could include unrelated files.
 
 Suggested commit style: -
 `docs(audit): record laptop and OpenStack baseline` -

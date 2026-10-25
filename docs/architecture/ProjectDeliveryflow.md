@@ -1,5 +1,43 @@
 
-> Original local POC workflow and implementation traceability. The local POC remains the current development scope; this diagram preserves its task IDs and dependencies but does not automatically reactivate T01–T28 as a sequence. Local evidence feeds the separate [`../staging-release-plan.md`](../staging-release-plan.md); it does not itself pass staging or production acceptance. AWS-hosted OpenStack is deferred and outside current implementation scope.
+> Active goal: deliver a browser-ready, secure, multi-tenant cloud with project-level usage and billing. The first diagram below is the current T29–T41 delivery flow. The following T01–T28 diagrams preserve the original API/fixture POC history; their prior completion labels do not satisfy the expanded goal. Local evidence feeds the separate [`../staging-release-plan.md`](../staging-release-plan.md), which remains an independent release gate.
+
+## Current browser-platform delivery flow
+
+```mermaid
+flowchart TD
+    T29[Audit repository and local runtime] --> T30[Choose Horizon boundary, service catalogue, target architecture]
+    T30 --> T31[Build billing domain model and immutable statement records]
+    T30 --> T32[Deploy Horizon with secure browser login]
+    T32 --> T33[Administer Keystone projects, users, roles, quotas]
+    T32 --> T34[Enable tenant compute, image, network, access workflows]
+    T33 --> T34
+    T33 --> T35{Cinder backend supported?}
+    T34 --> T35
+    T33 --> T36{Swift service supported?}
+    T34 --> T36
+    T34 --> T37[Collect and reconcile real usage]
+    T35 --> T37
+    T36 --> T37
+    T31 --> T38[Rate project usage and persist statements]
+    T37 --> T38
+    T32 --> T39[Add billing and audit panels]
+    T33 --> T39
+    T38 --> T39
+    T39 --> T40[Run two-tenant browser/security acceptance]
+    T35 -. optional service unavailable is documented .-> T40
+    T36 -. optional service unavailable is documented .-> T40
+    T40 --> T41[Prepare separate staging deployment and operations]
+
+    K[Keystone project scope and policy] -. backend enforcement .-> T33
+    K -. backend enforcement .-> T34
+    K -. billing role enforcement .-> T38
+```
+
+## Proposed browser-platform architecture
+
+See [browser-ready-cloud-goal.md](browser-ready-cloud-goal.md) for the audited service catalogue, Horizon feature fit, initial billing semantics, and a request sequence. That target diagram is proposed; the existing Task 11 deployment diagram remains factual historical evidence.
+
+## Original T01–T28 workflow (historical traceability)
 
 ```mermaid
 flowchart TD

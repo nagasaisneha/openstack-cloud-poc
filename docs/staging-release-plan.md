@@ -1,18 +1,20 @@
 # Staging Release Plan
 
-**Status:** Planning baseline; local OpenStack POC is the active development scope; staging target, scope, and owners are not yet selected or approved
-**Delivery path:** Continue the local POC, carry its evidence into a separate staging validation, then promote only after staging acceptance and production approval
-**Purpose:** Connect the original local POC requirements and evidence to a distinct staging release process and the long-term data-center production direction.
+**Status:** Planning baseline; the active local POC goal is a browser-ready, secure, multi-tenant self-service platform; staging target, scope, and owners are not yet selected or approved
+**Delivery path:** Complete the expanded local browser/usage/billing acceptance, then carry its evidence into a separate staging validation; promote only after staging acceptance and production approval
+**Purpose:** Connect the expanded platform requirements and evidence to a distinct staging release process and the long-term data-center production direction.
 
 **Release compatibility baseline (reviewed 2026-10-25):** OpenStack 2026.2 Hibiscus is the newest maintained series in the [official release status table](https://releases.openstack.org/). For a separately provisioned staging environment, evaluate Kolla Ansible 2026.2 on Ubuntu 24.04 LTS (Noble) or Rocky Linux 10; current [Kolla Ansible support matrix](https://docs.openstack.org/kolla-ansible/2026.2/user/support-matrix.html) lists these host operating systems. The target is a technical candidate, not an approved environment or deployment. Do not upgrade the existing Ubuntu 22.04 WSL POC to this baseline. Confirm exact component support, image digests, Python/Ansible constraints, hardware, storage drivers, and lifecycle dates at Gate 1 before provisioning.
 
-The original local OpenStack management POC is in scope and contributes requirements, architecture, implementation, and acceptance evidence to this plan. It is not the staging environment, and completing local work does not automatically pass any staging gate. The local implementation includes both real OpenStack-backed core workflows and a separate simulated fixture path. The operator-verified local evidence for Keystone, Glance, Placement, Nova, Neutron, guest isolation, recovery and WSL restart is recorded in Task 11; every staging target and capability must be validated independently. The laptop/WSL2 setup is neither staging nor production.
+The local POC goal now includes browser login and administration, role-scoped self-service, real usage, project billing, statements, and audit history. It is not complete from the prior API/resource baseline or by adding Horizon alone; the full [T29–T41 acceptance track](tasks/README.md#browser-ready-platform-delivery-track) and [current evidence map](architecture/browser-ready-cloud-goal.md) define the work. The operator-verified local evidence for Keystone, Glance, Placement, Nova, Neutron, guest isolation, recovery and WSL restart remains valid only for those capabilities. Every staging service and control must be validated independently. The laptop/WSL2 setup is neither staging nor production.
 
 **Project scope decision:** Local OpenStack POC work is the current development path. AWS-hosted OpenStack and AWS-native EC2 tenant provisioning are not approved implementation paths and are not staging prerequisites. The staging target remains unselected. The long-term production direction is OpenStack on organization-owned physical data-center infrastructure; Nova is the chosen tenant compute path and Proxmox is deprecated. The deferred Option A design and Gate 1 package are retained only as historical architectural evaluations, not as mandatory release steps.
 
 ## Release outcome
 
 Release a cloud management service for an explicitly approved workload and user population, backed by an approved and verified staging environment. The local POC provides design and implementation evidence; staging must independently validate real provider behavior, security, operations, and release criteria. Unsupported capabilities must remain unavailable and must not be advertised as usable.
+
+The release candidate must also demonstrate role-scoped project billing and audit history in the browser. Horizon provides native OpenStack resource panels where services exist; custom rating/statement workflows and complete application audit events remain separate deliverables. Staging acceptance requires HTTPS, externalized secrets, monitoring, backup/restore, and independent cross-tenant denial checks.
 
 ## Scope to settle before implementation
 
