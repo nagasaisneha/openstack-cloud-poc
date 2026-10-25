@@ -83,7 +83,8 @@ def safe_console_signals(output):
         (re.compile(r'powering off|power down', re.I), 'guest_poweroff'),
         (re.compile(r'kernel panic', re.I), 'kernel_panic'),
         (re.compile(r'out of memory|oom-kill|killed process', re.I), 'memory_pressure_or_kill'),
-        (re.compile(r'watchdog', re.I), 'watchdog_signal'),
+        (re.compile(r'(?:soft|hard) lockup|watchdog.{0,80}(?:\bBUG\b|timeout|timed out|expired|reset|bite|triggered)', re.I),
+         'watchdog_fault'),
         (re.compile(r'cloud-init.*(shutdown|poweroff|halt)', re.I), 'cloud_init_shutdown_signal'),
     )
     events = []

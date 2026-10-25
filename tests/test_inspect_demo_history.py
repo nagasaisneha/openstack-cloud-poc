@@ -66,6 +66,16 @@ class InspectDemoHistoryTests(unittest.TestCase):
         ])
         self.assertNotIn('PRIVATE_', repr(events))
 
+    def test_disabled_nmi_watchdog_notice_is_not_misclassified_as_a_fault(self):
+        output = ('[    0.013796] ACPI: LAPIC_NMI (acpi_id[0xff] dfl dfl lint[0x1])\n'
+                  '[    0.509311] NMI watchdog: Perf NMI watchdog permanently disabled\n')
+        self.assertEqual(inspect_demo.safe_console_signals(output), [])
+
+    def test_real_watchdog_lockup_remains_a_fault_signal(self):
+        output = '[  301.5] watchdog: BUG: soft lockup - CPU#0 stuck for 22s\n'
+        self.assertEqual(inspect_demo.safe_console_signals(output), [
+            {'category': 'watchdog_fault', 'uptime_seconds': '301.5'}])
+
 
 if __name__ == '__main__':
     unittest.main()
