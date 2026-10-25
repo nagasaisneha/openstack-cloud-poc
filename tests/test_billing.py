@@ -1,12 +1,18 @@
 import sqlite3
+import csv
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+import io
 import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from openstack_cloud_poc.billing import (
+    BillingAuditAction,
+    BillingAuditEvent,
+    BillingAuditOutcome,
     BillingError,
     BillingErrorCode,
     BillingLedger,
@@ -144,6 +150,160 @@ class BillingTests(unittest.TestCase):
             self.service.project_statements(project_user("project-a", "member"), "project-a")
         self.assertEqual(raised.exception.code, BillingErrorCode.AUTHORIZATION_DENIED)
 
+    def test_authorized_project_statement_csv_is_itemized_and_labels_simulated_data(self):
+        statement = self.generate()
+
+        content = self.service.project_statement_csv(
+            project_user("project-a", "billing_viewer"), "project-a", statement.statement_id
+        )
+        rows = list(csv.DictReader(io.StringIO(content.decode("utf-8"))))
+
+        self.assertEqual([row["record_type"] for row in rows], ["line", "statement"])
+        self.assertEqual(rows[0]["project_id"], "project-a")
+        self.assertEqual(rows[0]["resource_id"], "server-1")
+        self.assertEqual(rows[0]["metric"], "compute.vcpu_hours")
+        self.assertEqual(rows[0]["quantity"], "2")
+        self.assertEqual(rows[0]["rate_per_unit"], "1.25")
+        self.assertEqual(rows[0]["line_amount"], "2.50")
+        self.assertEqual(rows[0]["provenance"], "simulated")
+        self.assertEqual(rows[0]["statement_total"], "")
+        self.assertEqual(rows[1]["statement_total"], "2.50")
+        self.assertEqual(
+            content,
+            self.service.project_statement_csv(
+                project_user("project-a", "billing_viewer"), "project-a", statement.statement_id
+            ),
+        )
+
+    def test_statement_csv_denies_before_ledger_access(self):
+        class DenyLedger:
+            def record_audit_event(self, event):
+                self.event = event
+
+            def get_project_statement(self, project_id, statement_id):
+                raise AssertionError("ledger was accessed before authorization")
+
+        service = BillingService(DenyLedger(), Source())
+        with self.assertRaises(BillingError) as raised:
+            service.project_statement_csv(
+                project_user("project-a", "member"), "project-a", "statement-id"
+            )
+        self.assertEqual(raised.exception.code, BillingErrorCode.AUTHORIZATION_DENIED)
+        self.assertEqual(service.ledger.event.action, BillingAuditAction.STATEMENT_EXPORT)
+        self.assertEqual(service.ledger.event.outcome, BillingAuditOutcome.DENIED)
+        self.assertIsNone(service.ledger.event.target_id)
+
+    def test_statement_csv_does_not_disclose_a_foreign_statement_id(self):
+        statement = self.generate()
+
+        with self.assertRaises(BillingError) as raised:
+            self.service.project_statement_csv(
+                project_user("project-b", "billing_viewer"), "project-b", statement.statement_id
+            )
+
+        self.assertEqual(raised.exception.code, BillingErrorCode.STATEMENT_NOT_FOUND)
+
+    def test_statement_csv_escapes_formula_like_resource_text(self):
+        sample = make_sample(resource_id='=HYPERLINK("https://invalid.example/","open")')
+        statement = self.generate(Source((sample,)))
+
+        content = self.service.project_statement_csv(
+            project_user("project-a", "billing_viewer"), "project-a", statement.statement_id
+        )
+        rows = list(csv.DictReader(io.StringIO(content.decode("utf-8"))))
+
+        self.assertTrue(rows[0]["resource_id"].startswith("'=HYPERLINK("))
+
+    def test_statement_export_audit_records_actor_project_target_and_correlation(self):
+        statement = self.generate()
+        correlation_id = "d6b72e2a-4896-4d61-8e5b-c3b8248047b1"
+
+        self.service.project_statement_csv(
+            project_user("project-a", "billing_viewer"),
+            "project-a",
+            statement.statement_id,
+            correlation_id=correlation_id,
+        )
+        events = self.service.audit_events(admin())
+        export = next(event for event in events if event.action is BillingAuditAction.STATEMENT_EXPORT)
+
+        self.assertEqual(export.actor_id, "user-id")
+        self.assertEqual(export.project_id, "project-a")
+        self.assertEqual(export.target_id, statement.statement_id)
+        self.assertEqual(export.outcome, BillingAuditOutcome.SUCCESS)
+        self.assertEqual(export.correlation_id, correlation_id)
+        self.assertEqual(export.occurred_at.utcoffset(), timedelta(0))
+
+    def test_audit_log_is_admin_only_and_denied_attempt_is_retained(self):
+        with self.assertRaises(BillingError) as raised:
+            self.service.audit_events(project_user("project-a", "billing_viewer"))
+        self.assertEqual(raised.exception.code, BillingErrorCode.AUTHORIZATION_DENIED)
+
+        events = self.ledger.list_audit_events()
+        denied = next(
+            event for event in events
+            if event.action is BillingAuditAction.AUDIT_READ
+            and event.outcome is BillingAuditOutcome.DENIED
+        )
+        self.assertEqual(denied.actor_id, "user-id")
+        self.assertIsNone(denied.project_id)
+
+    def test_audit_events_cannot_be_updated_or_deleted(self):
+        self.generate()
+        event = self.ledger.list_audit_events()[0]
+
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.ledger._db.execute(
+                "UPDATE billing_audit_events SET outcome='denied' WHERE event_id=?",
+                (event.event_id,),
+            )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.ledger._db.execute(
+                "DELETE FROM billing_audit_events WHERE event_id=?",
+                (event.event_id,),
+            )
+
+    def test_audit_events_survive_ledger_reopen(self):
+        self.generate()
+        event_ids = {event.event_id for event in self.ledger.list_audit_events()}
+        self.ledger.close()
+
+        self.ledger = BillingLedger(self.path)
+
+        self.assertTrue(event_ids.issubset({event.event_id for event in self.ledger.list_audit_events()}))
+
+    def test_rate_card_write_rolls_back_if_its_audit_event_cannot_be_stored(self):
+        event = BillingAuditEvent(
+            event_id="96c405a1-0561-4af2-910c-876445f3ac09",
+            occurred_at=START,
+            actor_id="admin-id",
+            project_id=None,
+            action=BillingAuditAction.RATE_CARD_CONFIGURE,
+            target_id="atomic-v2",
+            outcome=BillingAuditOutcome.SUCCESS,
+            correlation_id="3c836409-42d5-4260-badb-1c2c326bd075",
+        )
+        with patch.object(self.ledger, "_insert_audit_event", side_effect=sqlite3.OperationalError):
+            with self.assertRaises(BillingError) as raised:
+                self.ledger.add_rate_card(
+                    make_card(make_rule(), version="atomic-v2"), "admin-id", START, audit_event=event
+                )
+        self.assertEqual(raised.exception.code, BillingErrorCode.LEDGER_UNAVAILABLE)
+        with self.assertRaises(BillingError) as missing:
+            self.ledger.get_rate_card("atomic-v2")
+        self.assertEqual(missing.exception.code, BillingErrorCode.INVALID_REQUEST)
+
+    def test_statement_write_rolls_back_if_its_audit_event_cannot_be_stored(self):
+        first = self.generate()
+        self.source.samples = (make_sample(quantity=Decimal("3")),)
+
+        with patch.object(self.ledger, "_insert_audit_event", side_effect=sqlite3.OperationalError):
+            with self.assertRaises(BillingError) as raised:
+                self.service.generate_statement(collector(), "project-a", START, END, "demo-v1")
+
+        self.assertEqual(raised.exception.code, BillingErrorCode.LEDGER_UNAVAILABLE)
+        self.assertEqual(self.ledger.list_project_statements("project-a"), (first,))
+
     def test_two_users_in_one_project_share_the_same_statement(self):
         statement = self.generate()
         binding = (ProjectRoleBinding("project-a", frozenset({"billing_viewer"})),)
@@ -169,6 +329,9 @@ class BillingTests(unittest.TestCase):
 
     def test_unauthorized_reads_do_not_access_the_ledger(self):
         class DenyLedger:
+            def record_audit_event(self, event):
+                self.event = event
+
             def list_project_statements(self, project_id):
                 raise AssertionError("ledger was accessed before authorization")
 
@@ -176,6 +339,9 @@ class BillingTests(unittest.TestCase):
         with self.assertRaises(BillingError) as raised:
             service.project_statements(project_user("project-a", "member"), "project-a")
         self.assertEqual(raised.exception.code, BillingErrorCode.AUTHORIZATION_DENIED)
+        self.assertEqual(service.ledger.event.action, BillingAuditAction.STATEMENT_LIST)
+        self.assertEqual(service.ledger.event.outcome, BillingAuditOutcome.DENIED)
+        self.assertIsNone(service.ledger.event.target_id)
 
     def test_unauthorized_statement_generation_does_not_collect_usage(self):
         source = Source((make_sample(),))
@@ -186,11 +352,23 @@ class BillingTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.code, BillingErrorCode.AUTHORIZATION_DENIED)
         self.assertEqual(source.calls, [])
+        denied = next(
+            event for event in self.ledger.list_audit_events()
+            if event.action is BillingAuditAction.STATEMENT_GENERATE
+            and event.outcome is BillingAuditOutcome.DENIED
+        )
+        self.assertEqual(denied.actor_id, "user-id")
 
     def test_only_admin_can_configure_a_rate_card(self):
         with self.assertRaises(BillingError) as raised:
             self.service.configure_rate_card(project_user("project-a", "project_admin"), make_card(make_rule(), version="v2"))
         self.assertEqual(raised.exception.code, BillingErrorCode.AUTHORIZATION_DENIED)
+        denied = next(
+            event for event in self.ledger.list_audit_events()
+            if event.action is BillingAuditAction.RATE_CARD_CONFIGURE
+            and event.outcome is BillingAuditOutcome.DENIED
+        )
+        self.assertEqual(denied.actor_id, "user-id")
 
         admin_service = self.service
         admin_service.configure_rate_card(admin(), make_card(make_rule(rate=Decimal("2")), version="v2"))

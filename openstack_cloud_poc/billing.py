@@ -10,8 +10,10 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from enum import Enum
+import csv
 import fcntl
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -20,7 +22,7 @@ import sqlite3
 import stat
 from threading import RLock
 from typing import Protocol
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from .usage import UsageProvenance, UsageSample
 
@@ -295,6 +297,60 @@ class BillingStatement:
         }
 
 
+class BillingAuditAction(str, Enum):
+    RATE_CARD_CONFIGURE = "billing.rate_card.configure"
+    RATE_CARD_READ = "billing.rate_card.read"
+    STATEMENT_GENERATE = "billing.statement.generate"
+    STATEMENT_LIST = "billing.statement.list"
+    STATEMENT_READ = "billing.statement.read"
+    STATEMENT_EXPORT = "billing.statement.export"
+    ADMIN_STATEMENT_LIST = "billing.statement.admin_list"
+    AUDIT_READ = "billing.audit.read"
+
+
+class BillingAuditOutcome(str, Enum):
+    SUCCESS = "success"
+    DENIED = "denied"
+    NOT_FOUND = "not_found"
+    ERROR = "error"
+
+
+@dataclass(frozen=True)
+class BillingAuditEvent:
+    """Minimal immutable audit metadata; never store request bodies or secrets."""
+
+    event_id: str
+    occurred_at: datetime
+    actor_id: str
+    project_id: str | None
+    action: BillingAuditAction
+    target_id: str | None
+    outcome: BillingAuditOutcome
+    correlation_id: str
+
+    def __post_init__(self) -> None:
+        try:
+            UUID(self.event_id)
+            UUID(self.correlation_id)
+        except (ValueError, TypeError, AttributeError):
+            raise ValueError("audit event identifiers must be UUIDs") from None
+        if not _is_utc(self.occurred_at):
+            raise ValueError("audit event timestamp must be UTC")
+        for field_name, value in (
+            ("actor_id", self.actor_id),
+            ("project_id", self.project_id),
+            ("target_id", self.target_id),
+        ):
+            if value is None and field_name != "actor_id":
+                continue
+            if not _safe_text(value) or len(value) > 255:
+                raise ValueError(f"{field_name} is invalid")
+        if not isinstance(self.action, BillingAuditAction):
+            raise TypeError("action must be a BillingAuditAction")
+        if not isinstance(self.outcome, BillingAuditOutcome):
+            raise TypeError("outcome must be a BillingAuditOutcome")
+
+
 class BillingLedger:
     """Protected SQLite storage with append-only rate cards/statements.
 
@@ -358,6 +414,24 @@ class BillingLedger:
                     BEFORE UPDATE ON statements BEGIN SELECT RAISE(ABORT, 'immutable'); END;
                 CREATE TRIGGER IF NOT EXISTS statements_no_delete
                     BEFORE DELETE ON statements BEGIN SELECT RAISE(ABORT, 'immutable'); END;
+                CREATE TABLE IF NOT EXISTS billing_audit_events (
+                    event_id TEXT PRIMARY KEY,
+                    occurred_at TEXT NOT NULL,
+                    actor_id TEXT NOT NULL,
+                    project_id TEXT,
+                    action TEXT NOT NULL,
+                    target_id TEXT,
+                    outcome TEXT NOT NULL,
+                    correlation_id TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS billing_audit_time
+                    ON billing_audit_events(occurred_at DESC, event_id DESC);
+                CREATE INDEX IF NOT EXISTS billing_audit_project_time
+                    ON billing_audit_events(project_id, occurred_at DESC, event_id DESC);
+                CREATE TRIGGER IF NOT EXISTS billing_audit_no_update
+                    BEFORE UPDATE ON billing_audit_events BEGIN SELECT RAISE(ABORT, 'immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS billing_audit_no_delete
+                    BEFORE DELETE ON billing_audit_events BEGIN SELECT RAISE(ABORT, 'immutable'); END;
                 """
             )
             self._db.commit()
@@ -370,18 +444,28 @@ class BillingLedger:
             self._db.close()
             os.close(self._lock_fd)
 
-    def add_rate_card(self, card: RateCard, actor_id: str, created_at: datetime) -> None:
+    def add_rate_card(
+        self,
+        card: RateCard,
+        actor_id: str,
+        created_at: datetime,
+        audit_event: BillingAuditEvent | None = None,
+    ) -> None:
         _safe_text(actor_id)
         if not _is_utc(created_at):
             raise BillingError(BillingErrorCode.INVALID_REQUEST)
         try:
             with self._lock:
+                self._db.execute("BEGIN IMMEDIATE")
                 self._db.execute(
                     "INSERT INTO rate_cards(version, payload, actor_id, created_at) VALUES (?, ?, ?, ?)",
                     (card.version, _encode(card.to_wire()), actor_id, created_at.isoformat()),
                 )
+                if audit_event is not None:
+                    self._insert_audit_event(audit_event)
                 self._db.commit()
         except sqlite3.IntegrityError:
+            self._db.rollback()
             raise BillingError(BillingErrorCode.RATE_CARD_CONFLICT) from None
         except sqlite3.Error:
             self._db.rollback()
@@ -399,7 +483,11 @@ class BillingLedger:
         except (sqlite3.Error, TypeError, ValueError, KeyError):
             raise BillingError(BillingErrorCode.LEDGER_UNAVAILABLE) from None
 
-    def append_statement(self, statement: BillingStatement) -> BillingStatement:
+    def append_statement(
+        self,
+        statement: BillingStatement,
+        audit_event: BillingAuditEvent | None = None,
+    ) -> BillingStatement:
         try:
             with self._lock:
                 self._db.execute("BEGIN IMMEDIATE")
@@ -411,6 +499,8 @@ class BillingLedger:
                      statement.period_end.isoformat(), fingerprint),
                 ).fetchone()
                 if previous is not None:
+                    if audit_event is not None:
+                        self._insert_audit_event(audit_event)
                     self._db.commit()
                     return _statement_from_wire(json.loads(previous["payload"]))
                 row = self._db.execute(
@@ -425,6 +515,8 @@ class BillingLedger:
                     (saved.statement_id, saved.project_id, saved.period_start.isoformat(),
                      saved.period_end.isoformat(), saved.revision, fingerprint, _encode(saved.to_wire())),
                 )
+                if audit_event is not None:
+                    self._insert_audit_event(audit_event)
                 self._db.commit()
                 return saved
         except sqlite3.Error:
@@ -452,6 +544,47 @@ class BillingLedger:
     def list_all_statements(self) -> tuple[BillingStatement, ...]:
         return self._list_statements("1=1", ())
 
+    def record_audit_event(self, event: BillingAuditEvent) -> None:
+        if not isinstance(event, BillingAuditEvent):
+            raise BillingError(BillingErrorCode.INVALID_REQUEST)
+        try:
+            with self._lock:
+                self._db.execute("BEGIN IMMEDIATE")
+                self._insert_audit_event(event)
+                self._db.commit()
+        except sqlite3.Error:
+            self._db.rollback()
+            raise BillingError(BillingErrorCode.LEDGER_UNAVAILABLE) from None
+
+    def list_audit_events(self, limit: int = 200) -> tuple[BillingAuditEvent, ...]:
+        if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 1000:
+            raise BillingError(BillingErrorCode.INVALID_REQUEST)
+        try:
+            with self._lock:
+                rows = self._db.execute(
+                    "SELECT * FROM billing_audit_events ORDER BY occurred_at DESC, event_id DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+            return tuple(_audit_event_from_row(row) for row in rows)
+        except (sqlite3.Error, TypeError, ValueError, KeyError):
+            raise BillingError(BillingErrorCode.LEDGER_UNAVAILABLE) from None
+
+    def _insert_audit_event(self, event: BillingAuditEvent) -> None:
+        self._db.execute(
+            "INSERT INTO billing_audit_events(event_id, occurred_at, actor_id, project_id, action, "
+            "target_id, outcome, correlation_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                event.event_id,
+                event.occurred_at.isoformat(),
+                event.actor_id,
+                event.project_id,
+                event.action.value,
+                event.target_id,
+                event.outcome.value,
+                event.correlation_id,
+            ),
+        )
+
     def _list_statements(self, where: str, values: tuple[object, ...]) -> tuple[BillingStatement, ...]:
         try:
             with self._lock:
@@ -465,7 +598,7 @@ class BillingLedger:
 
 
 class BillingService:
-    """Authorize before source/ledger access and keep bills at project scope."""
+    """Authorize bill access and record billing actions in the protected ledger."""
 
     def __init__(self, ledger: BillingLedger, source: BillingUsageSource, clock=None) -> None:
         if not callable(getattr(source, "collect", None)):
@@ -474,23 +607,144 @@ class BillingService:
         self.source = source
         self.clock = clock or (lambda: datetime.now(timezone.utc))
 
-    def configure_rate_card(self, principal: BillingPrincipal, card: RateCard) -> None:
-        _require_system_role(principal, "cloud_admin")
+    def _correlation(self, correlation_id: str | None) -> str:
+        if correlation_id is None:
+            return str(uuid4())
+        try:
+            return str(UUID(correlation_id))
+        except (ValueError, TypeError, AttributeError):
+            raise BillingError(BillingErrorCode.INVALID_REQUEST) from None
+
+    def _make_audit_event(
+        self,
+        principal: BillingPrincipal | None,
+        action: BillingAuditAction,
+        outcome: BillingAuditOutcome,
+        correlation_id: str,
+        *,
+        project_id: str | None = None,
+        target_id: str | None = None,
+        occurred_at: datetime | None = None,
+    ) -> BillingAuditEvent:
+        actor_candidate = principal.subject_id if isinstance(principal, BillingPrincipal) else "anonymous"
+        actor_id = actor_candidate if len(actor_candidate) <= 255 else "unknown"
+        safe_project = project_id if isinstance(project_id, str) and project_id.strip() and len(project_id) <= 255 and "\n" not in project_id and "\r" not in project_id else None
+        safe_target = target_id if outcome is BillingAuditOutcome.SUCCESS and isinstance(target_id, str) and target_id.strip() and len(target_id) <= 255 and "\n" not in target_id and "\r" not in target_id else None
+        timestamp_value = occurred_at if occurred_at is not None else self.clock()
+        if not _is_utc(timestamp_value):
+            raise BillingError(BillingErrorCode.INVALID_REQUEST)
+        return BillingAuditEvent(
+            event_id=str(uuid4()),
+            occurred_at=timestamp_value,
+            actor_id=actor_id,
+            project_id=safe_project,
+            action=action,
+            target_id=safe_target,
+            outcome=outcome,
+            correlation_id=correlation_id,
+        )
+
+    def _record_audit_event(
+        self,
+        principal: BillingPrincipal | None,
+        action: BillingAuditAction,
+        outcome: BillingAuditOutcome,
+        correlation_id: str,
+        *,
+        project_id: str | None = None,
+        target_id: str | None = None,
+        occurred_at: datetime | None = None,
+    ) -> None:
+        event = self._make_audit_event(
+            principal,
+            action,
+            outcome,
+            correlation_id,
+            project_id=project_id,
+            target_id=target_id,
+            occurred_at=occurred_at,
+        )
+        self.ledger.record_audit_event(event)
+
+    @staticmethod
+    def _audit_outcome(error: BillingError) -> BillingAuditOutcome:
+        if error.code in {BillingErrorCode.AUTHENTICATION_REQUIRED, BillingErrorCode.AUTHORIZATION_DENIED}:
+            return BillingAuditOutcome.DENIED
+        if error.code is BillingErrorCode.STATEMENT_NOT_FOUND:
+            return BillingAuditOutcome.NOT_FOUND
+        return BillingAuditOutcome.ERROR
+
+    def _record_failed_action(
+        self,
+        principal: BillingPrincipal | None,
+        action: BillingAuditAction,
+        error: BillingError,
+        correlation_id: str,
+        *,
+        project_id: str | None = None,
+    ) -> None:
+        self._record_audit_event(
+            principal,
+            action,
+            self._audit_outcome(error),
+            correlation_id,
+            project_id=project_id,
+        )
+
+    def configure_rate_card(
+        self,
+        principal: BillingPrincipal,
+        card: RateCard,
+        *,
+        correlation_id: str | None = None,
+    ) -> None:
+        correlation = self._correlation(correlation_id)
+        try:
+            _require_system_role(principal, "cloud_admin")
+        except BillingError as error:
+            self._record_failed_action(principal, BillingAuditAction.RATE_CARD_CONFIGURE, error, correlation)
+            raise
         try:
             created_at = self.clock()
             if not _is_utc(created_at):
-                raise ValueError
-            self.ledger.add_rate_card(card, principal.subject_id, created_at)
-        except BillingError:
+                raise BillingError(BillingErrorCode.INVALID_REQUEST)
+            event = self._make_audit_event(
+                principal,
+                BillingAuditAction.RATE_CARD_CONFIGURE,
+                BillingAuditOutcome.SUCCESS,
+                correlation,
+                target_id=card.version,
+                occurred_at=created_at,
+            )
+            self.ledger.add_rate_card(card, principal.subject_id, created_at, audit_event=event)
+        except BillingError as error:
+            self._record_failed_action(principal, BillingAuditAction.RATE_CARD_CONFIGURE, error, correlation)
             raise
         except Exception:
-            raise BillingError(BillingErrorCode.INVALID_REQUEST) from None
+            error = BillingError(BillingErrorCode.INVALID_REQUEST)
+            self._record_failed_action(principal, BillingAuditAction.RATE_CARD_CONFIGURE, error, correlation)
+            raise error from None
 
     def project_rate_card(
-        self, principal: BillingPrincipal, project_id: str, version: str
+        self,
+        principal: BillingPrincipal,
+        project_id: str,
+        version: str,
+        *,
+        correlation_id: str | None = None,
     ) -> RateCard:
-        _require_project_billing_role(principal, project_id)
-        return self.ledger.get_rate_card(version)
+        correlation = self._correlation(correlation_id)
+        try:
+            _require_project_billing_role(principal, project_id)
+            card = self.ledger.get_rate_card(version)
+        except BillingError as error:
+            self._record_failed_action(principal, BillingAuditAction.RATE_CARD_READ, error, correlation, project_id=project_id)
+            raise
+        self._record_audit_event(
+            principal, BillingAuditAction.RATE_CARD_READ, BillingAuditOutcome.SUCCESS,
+            correlation, project_id=project_id, target_id=card.version,
+        )
+        return card
 
     def generate_statement(
         self,
@@ -499,11 +753,20 @@ class BillingService:
         period_start: datetime,
         period_end: datetime,
         rate_card_version: str,
+        *,
+        correlation_id: str | None = None,
     ) -> BillingStatement:
-        _require_system_role(principal, "billing_collector", "cloud_admin")
-        if not _safe_text(project_id) or not _is_utc_calendar_month(period_start, period_end):
-            raise BillingError(BillingErrorCode.INVALID_REQUEST)
+        correlation = self._correlation(correlation_id)
         try:
+            _require_system_role(principal, "billing_collector", "cloud_admin")
+            if (
+                not isinstance(project_id, str)
+                or not project_id.strip()
+                or "\n" in project_id
+                or "\r" in project_id
+                or not _is_utc_calendar_month(period_start, period_end)
+            ):
+                raise BillingError(BillingErrorCode.INVALID_REQUEST)
             card = self.ledger.get_rate_card(rate_card_version)
             batch = self.source.collect(project_id, period_start, period_end)
             if (
@@ -557,27 +820,181 @@ class BillingService:
             )
             if not _is_utc(statement.created_at):
                 raise BillingError(BillingErrorCode.INVALID_REQUEST)
-            return self.ledger.append_statement(statement)
-        except BillingError:
+            event = self._make_audit_event(
+                principal,
+                BillingAuditAction.STATEMENT_GENERATE,
+                BillingAuditOutcome.SUCCESS,
+                correlation,
+                project_id=project_id,
+                target_id=statement.statement_id,
+                occurred_at=statement.created_at,
+            )
+            return self.ledger.append_statement(statement, audit_event=event)
+        except BillingError as error:
+            self._record_failed_action(principal, BillingAuditAction.STATEMENT_GENERATE, error, correlation, project_id=project_id)
             raise
         except Exception:
-            raise BillingError(BillingErrorCode.LEDGER_UNAVAILABLE) from None
+            error = BillingError(BillingErrorCode.LEDGER_UNAVAILABLE)
+            self._record_failed_action(principal, BillingAuditAction.STATEMENT_GENERATE, error, correlation, project_id=project_id)
+            raise error from None
 
     def project_statements(
-        self, principal: BillingPrincipal, project_id: str
+        self,
+        principal: BillingPrincipal,
+        project_id: str,
+        *,
+        correlation_id: str | None = None,
     ) -> tuple[BillingStatement, ...]:
-        _require_project_billing_role(principal, project_id)
-        return self.ledger.list_project_statements(project_id)
+        correlation = self._correlation(correlation_id)
+        try:
+            _require_project_billing_role(principal, project_id)
+            statements = self.ledger.list_project_statements(project_id)
+        except BillingError as error:
+            self._record_failed_action(principal, BillingAuditAction.STATEMENT_LIST, error, correlation, project_id=project_id)
+            raise
+        self._record_audit_event(
+            principal, BillingAuditAction.STATEMENT_LIST, BillingAuditOutcome.SUCCESS,
+            correlation, project_id=project_id,
+        )
+        return statements
 
     def project_statement(
-        self, principal: BillingPrincipal, project_id: str, statement_id: str
+        self,
+        principal: BillingPrincipal,
+        project_id: str,
+        statement_id: str,
+        *,
+        correlation_id: str | None = None,
     ) -> BillingStatement:
-        _require_project_billing_role(principal, project_id)
-        return self.ledger.get_project_statement(project_id, statement_id)
+        correlation = self._correlation(correlation_id)
+        statement = self._get_authorized_statement(
+            principal, project_id, statement_id, BillingAuditAction.STATEMENT_READ, correlation
+        )
+        self._record_audit_event(
+            principal, BillingAuditAction.STATEMENT_READ, BillingAuditOutcome.SUCCESS,
+            correlation, project_id=project_id, target_id=statement.statement_id,
+        )
+        return statement
 
-    def all_statements(self, principal: BillingPrincipal) -> tuple[BillingStatement, ...]:
-        _require_system_role(principal, "cloud_admin")
-        return self.ledger.list_all_statements()
+    def _get_authorized_statement(
+        self,
+        principal: BillingPrincipal,
+        project_id: str,
+        statement_id: str,
+        action: BillingAuditAction,
+        correlation_id: str,
+    ) -> BillingStatement:
+        try:
+            _require_project_billing_role(principal, project_id)
+            return self.ledger.get_project_statement(project_id, statement_id)
+        except BillingError as error:
+            self._record_failed_action(principal, action, error, correlation_id, project_id=project_id)
+            raise
+
+    def project_statement_csv(
+        self,
+        principal: BillingPrincipal,
+        project_id: str,
+        statement_id: str,
+        *,
+        correlation_id: str | None = None,
+    ) -> bytes:
+        """Return a role-checked, spreadsheet-safe CSV snapshot for one project.
+
+        This is a server-side export primitive, not an HTTP endpoint. The
+        project role check runs before the ledger lookup; callers must derive
+        ``principal`` from a trusted Keystone/Horizon session adapter.
+        """
+        correlation = self._correlation(correlation_id)
+        statement = self._get_authorized_statement(
+                principal, project_id, statement_id, BillingAuditAction.STATEMENT_EXPORT, correlation
+        )
+        try:
+            output = io.StringIO(newline="")
+            writer = csv.writer(output, lineterminator="\r\n")
+            writer.writerow((
+                "record_type", "schema_version", "statement_id", "project_id",
+                "period_start_utc", "period_end_utc", "status", "provenance",
+                "source", "rate_card_version", "currency", "currency_minor_units",
+                "resource_id", "metric", "quantity", "unit", "rate_per_unit",
+                "line_amount", "statement_total", "missing_rates",
+            ))
+            common = (
+                statement.statement_id,
+                statement.project_id,
+                statement.period_start.isoformat(),
+                statement.period_end.isoformat(),
+                statement.status.value,
+                statement.provenance.value,
+                statement.source,
+                statement.rate_card_version,
+                statement.currency,
+                statement.minor_units,
+            )
+            for line in sorted(
+                statement.lines,
+                key=lambda item: (item.interval_start, item.resource_id, item.metric, item.interval_end, item.unit),
+            ):
+                writer.writerow(_spreadsheet_safe_cells((
+                    "line", 1, *common, line.resource_id, line.metric, line.quantity,
+                    line.unit, line.rate_per_unit, line.amount, "", "",
+                )))
+            writer.writerow(_spreadsheet_safe_cells((
+                "statement", 1, *common, "", "", "", "", "", "",
+                statement.total if statement.total is not None else "",
+                ";".join(statement.missing_rates),
+            )))
+            content = output.getvalue().encode("utf-8")
+        except Exception:
+            error = BillingError(BillingErrorCode.INVALID_REQUEST)
+            self._record_failed_action(
+                principal, BillingAuditAction.STATEMENT_EXPORT, error,
+                correlation, project_id=project_id,
+            )
+            raise error from None
+        self._record_audit_event(
+            principal, BillingAuditAction.STATEMENT_EXPORT, BillingAuditOutcome.SUCCESS,
+            correlation, project_id=project_id, target_id=statement.statement_id,
+        )
+        return content
+
+    def all_statements(
+        self,
+        principal: BillingPrincipal,
+        *,
+        correlation_id: str | None = None,
+    ) -> tuple[BillingStatement, ...]:
+        correlation = self._correlation(correlation_id)
+        try:
+            _require_system_role(principal, "cloud_admin")
+            statements = self.ledger.list_all_statements()
+        except BillingError as error:
+            self._record_failed_action(principal, BillingAuditAction.ADMIN_STATEMENT_LIST, error, correlation)
+            raise
+        self._record_audit_event(
+            principal, BillingAuditAction.ADMIN_STATEMENT_LIST, BillingAuditOutcome.SUCCESS,
+            correlation,
+        )
+        return statements
+
+    def audit_events(
+        self,
+        principal: BillingPrincipal,
+        *,
+        limit: int = 200,
+        correlation_id: str | None = None,
+    ) -> tuple[BillingAuditEvent, ...]:
+        correlation = self._correlation(correlation_id)
+        try:
+            _require_system_role(principal, "cloud_admin")
+            events = self.ledger.list_audit_events(limit)
+        except BillingError as error:
+            self._record_failed_action(principal, BillingAuditAction.AUDIT_READ, error, correlation)
+            raise
+        self._record_audit_event(
+            principal, BillingAuditAction.AUDIT_READ, BillingAuditOutcome.SUCCESS, correlation
+        )
+        return events
 
 
 def _matching_rate(card: RateCard, sample: UsageSample) -> RateRule | None:
@@ -612,6 +1029,20 @@ def _require_authenticated(principal: BillingPrincipal) -> None:
         raise BillingError(BillingErrorCode.AUTHENTICATION_REQUIRED)
 
 
+def _spreadsheet_safe_cells(values: tuple[object, ...]) -> tuple[object, ...]:
+    """Prefix formula-like text cells so spreadsheet apps do not evaluate them."""
+    safe = []
+    for value in values:
+        if not isinstance(value, str):
+            safe.append(value)
+            continue
+        first_content = value.lstrip(" \t\r\n\ufeff")[:1]
+        if first_content in {"=", "+", "-", "@"} or value.startswith(("\t", "\r", "\n", "\ufeff")):
+            value = "'" + value
+        safe.append(value)
+    return tuple(safe)
+
+
 def _statement_from_wire(value: object) -> BillingStatement:
     if not isinstance(value, dict):
         raise ValueError("statement must be an object")
@@ -644,6 +1075,19 @@ def _statement_from_wire(value: object) -> BillingStatement:
         missing_rates=tuple(value["missing_rates"]),
         created_at=datetime.fromisoformat(value["created_at"]),
         revision=value["revision"],
+    )
+
+
+def _audit_event_from_row(row: sqlite3.Row) -> BillingAuditEvent:
+    return BillingAuditEvent(
+        event_id=row["event_id"],
+        occurred_at=datetime.fromisoformat(row["occurred_at"]),
+        actor_id=row["actor_id"],
+        project_id=row["project_id"],
+        action=BillingAuditAction(row["action"]),
+        target_id=row["target_id"],
+        outcome=BillingAuditOutcome(row["outcome"]),
+        correlation_id=row["correlation_id"],
     )
 
 
