@@ -37,7 +37,7 @@ The detailed acceptance map and live-state limits are in the [goal audit](../arc
 | 32 | [Horizon deployment and secure browser login](T32.md) | T30 | Verified browser URL; TLS/session/CSRF configuration; admin and tenant logins; existing Apache/OpenStack paths preserved | Blocked for live deployment; loopback TLS templates prepared, Horizon absent and cloud auth unavailable |
 | 33 | [Keystone administration, project roles, and quotas](T33.md) | T32 | Admin creates two projects/users, assigns least-privilege roles and quotas; backend accepts intended actions and denies unauthorized ones | Blocked by T32 |
 | 34 | [Tenant compute, image, network, and access workflow](T34.md) | T32–T33 | Project-scoped instance/key/image/network/security-group lifecycle, truthful job errors/status, verified console or SSH path | Blocked by T32–T33 |
-| 35 | [Cinder volumes and snapshots](T35.md) | T33–T34; supported backend | Create/attach/read-write/detach/snapshot/restore and cleanup verified, or service explicitly unavailable | Blocked; no verified local backend |
+| 35 | [Cinder volumes and snapshots](T35.md) | T33–T34; supported backend | Create/attach/read-write/detach/snapshot/restore and cleanup verified, or service explicitly unavailable | Pending application integration; T18 local backend acceptance passed |
 | 36 | [Swift object storage](T36.md) | T33; supported service | Project-scoped object put/get/hash/delete and cleanup verified, or service explicitly unavailable | Blocked; no verified local service |
 | 37 | [Real usage metering and attribution](T37.md) | T33–T36 as applicable | Source-backed intervals, units, project/resource lineage, freshness/completeness and controlled workload reconciliation | Blocked; no verified meter source |
 | 38 | [Rate administration and project billing statements](T38.md) | T31, T37 | Admin configures versioned rates; complete real samples produce reproducible project bills; deletion preserves history; incomplete data stays provisional | Partial; offline domain complete, T37 pending |
@@ -293,7 +293,7 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T18 — Cinder block-storage validation (conditional)
 
-- **Execution record:** [`T18.md`](T18.md) — real local volume lifecycle, guest I/O, snapshot-content recovery and owned cleanup **passed**; local commit closeout is in progress. The loopback MD5 exception and staging/recovery limitations are explicit.
+- **Execution record:** [`T18.md`](T18.md) — **complete for local functional scope**, committed as `c530187`; real volume lifecycle, guest I/O, snapshot-content recovery and owned cleanup passed. The loopback MD5 exception and staging/recovery limitations are explicit.
 
 - **Prerequisites:** T07 confirms compatible Cinder backend; explicit approval enumerates volume/snapshot create, attach, detach, and delete operations and storage use.
 - **Dependencies:** T07; T16 only if attachment to the approved test instance is required. Do not block standalone backend checks on Neutron/T17.
