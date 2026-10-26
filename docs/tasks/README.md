@@ -305,7 +305,7 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T19 — Object storage validation (optional/conditional)
 
-- **Execution record:** [`T19.md`](T19.md) — **in progress**; protected preflight, live packages and filesystem preparation passed. A directory-umask correction passes 43 offline tests; live mount/service setup and project-scoped object acceptance remain pending.
+- **Execution record:** [`T19.md`](T19.md) — local Swift setup and two-tenant object acceptance **passed** on 2026-10-26; backup/restore coverage and staging-scale durability remain pending.
 
 - **Prerequisites:** T07 confirms Swift or another locally approved compatible service; explicit approval enumerates test object/container create and delete operations.
 - **Dependencies:** T07; independent of Cinder unless the approved use case explicitly needs both.
