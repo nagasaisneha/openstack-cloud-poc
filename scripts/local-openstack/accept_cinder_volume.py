@@ -21,8 +21,6 @@ import sys
 import time
 import uuid
 
-from openstack import exceptions as os_exc
-
 import configure_nova as common
 import cinder_loopback_chap as chap
 import inspect_cinder_volume_acceptance as diagnostic
@@ -48,6 +46,8 @@ def save(state):
 
 
 def wait_volume(cloud, volume_id, statuses, timeout=180):
+    from openstack import exceptions as os_exc
+
     deadline = time.monotonic() + timeout
     last_status = 'not_found'
     while time.monotonic() < deadline:
@@ -71,6 +71,8 @@ def wait_volume(cloud, volume_id, statuses, timeout=180):
 
 
 def wait_snapshot(cloud, snapshot_id, statuses, timeout=180):
+    from openstack import exceptions as os_exc
+
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:

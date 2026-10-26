@@ -137,8 +137,10 @@ class SwiftReadinessTests(unittest.TestCase):
         self.assertNotIn('SECRET', repr(result))
 
     def test_typed_endpoint_absence_is_verified_separately_from_catalog_failure(self):
+        from keystoneauth1.exceptions.catalog import EndpointNotFound
+
         cloud = self.cloud()
-        cloud.session.get_endpoint.side_effect = setup.EndpointNotFound('PRIVATE_ENDPOINT')
+        cloud.session.get_endpoint.side_effect = EndpointNotFound('PRIVATE_ENDPOINT')
         result = setup.cloud_inventory(cloud)
         self.assertTrue(result['keystone_auth'])
         self.assertEqual(result['endpoint_status'], 'not_in_catalog')

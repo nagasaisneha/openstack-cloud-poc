@@ -20,7 +20,6 @@ import sys
 from urllib.parse import urlsplit
 import uuid
 
-from keystoneauth1.exceptions.catalog import EndpointNotFound
 
 import configure_nova as common
 import inspect_cinder_readiness as cinder
@@ -135,6 +134,8 @@ def expected_account_endpoint(endpoint, project_id):
 
 
 def cloud_inventory(cloud):
+    from keystoneauth1.exceptions.catalog import EndpointNotFound
+
     result = {'keystone_auth': False, 'endpoint_present': False,
               'account_head': 'not_attempted'}
     try:

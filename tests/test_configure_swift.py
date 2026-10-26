@@ -13,7 +13,6 @@ import tempfile
 from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import Mock, patch
-from openstack.identity.v3.endpoint import Endpoint
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts/local-openstack'
 sys.path.insert(0, str(SCRIPTS))
@@ -79,8 +78,8 @@ class SwiftSetupTests(unittest.TestCase):
                          {'admin-id', 'service-id', 'legacy-id'})
 
     def test_keystone_endpoint_validation_uses_region_id_resource_field(self):
-        endpoint = Endpoint(id='endpoint-id', service_id='service-id', interface='internal',
-                            region_id='RegionOne', url=setup.API_URL, enabled=True)
+        endpoint = NS(id='endpoint-id', service_id='service-id', interface='internal',
+                      region_id='RegionOne', url=setup.API_URL, is_enabled=True)
         setup.validate_swift_endpoint(endpoint, 'RegionOne', 'service-id')
         with self.assertRaisesRegex(setup.GuardError, 'unexpected_swift_endpoint'):
             setup.validate_swift_endpoint(endpoint, 'another-region', 'service-id')

@@ -18,7 +18,6 @@ import stat
 import subprocess
 import sys
 
-from openstack import exceptions as os_exc
 
 import configure_nova as common
 import cinder_loopback_chap as chap
@@ -455,6 +454,8 @@ def main(argv=None):
     if os.geteuid() != 0:
         print('STOP: run with sudo /usr/bin/python3 in the actual Ubuntu terminal.', file=sys.stderr)
         return 1
+    from openstack import exceptions as os_exc
+
     os.umask(0o077)
     logging.disable(logging.CRITICAL)
     try:
