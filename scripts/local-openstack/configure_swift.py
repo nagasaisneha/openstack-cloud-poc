@@ -507,6 +507,12 @@ def role_ids_from_assignments(assignments):
     return role_ids
 
 
+def validate_swift_endpoint(endpoint, region_id):
+    require(endpoint.interface in {'public', 'internal', 'admin'}
+            and endpoint.region_id == region_id and endpoint.url == API_URL
+            and endpoint.is_enabled, 'unexpected_swift_endpoint')
+
+
 def ensure_identity(cloud, values, state):
     identity = cloud.identity
     marker = 'T19 local Swift ' + state['run_id']
@@ -552,16 +558,16 @@ def ensure_identity(cloud, values, state):
                                           description=marker, is_enabled=True)
     state['service_id'] = service.id
     save(state)
+    region = identity.find_region('RegionOne', ignore_missing=False)
     endpoints = list(identity.endpoints(service_id=service.id))
     for endpoint in endpoints:
-        require(endpoint.interface in {'public', 'internal', 'admin'} and endpoint.region == 'RegionOne'
-                and endpoint.url == API_URL and endpoint.is_enabled, 'unexpected_swift_endpoint')
+        validate_swift_endpoint(endpoint, region.id)
     for interface in ('public', 'internal', 'admin'):
         matches = [item for item in endpoints if item.interface == interface]
         require(len(matches) <= 1, 'duplicate_swift_endpoint')
         if not matches:
             identity.create_endpoint(service_id=service.id, interface=interface,
-                                     region='RegionOne', url=API_URL, is_enabled=True)
+                                     region_id=region.id, url=API_URL, is_enabled=True)
     state['unused_reseller_role'] = unused
     save(state)
 
