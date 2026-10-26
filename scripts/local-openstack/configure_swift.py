@@ -741,6 +741,27 @@ def validate_ring(ring, server):
             'unexpected_ring_partition_assignment')
 
 
+def restrict_generated_ring(path):
+    """Restrict Swift RingData's explicit 0644 output inside the private dir."""
+    require(path.parent == PRIVATE and path.name in {name + '.ring.gz' for name in PORTS},
+            'unexpected_private_ring_path')
+    info = path.lstat()
+    require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and info.st_gid == 0
+            and stat.S_IMODE(info.st_mode) in {0o600, 0o644}, 'unsafe_file_metadata')
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        current = os.fstat(descriptor)
+        require((current.st_dev, current.st_ino) == (info.st_dev, info.st_ino)
+                and stat.S_ISREG(current.st_mode) and current.st_uid == 0 and current.st_gid == 0,
+                'ring_changed_during_open')
+        if stat.S_IMODE(current.st_mode) != 0o600:
+            os.fchmod(descriptor, 0o600)
+            os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    protected_file(path)
+
+
 def configure_rings(state, gid):
     importlib.invalidate_caches()
     from swift.common.ring.builder import RingBuilder
@@ -760,9 +781,9 @@ def configure_rings(state, gid):
             builder.validate()
             builder.save(str(builder_path))
             builder.get_ring().save(str(source))
-        protected_file(source)
-        protected_file(builder_path)
+        restrict_generated_ring(source)
         validate_ring(RingData.load(str(source)), server)
+        protected_file(builder_path)
         write_owned(CONF / source.name, source.read_bytes(), state, mode=0o640, gid=gid)
 
 

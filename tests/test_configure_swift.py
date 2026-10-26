@@ -474,6 +474,24 @@ class SwiftSetupTests(unittest.TestCase):
         with self.assertRaises(setup.GuardError):
             setup.validate_ring(ring, 'object')
 
+    def test_swift_ring_output_permissions_are_restricted_only_in_private_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory)
+            path = private / 'account.ring.gz'
+            path.write_bytes(b'validated ring bytes')
+            path.chmod(0o644)
+            with patch.object(setup, 'PRIVATE', private), self.root_metadata():
+                setup.restrict_generated_ring(path)
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+            self.assertEqual(path.read_bytes(), b'validated ring bytes')
+            foreign = private / 'foreign.ring.gz'
+            foreign.write_bytes(b'leave unchanged')
+            foreign.chmod(0o644)
+            with patch.object(setup, 'PRIVATE', private), self.root_metadata():
+                with self.assertRaisesRegex(setup.GuardError, 'unexpected_private_ring_path'):
+                    setup.restrict_generated_ring(foreign)
+            self.assertEqual(stat.S_IMODE(foreign.stat().st_mode), 0o644)
+
     def test_foreign_identity_stops_before_password_role_or_catalog_changes(self):
         identity = NS(find_user=Mock(return_value=NS(description='another deployment', is_enabled=True)),
                       create_user=Mock(), assign_project_role_to_user=Mock(), create_service=Mock())
