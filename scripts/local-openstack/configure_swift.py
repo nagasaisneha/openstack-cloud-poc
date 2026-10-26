@@ -802,6 +802,12 @@ def main():
         if frames:
             frame = frames[-1]
             failure['origin'] = {'module': Path(frame.filename).name, 'function': frame.name, 'line': frame.lineno}
+            # The deepest SDK frame alone is often not actionable. Include a
+            # short static call trace, never locals, exception text, or bodies.
+            failure['call_trace'] = [
+                {'module': Path(item.filename).name, 'function': item.name, 'line': item.lineno}
+                for item in frames[-6:]
+            ]
         if isinstance(error, GuardError):
             failure['reason'] = str(error)
             if getattr(error, 'context', None):
