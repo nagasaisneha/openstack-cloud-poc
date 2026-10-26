@@ -15,6 +15,7 @@ from pathlib import Path
 import stat
 import sys
 import tempfile
+import traceback
 
 # Absolute-path execution sets sys.path to scripts/local-openstack. Add the
 # repository root so the shared application package is importable under sudo.
@@ -66,19 +67,24 @@ def main():
     parser.add_argument('--hours', type=parse_hours, default=24,
                         help='lookback window in hours (default: 24; maximum: 168)')
     args = parser.parse_args()
+    stage = 'lock'
     try:
         with LOCK.open('a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            stage = 'manifest'
             state = protected_json(STATE)
             if not isinstance(state.get('project_id'), str) or not state.get('ids', {}).get('server'):
                 raise RuntimeError('retained Task 11 project and server are required')
+            stage = 'credentials'
             secrets = common.read_secrets(common.SECRET_FILE)
             end = datetime.now(timezone.utc).replace(microsecond=0)
             start = end - timedelta(hours=args.hours)
             with common.connection(secrets) as cloud:
+                stage = 'nova_server_ownership'
                 server = cloud.compute.get_server(state['ids']['server'])
                 if server.project_id != state['project_id']:
                     raise RuntimeError('retained VM project ownership check failed')
+                stage = 'nova_usage_api'
                 response = cloud.compute.get(
                     '/os-simple-tenant-usage/' + state['project_id'],
                     # Nova's usage API expects UTC timestamps without an
@@ -87,8 +93,10 @@ def main():
                             'end': end.strftime('%Y-%m-%dT%H:%M:%S')},
                     raise_exc=True,
                 )
+                stage = 'nova_usage_parse'
                 samples = samples_from_nova_usage(response.json(), state['project_id'], start, end)
             report_path = DATA_DIR / 'nova-usage-latest.json'
+            stage = 'report_write'
             report = {
                 'schema': 1,
                 'source': 'openstack:nova.os-simple-tenant-usage',
@@ -118,7 +126,13 @@ def main():
               f"samples={len(samples)}; report={report_path}", flush=True)
         return 0
     except Exception as exc:
-        print('STOP: Nova usage collection unavailable: ' + type(exc).__name__ +
+        frames = traceback.extract_tb(exc.__traceback__)
+        origin = frames[-1] if frames else None
+        detail = {'stage': stage, 'error_type': type(exc).__name__}
+        if origin is not None:
+            detail['origin'] = {'module': Path(origin.filename).name,
+                                'function': origin.name, 'line': origin.lineno}
+        print('STOP: Nova usage collection unavailable: ' + json.dumps(detail, sort_keys=True) +
               '; no cloud resources or services changed.', file=sys.stderr, flush=True)
         return 1
 
