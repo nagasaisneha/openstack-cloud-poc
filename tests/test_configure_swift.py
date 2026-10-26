@@ -351,6 +351,60 @@ class SwiftSetupTests(unittest.TestCase):
             self.assertNotIn('sha256', repr(raised.exception.context))
             self.assertEqual(path.read_text(), 'matching\n')
 
+    def test_package_configuration_is_replaced_only_when_preflight_and_backup_prove_origin(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            conf = root / 'etc' / 'swift'
+            private = root / 'private'
+            data = root / 'data'
+            conf.mkdir(parents=True)
+            (private / 'package-config').mkdir(parents=True)
+            data.mkdir()
+            path = conf / 'account-server.conf'
+            original = 'package sample\n'
+            path.write_text(original)
+            (private / 'package-config' / path.name).write_text(original)
+            path.chmod(0o640)
+            (private / 'package-config' / path.name).chmod(0o640)
+            readiness = data / ('swift-readiness-' + 'a' * 32 + '.json')
+            state = dict(self.state(), package_config_backed_up=True,
+                         readiness_report=str(readiness))
+            report = {'installation': {'status': 'ready_for_guarded_setup'},
+                      'host': {'paths': {str(conf): {'present': False}}}}
+            with patch.object(setup, 'CONF', conf), patch.object(setup, 'PRIVATE', private), \
+                    patch.object(setup, 'DATA', data), patch.object(setup, 'protected_json', return_value=report), \
+                    patch.object(setup, 'protected_file'), patch.object(setup, 'save'), \
+                    patch.object(os, 'fchown'), self.root_metadata():
+                setup.write_owned(path, 'task config\n', state, mode=0o640, gid=0)
+            self.assertEqual(path.read_text(), 'task config\n')
+            self.assertEqual((private / 'package-config' / path.name).read_text(), original)
+            self.assertEqual(state['package_config_adoptions'][str(path)]['phase'], 'verified')
+
+    def test_package_configuration_adoption_refuses_changed_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            conf = root / 'etc' / 'swift'
+            private = root / 'private'
+            data = root / 'data'
+            conf.mkdir(parents=True)
+            (private / 'package-config').mkdir(parents=True)
+            data.mkdir()
+            path = conf / 'account-server.conf'
+            path.write_text('unrecognized content\n')
+            (private / 'package-config' / path.name).write_text('different backup\n')
+            path.chmod(0o640)
+            (private / 'package-config' / path.name).chmod(0o640)
+            state = dict(self.state(), package_config_backed_up=True,
+                         readiness_report=str(data / ('swift-readiness-' + 'a' * 32 + '.json')))
+            report = {'installation': {'status': 'ready_for_guarded_setup'},
+                      'host': {'paths': {str(conf): {'present': False}}}}
+            with patch.object(setup, 'CONF', conf), patch.object(setup, 'PRIVATE', private), \
+                    patch.object(setup, 'DATA', data), patch.object(setup, 'protected_json', return_value=report), \
+                    patch.object(setup, 'protected_file'), patch.object(setup, 'save'), self.root_metadata():
+                with self.assertRaisesRegex(setup.GuardError, 'not_owned'):
+                    setup.write_owned(path, 'task config\n', state, mode=0o640, gid=0)
+            self.assertEqual(path.read_text(), 'unrecognized content\n')
+
     def test_interrupted_owned_write_is_adopted_only_with_matching_intent(self):
         state = self.state()
         with tempfile.TemporaryDirectory() as directory:

@@ -131,6 +131,38 @@ def digest_file(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def package_config_preimage(path, state, actual_digest):
+    """Prove an existing Swift sample file came from this run's package backup."""
+    allowed = {'swift.conf', 'proxy-server.conf', 'account-server.conf',
+               'container-server.conf', 'object-server.conf'}
+    if (path.parent != CONF or path.name not in allowed
+            or state.get('package_config_backed_up') is not True):
+        return None
+    report_path = Path(state.get('readiness_report', ''))
+    if (report_path.parent != DATA
+            or not re.fullmatch(r'swift-readiness-[0-9a-f]{32}\.json', report_path.name)):
+        return None
+    try:
+        report = protected_json(report_path)
+        original = report.get('host', {}).get('paths', {}).get(str(CONF), {})
+        if (report.get('installation', {}).get('status') != 'ready_for_guarded_setup'
+                or original.get('present') is not False):
+            return None
+        backup_dir = PRIVATE / 'package-config'
+        directory = backup_dir.lstat()
+        if (not stat.S_ISDIR(directory.st_mode) or directory.st_uid != 0
+                or directory.st_mode & 0o022):
+            return None
+        backup = backup_dir / path.name
+        info = backup.lstat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022):
+            return None
+        digest = digest_file(backup)
+        return digest if digest == actual_digest else None
+    except (GuardError, OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 def preserve_snapshot():
     result = {}
     for path in PRESERVED:
@@ -213,12 +245,47 @@ def write_owned(path, content, state, mode=0o644, gid=0):
     encoded = content.encode() if isinstance(content, str) else content
     expected = hashlib.sha256(encoded).hexdigest()
     key = str(path)
+    write_required = False
     if path.exists() or path.is_symlink():
         info = protected_file(path, mode, gid)
         actual = digest_file(path)
         recorded_file = state['files'].get(key)
         recorded_intent = state['file_intents'].get(key)
-        if not ((recorded_file or recorded_intent) == expected and actual == expected):
+        owned_content = ((recorded_file or recorded_intent) == expected and actual == expected)
+        adoptions = state.get('package_config_adoptions', {})
+        adoption = adoptions.get(key)
+        if (not owned_content and adoption is not None and adoption.get('phase') == 'intent'
+                and recorded_file is None and recorded_intent == expected):
+            backup_digest = package_config_preimage(path, state, actual)
+            require(backup_digest == adoption.get('backup_sha256')
+                    and adoption.get('expected_sha256') == expected,
+                    'package_config_adoption_drifted')
+            write_required = True
+        elif not owned_content and recorded_file is None and recorded_intent is None:
+            backup_digest = package_config_preimage(path, state, actual)
+            if backup_digest is not None:
+                adoptions = state.setdefault('package_config_adoptions', {})
+                adoption = adoptions.get(key)
+                expected_adoption = {'backup_sha256': backup_digest,
+                                     'expected_sha256': expected}
+                if adoption is None:
+                    adoptions[key] = dict(expected_adoption, phase='intent')
+                    state['file_intents'][key] = expected
+                    save(state)
+                    write_required = True
+                else:
+                    require(all(adoption.get(field) == value
+                                for field, value in expected_adoption.items()),
+                            'package_config_adoption_drifted')
+                    if actual == expected:
+                        adoption['phase'] = 'verified'
+                        owned_content = True
+                        save(state)
+                    elif adoption.get('phase') == 'intent':
+                        state['file_intents'][key] = expected
+                        save(state)
+                        write_required = True
+        if not owned_content and not write_required:
             error = GuardError('existing_file_not_owned_or_drifted')
             error.context = {
                 'path': key,
@@ -236,6 +303,8 @@ def write_owned(path, content, state, mode=0o644, gid=0):
         require(key not in state['files'], 'owned_file_missing')
         state['file_intents'][key] = expected
         save(state)
+        write_required = True
+    if write_required:
         descriptor, temporary = tempfile.mkstemp(prefix='.swift-poc-', dir=path.parent)
         try:
             with os.fdopen(descriptor, 'wb') as stream:
@@ -250,6 +319,9 @@ def write_owned(path, content, state, mode=0o644, gid=0):
                 os.unlink(temporary)  # Only this invocation's temporary file.
     state['files'][key] = expected
     state['file_intents'].pop(key, None)
+    adoption = state.get('package_config_adoptions', {}).get(key)
+    if adoption is not None and adoption.get('expected_sha256') == expected:
+        adoption['phase'] = 'verified'
     save(state)
 
 
