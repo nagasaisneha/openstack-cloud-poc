@@ -16,6 +16,10 @@ import stat
 import sys
 import tempfile
 
+# Absolute-path execution sets sys.path to scripts/local-openstack. Add the
+# repository root so the shared application package is importable under sudo.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import configure_nova as common
 from openstack_cloud_poc.nova_usage import samples_from_nova_usage
 
@@ -23,6 +27,16 @@ from openstack_cloud_poc.nova_usage import samples_from_nova_usage
 DATA_DIR = Path('/root/openstack-poc-acceptance')
 STATE = DATA_DIR / 'run.json'
 LOCK = Path('/root/.openstack-poc-nova-prerequisites.lock')
+
+
+def parse_hours(value):
+    try:
+        hours = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError('hours must be an integer from 1 to 168') from None
+    if not 1 <= hours <= 168:
+        raise argparse.ArgumentTypeError('hours must be an integer from 1 to 168')
+    return hours
 
 
 def protected_json(path):
@@ -49,7 +63,7 @@ def atomic_report(path, report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--hours', type=int, choices=range(1, 169), default=24,
+    parser.add_argument('--hours', type=parse_hours, default=24,
                         help='lookback window in hours (default: 24; maximum: 168)')
     args = parser.parse_args()
     try:
