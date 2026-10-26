@@ -1,6 +1,6 @@
 # Local Horizon browser slice
 
-**Status:** Hardened configuration templates and package-impact review only. Horizon is not installed or running.
+**Status:** Horizon 24.0.1 is installed, but its default global Apache configuration was enabled by the package maintainer script. Containment is pending; the loopback TLS vhost is not installed and no browser URL is verified.
 
 This package targets the existing Ubuntu 22.04 / OpenStack Caracal WSL POC. It keeps the shared Apache service and existing OpenStack APIs in place. It is not a staging or production deployment.
 
@@ -11,10 +11,10 @@ The current Jammy Caracal apt candidate is `openstack-dashboard` `4:24.0.1-0ubun
 The package's maintainer script has material shared-service effects:
 
 - It creates the `horizon` system user/group, collects/compresses static assets, and restarts Memcached.
-- It enables `/etc/apache2/conf-available/openstack-dashboard.conf` and reloads Apache through `apache2_invoke` unless `APACHE2_MAINTSCRIPT_DEFER` is set.
+- It enables `/etc/apache2/conf-available/openstack-dashboard.conf` and requests an Apache reload through `apache2_invoke`. On this host, the sourced Apache maintainer helper resets `APACHE2_MAINTSCRIPT_DEFER` when Apache is already installed, so setting that variable in the `apt-get` environment does not defer the action.
 - That default Apache config mounts Horizon globally at `/horizon`, publishes static assets, and grants access. The packaged settings default to `ALLOWED_HOSTS = ['*']`; secure-cookie settings are commented out. Enabling that config as-is would expose an HTTP login route on the current wildcard port 80.
 
-The proposed installation must set `APACHE2_MAINTSCRIPT_DEFER=/dev/null` for the package transaction, verify that `a2query -c openstack-dashboard` reports the default config disabled, and configure this loopback-only TLS vhost before reloading Apache. If the defer check fails, stop and do not reload Apache. The install still restarts Memcached and performs the single planned `python3-yaml` upgrade; review those effects against current service state.
+The operator installed the pinned package after the protected rollback snapshot passed. The transaction matched the reviewed 1-upgrade/18-new/0-remove plan, but the attempted maintscript deferral did not work: `a2query -c openstack-dashboard` now reports the global config enabled by the maintainer script. Disable it, run `apache2ctl configtest`, and gracefully reload Apache only if the check passes. Verify the config is disabled and the shared routes still work before installing the loopback-only TLS vhost. The install also performed the planned `python3-yaml` upgrade and can restart Memcached; verify current service health.
 
 ## Browser boundary
 
@@ -60,14 +60,15 @@ Windows/WSL localhost forwarding and the Apache `Require local` rule must still 
    ```
 
    It prints `BEGIN`/`PASS` markers for each preflight and snapshot phase, rechecks the exact package scope, then saves the old `python3-yaml` package, package versions and Apache configuration under the root-only POC acceptance directory. It makes no service or package changes. The apt simulation can take time; if it fails, the last phase and `STOP` line identify where. If no first `BEGIN` appears, check whether `sudo` is still waiting for authentication or whether the command returned before the script started. The old `python3-yaml` package was downloaded to `/tmp` and its digest is pinned in the helper. Preserve the script's root-only output path; do not copy the snapshot into Git.
-3. Install only the pinned dashboard package without recommended packages and with Apache maintscript actions deferred:
+3. The pinned dashboard package is installed. The package maintainer enabled its default global Apache config despite the attempted environment deferral. Contain it and remove it from Apache's active configuration:
 
    ```bash
-   sudo env APACHE2_MAINTSCRIPT_DEFER=/dev/null apt-get install --no-install-recommends \
-     'openstack-dashboard=4:24.0.1-0ubuntu0.24.04.2~cloud0'
+   sudo a2disconf openstack-dashboard && \
+     sudo apache2ctl configtest && \
+     sudo systemctl reload apache2
    ```
 
-   Confirm the package is installed and the default global dashboard config remains disabled (`a2query -c openstack-dashboard`). If it is enabled, disable it without reloading Apache and stop to review the maintscript deferral before proceeding.
+   Then confirm `a2query -c openstack-dashboard` reports the config disabled and verify the existing shared routes. If `configtest` fails, do not reload Apache; stop and review the error. Keep the default config disabled while installing the dedicated loopback TLS vhost.
 4. After reviewing the certificate helper, create the private localhost certificate and install the settings block and Apache config from this directory. Keep generated keys and host-specific files outside the repository.
 5. Run `apache2ctl configtest`; only then enable the dedicated config and reload Apache. Do not restart the shared Apache service.
 6. Confirm the listener is exactly `127.0.0.1:8443`, HTTPS serves the Horizon login, and existing root/identity/placement routes and core services match their pre-change results.
