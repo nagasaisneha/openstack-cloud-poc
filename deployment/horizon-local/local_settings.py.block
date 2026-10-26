@@ -1,5 +1,4 @@
-# Local OpenStack POC security overrides. Append with a managed marker after
-# package installation; do not replace the package's full settings file.
+# BEGIN openstack-cloud-poc Horizon overrides
 DEBUG = False
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
@@ -17,3 +16,4 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+# END openstack-cloud-poc Horizon overrides

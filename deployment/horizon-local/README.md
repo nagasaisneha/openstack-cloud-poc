@@ -1,6 +1,6 @@
 # Local Horizon browser slice
 
-**Status:** Horizon 24.0.1 is installed and its default global Apache configuration is disabled. The dedicated loopback TLS vhost and certificate are not installed; no browser URL is verified.
+**Status:** Horizon 24.0.1 is installed, the default global Apache configuration is disabled, and the localhost CA/server certificate has been generated and validated. The dedicated loopback TLS vhost is not installed; no browser URL is verified.
 
 This package targets the existing Ubuntu 22.04 / OpenStack Caracal WSL POC. It keeps the shared Apache service and existing OpenStack APIs in place. It is not a staging or production deployment.
 
@@ -61,15 +61,21 @@ Windows/WSL localhost forwarding and the Apache `Require local` rule must still 
 
    It prints `BEGIN`/`PASS` markers for each preflight and snapshot phase, rechecks the exact package scope, then saves the old `python3-yaml` package, package versions and Apache configuration under the root-only POC acceptance directory. It makes no service or package changes. The apt simulation can take time; if it fails, the last phase and `STOP` line identify where. If no first `BEGIN` appears, check whether `sudo` is still waiting for authentication or whether the command returned before the script started. The old `python3-yaml` package was downloaded to `/tmp` and its digest is pinned in the helper. Preserve the script's root-only output path; do not copy the snapshot into Git.
 3. The pinned dashboard package is installed. The package maintainer enabled its default global Apache config despite the attempted environment deferral. The operator disabled it, passed `apache2ctl configtest`, reloaded Apache, and confirmed `/horizon/` returns 404 while the existing API endpoints still respond. Keep this config disabled.
-4. After reviewing the certificate helper, create the private localhost certificate:
+4. The operator ran the certificate helper; it created and validated the private localhost certificate set. For a fresh setup, use:
 
    ```bash
    sudo bash deployment/horizon-local/generate-local-cert.sh
    ```
 
    Record only the printed CA SHA-256 fingerprint. The `ssl` Apache module is currently disabled and must be enabled as part of the reviewed TLS configuration step. Keep generated keys and host-specific files outside the repository.
-5. Append the secure settings block without replacing the package settings, install the dedicated Apache config, enable only the required modules/config, and run `apache2ctl configtest`. Reload Apache only after the test passes. Do not enable the package global dashboard config or restart the shared Apache service.
+5. Install the secure settings block and dedicated Apache config with the guarded helper:
+
+   ```bash
+   sudo bash deployment/horizon-local/install-loopback-config.sh
+   ```
+
+   It preserves the packaged settings and secret, creates a fresh protected configuration snapshot, removes the inactive wildcard `Listen 443` directives from `ports.conf`, enables the SSL module and dedicated vhost, runs `apache2ctl configtest`, and gracefully reloads Apache only on success. It refuses to proceed if port 443 is already listening. It checks the TLS response, exact loopback `8443` listener, absence of a port-443 listener, disabled HTTP `/horizon/` route, and before/after status of the existing API routes. On failure after applying files, it attempts to restore the previous configuration and reload it if a reload was attempted. Do not enable the package global dashboard config or restart the shared Apache service.
 6. Confirm the listener is exactly `127.0.0.1:8443`, HTTPS serves the Horizon login, and existing root/identity/placement routes and core services match their pre-change results.
 7. Verify the certificate in the Windows browser and sign in using an existing Keystone account. No credentials are provided by this repository.
 
-The package install, config write, Apache reload and certificate trust changes are host operations. No install, config write, listener change, reload, or credential access is performed by these templates.
+The package installation has completed. The certificate helper and loopback config installer are explicit root-run host actions: they write the local certificates/configuration, and the installer reloads Apache only after its checks pass. No credentials are stored in Git.

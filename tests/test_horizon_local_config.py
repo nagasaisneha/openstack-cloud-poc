@@ -86,6 +86,45 @@ class HorizonLocalConfigTests(unittest.TestCase):
             with self.subTest(operation=operation):
                 self.assertNotIn(operation, content)
 
+    def test_loopback_config_installer_is_bash_parseable_and_reload_gated(self):
+        helper = DEPLOYMENT / "install-loopback-config.sh"
+        subprocess.run(["bash", "-n", str(helper)], check=True)
+        content = helper.read_text(encoding="utf-8")
+        self.assertIn("not confirmed disabled by the site administrator", content)
+        self.assertIn("default HTTP /horizon/ route is not confirmed disabled", content)
+        self.assertIn("apache2ctl configtest || die", content)
+        self.assertIn("cmp -s -- \"$before_routes\" \"$after_routes\"", content)
+        self.assertIn("https://localhost:8443/horizon/", content)
+        self.assertIn("Protected config snapshot:", content)
+        self.assertIn("ports.conf.before", content)
+        self.assertIn("port 443 is already in use", content)
+        self.assertIn("wildcard443", content)
+        for operation in (
+            "systemctl restart",
+            "a2enconf openstack-dashboard",
+            "a2disconf openstack-dashboard",
+        ):
+            with self.subTest(operation=operation):
+                self.assertNotIn(operation, content)
+
+    def test_ports_filter_removes_only_inactive_wildcard_ssl_listeners(self):
+        filter_file = DEPLOYMENT / "remove-inactive-wildcard-ssl-listeners.awk"
+        self.assertIn("Listen[[:space:]].*443", filter_file.read_text(encoding="utf-8"))
+        ports = (
+            "Listen 80\n"
+            "<IfModule ssl_module>\n\tListen 443\n</IfModule>\n"
+            "<IfModule mod_gnutls.c>\n\tListen 443\n</IfModule>\n"
+        )
+        result = subprocess.run(["awk", "-f", str(filter_file)], input=ports, text=True,
+                                capture_output=True, check=True)
+        self.assertIn("Listen 80", result.stdout)
+        self.assertNotIn("Listen 443", result.stdout)
+        for unsafe in ("Listen *:443\n", "<IfModule ssl_module>\n Listen 127.0.0.1:443\n</IfModule>\n"):
+            with self.subTest(unsafe=unsafe):
+                rejected = subprocess.run(["awk", "-f", str(filter_file)], input=unsafe, text=True,
+                                          capture_output=True)
+                self.assertEqual(rejected.returncode, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
