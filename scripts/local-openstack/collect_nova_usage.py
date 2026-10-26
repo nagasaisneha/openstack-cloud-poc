@@ -90,7 +90,8 @@ def main():
                     # Nova's usage API expects UTC timestamps without an
                     # offset suffix (unlike many other OpenStack APIs).
                     params={'start': start.strftime('%Y-%m-%dT%H:%M:%S'),
-                            'end': end.strftime('%Y-%m-%dT%H:%M:%S')},
+                            'end': end.strftime('%Y-%m-%dT%H:%M:%S'),
+                            'detailed': '1'},
                     raise_exc=True,
                 )
                 stage = 'nova_usage_parse'

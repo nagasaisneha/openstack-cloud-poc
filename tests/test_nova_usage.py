@@ -15,7 +15,7 @@ def payload():
         'tenant_id': 'project-a',
         'server_usages': [{
             'instance_id': 'server-1', 'hours': 2.5,
-            'flavor': {'vcpus': 2, 'ram': 512, 'disk': 1},
+            'vcpus': 2, 'memory_mb': 512, 'local_gb': 1,
         }],
     }}
 
@@ -39,10 +39,10 @@ class NovaUsageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'project does not match'):
             samples_from_nova_usage(payload(), 'project-b', START, END)
 
-    def test_missing_flavor_measurement_is_rejected(self):
+    def test_missing_server_allocation_measurement_is_rejected(self):
         document = payload()
-        document['tenant_usage']['server_usages'][0]['flavor'].pop('ram')
-        with self.assertRaisesRegex(ValueError, 'ram'):
+        document['tenant_usage']['server_usages'][0].pop('memory_mb')
+        with self.assertRaisesRegex(ValueError, 'memory_mb'):
             samples_from_nova_usage(document, 'project-a', START, END)
 
     def test_negative_and_non_finite_values_are_rejected(self):

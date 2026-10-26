@@ -32,18 +32,15 @@ def samples_from_nova_usage(
     for row in rows:
         if not isinstance(row, Mapping) or not isinstance(row.get("instance_id"), str):
             raise ValueError("Nova server usage entry is malformed")
-        flavor = row.get("flavor")
-        if not isinstance(flavor, Mapping):
-            raise ValueError("Nova server usage is missing flavor allocation")
         hours = _decimal(row.get("hours"), "hours")
         if hours < 0:
             raise ValueError("Nova server usage hours cannot be negative")
         for field, metric, unit in (
             ("vcpus", "compute.vcpu_hours", "vCPU-hour"),
-            ("ram", "compute.memory_mb_hours", "MB-hour"),
-            ("disk", "compute.local_disk_gb_hours", "GB-hour"),
+            ("memory_mb", "compute.memory_mb_hours", "MB-hour"),
+            ("local_gb", "compute.local_disk_gb_hours", "GB-hour"),
         ):
-            quantity = hours * _decimal(flavor.get(field), field)
+            quantity = hours * _decimal(row.get(field), field)
             result.append(UsageSample(
                 project_id=project_id,
                 resource_id=row["instance_id"],
