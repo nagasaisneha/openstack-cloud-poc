@@ -18,6 +18,7 @@ import re
 import secrets
 import stat
 import sys
+import traceback
 from urllib.parse import quote
 
 from keystoneauth1 import session
@@ -488,7 +489,7 @@ def run(args=None):
     os.umask(0o077)
     logging.disable(logging.CRITICAL)
     state = None
-    stage = 'preflight'
+    stage = 'host_preflight'
     try:
         release = Path('/etc/os-release').read_text()
         if (not re.search(r'^ID=ubuntu$', release, re.M)
@@ -502,6 +503,7 @@ def run(args=None):
         with os.fdopen(descriptor, 'a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             progress('BEGIN; setup, core, Cinder, and existing data preserved')
+            stage = 'acceptance_journal'
             state = load_or_create_state(options.resume)
             if state.get('phase') == 'complete':
                 raise RuntimeError('acceptance already completed; refusing replay')
@@ -514,8 +516,11 @@ def run(args=None):
                 save(state)
                 progress('PASS; private acceptance artifacts cleaned; report=' + str(STATE))
                 return 0
+            progress('acceptance_journal: PASS')
+            stage = 'credential_source'
             base = common.read_secrets(common.SECRET_FILE)
             with common.connection(base) as admin:
+                stage = 'setup_report'
                 setup_state = protected_json(SETUP_STATE)
                 if (setup_state.get('phase') != 'service_ready_pending_object_acceptance'
                         or not {'packages', 'filesystem', 'mount_and_xattrs',
@@ -523,8 +528,14 @@ def run(args=None):
                                 'services_and_authenticated_api', 'core_preservation'}
                            .issubset(set(setup_state.get('steps', [])))):
                     raise RuntimeError('Swift service setup journal is not complete')
+                progress('setup_report: PASS')
+                stage = 'configuration_integrity'
                 swift_setup.verify_owned_files(setup_state)
+                progress('configuration_integrity: PASS')
+                stage = 'core_preservation'
                 swift_setup.check_core(admin, setup_state)
+                progress('core_preservation: PASS')
+                stage = 'swift_service_health'
                 setup_secrets = swift_setup.setup_secrets(setup_state)
                 swift_setup.service_health(dict(base, **setup_secrets))
                 progress('service, storage, and core preservation recheck: PASS')
@@ -634,11 +645,15 @@ def run(args=None):
                         cloud.close()
         return 0
     except Exception as error:
+        frames = traceback.extract_tb(error.__traceback__)
+        call_trace = [{'module': Path(frame.filename).name, 'function': frame.name,
+                       'line': frame.lineno} for frame in frames[-6:]]
         if state is not None:
-            state['failure'] = {'stage': stage, 'error_type': type(error).__name__}
+            state['failure'] = {'stage': stage, 'error_type': type(error).__name__,
+                                'call_trace': call_trace}
             save(state)
         print('STOP: Swift object acceptance incomplete: ' + json.dumps(
-            {'stage': stage, 'error_type': type(error).__name__}, sort_keys=True)
+            {'stage': stage, 'error_type': type(error).__name__, 'call_trace': call_trace}, sort_keys=True)
               + '; task-owned resources and protected evidence are preserved.', file=sys.stderr)
         return 1
 
