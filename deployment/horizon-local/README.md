@@ -1,6 +1,6 @@
 # Local Horizon browser slice
 
-**Status:** Horizon 24.0.1 is installed, the default global Apache configuration is disabled, and the localhost CA/server certificate has been generated and validated. The dedicated loopback TLS vhost is not installed; no browser URL is verified.
+**Status:** Horizon 24.0.1 is installed; the package global Apache config is disabled; localhost TLS and the dedicated loopback vhost are installed and locally verified. Windows browser trust and Keystone sign-in remain unverified.
 
 This package targets the existing Ubuntu 22.04 / OpenStack Caracal WSL POC. It keeps the shared Apache service and existing OpenStack APIs in place. It is not a staging or production deployment.
 
@@ -18,13 +18,13 @@ The operator installed the pinned package after the protected rollback snapshot 
 
 ## Browser boundary
 
-The configuration in this directory binds only `127.0.0.1:8443` and targets `https://localhost:8443/horizon/`. That is not a currently working or verified URL. No administrator or tenant password is stored here; Horizon must authenticate against the existing Keystone service.
+The configuration binds only `127.0.0.1:8443`. The operator-reported installer PASS and an independent CA-validated request returned HTTP 302 from `https://localhost:8443/horizon/`; the listener check found only `127.0.0.1:8443` and no port-443 listener. This verifies the local WSL endpoint, not the Windows browser path. No administrator or tenant password is stored here; Horizon authenticates against the existing Keystone service.
 
-The certificate helper creates a local CA and a 90-day localhost server certificate outside Git. It refuses partial file sets and validates ownership, file modes, key/certificate matches, expiry, certificate usages, SANs, and the trust chain before reporting success. The CA is constrained to `localhost` and `127.0.0.1`; its private key remains root-only in `/etc/ssl/private`. The helper has not been run.
+The certificate helper created a local CA and 90-day localhost server certificate under `/etc/ssl`; both passed validation. The CA is constrained to `localhost` and `127.0.0.1`; its private key remains root-only in `/etc/ssl/private`. The operator has the public CA SHA-256 fingerprint; browser trust has not yet been imported.
 
 To trust the certificate in a Windows browser after an approved host deployment:
 
-1. Run `sudo bash deployment/horizon-local/generate-local-cert.sh` and record the printed CA SHA-256 fingerprint. Do not copy or import the private key.
+1. Use the CA SHA-256 fingerprint printed when the certificate helper completed successfully. Do not copy or import the private key.
 2. Export only the public CA certificate as DER and get its WSL path:
 
    ```bash
@@ -67,15 +67,15 @@ Windows/WSL localhost forwarding and the Apache `Require local` rule must still 
    sudo bash deployment/horizon-local/generate-local-cert.sh
    ```
 
-   Record only the printed CA SHA-256 fingerprint. The `ssl` Apache module is currently disabled and must be enabled as part of the reviewed TLS configuration step. Keep generated keys and host-specific files outside the repository.
-5. Install the secure settings block and dedicated Apache config with the guarded helper:
+   Keep only the printed CA SHA-256 fingerprint for the Windows trust check; never copy or import the private key. The installer has since enabled the `ssl` Apache module.
+5. The operator ran the guarded helper successfully. It installed the secure settings block and dedicated Apache config, passed configtest, gracefully reloaded Apache, confirmed the HTTPS response and loopback listener, and verified unchanged API route statuses. The same command is idempotent for an already installed, matching configuration:
 
    ```bash
    sudo bash deployment/horizon-local/install-loopback-config.sh
    ```
 
-   It preserves the packaged settings and secret, creates a fresh protected configuration snapshot, removes the inactive wildcard `Listen 443` directives from `ports.conf`, enables the SSL module and dedicated vhost, runs `apache2ctl configtest`, and gracefully reloads Apache only on success. It refuses to proceed if port 443 is already listening. It checks the TLS response, exact loopback `8443` listener, absence of a port-443 listener, disabled HTTP `/horizon/` route, and before/after status of the existing API routes. On failure after applying files, it attempts to restore the previous configuration and reload it if a reload was attempted. Do not enable the package global dashboard config or restart the shared Apache service.
-6. Confirm the listener is exactly `127.0.0.1:8443`, HTTPS serves the Horizon login, and existing root/identity/placement routes and core services match their pre-change results.
+   It preserves the packaged settings and secret, creates a protected configuration snapshot, removes only inactive wildcard `Listen 443` directives from `ports.conf`, and refuses to proceed if port 443 is occupied. It verifies the local TLS response, exact loopback listener, disabled HTTP `/horizon/` route, and before/after status of existing API routes. Do not enable the package global dashboard config or restart the shared Apache service.
+6. The installer confirmed the listener is exactly `127.0.0.1:8443` and local HTTPS serves Horizon. Verify that URL in the intended Windows browser and confirm existing routes and services there.
 7. Verify the certificate in the Windows browser and sign in using an existing Keystone account. No credentials are provided by this repository.
 
 The package installation has completed. The certificate helper and loopback config installer are explicit root-run host actions: they write the local certificates/configuration, and the installer reloads Apache only after its checks pass. No credentials are stored in Git.
