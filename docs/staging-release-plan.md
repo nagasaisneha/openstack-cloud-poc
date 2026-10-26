@@ -175,7 +175,7 @@ The local POC produces evidence for planning and local acceptance. Task 11 inclu
 | GPU feasibility and sample workload (POC-021/022) | T23's existing audit shows RTX 2060 visibility inside a CUDA container; host NVML failed and Nova guest passthrough is unverified. No T24 workload was run. | GPU remains optional; if included, staging must validate the selected hardware, passthrough/isolation model, workload, and resource limits independently |
 | End-to-end acceptance (POC-025) | Task 11 real local lifecycle, guest/network/isolation, cleanup, backup restore and restart evidence; separate fixture demonstration remains simulated | Run staging release acceptance with real provider evidence, security/operations checks, cleanup, and release-owner sign-off |
 
-Task 11 and T18–T20 operator reports establish only their recorded local provider results; offline test files establish code-path and fixture behavior only. The earlier WSL manager verification point discovered 496 tests (494 passed, 2 opt-in daemon tests skipped). The current expanded offline suite discovers **688 tests: 686 passed, 2 opt-in tests skipped**. No staging tests were run.
+Task 11 and T18–T20 operator reports establish only their recorded local provider results; offline test files establish code-path and fixture behavior only. The earlier WSL manager verification point discovered 496 tests (494 passed, 2 opt-in daemon tests skipped). The current expanded offline suite discovers **689 tests: 687 passed, 2 opt-in tests skipped**. No staging tests were run.
 
 ## Relationship to existing repository documents
 

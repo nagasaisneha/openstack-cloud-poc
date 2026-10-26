@@ -49,6 +49,7 @@ At audit time, `main` was at `88fb177` and one commit ahead of `origin/main`. Th
 | Cinder | Scheduler and volume units active; API unit inactive; port 8776 listens on `127.0.0.1`. | The API listener was not authenticated or queried; T18's operator-reported functional test is separate evidence. |
 | Swift | Proxy/account/container/object units active; 8080 and 6200–6202 listen on loopback. | No authenticated Swift request was made in this refresh; T19's operator-reported tenant acceptance is separate evidence. |
 | Nova usage | T20's protected read-only report records three observed project samples. | The one-off collector uses an administrator credential and does not prove complete/paginated coverage or a billing-grade feed. |
+| Protected preflight | Operator supplied a passing root-only readiness run on 2026-10-26, including existing recovery rehearsal, Keystone session, service, retained-demo and guest checks. | No restart was performed. This does not install Horizon, verify a browser URL, or supply a Horizon package rollback point. |
 
 ## Horizon fit and custom work
 

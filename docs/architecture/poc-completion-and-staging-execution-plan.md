@@ -13,7 +13,7 @@ The active dependency path is [T29–T41](../tasks/README.md#browser-ready-platf
 |---|---|---|---|
 | Audit and design | T29–T30 | Requirement map, Horizon feature fit, supported service catalogue, target diagrams | Complete as repository work; no deployment claim |
 | Offline billing core | T31 | Decimal/effective-dated rates, project-only access, immutable/idempotent statements, focused and regression tests | Implemented with synthetic usage only |
-| Browser foundation | T32 | Secure Horizon login URL; existing Apache/OpenStack/VM preservation checks | Horizon absent; Apache active on 80, no HTTPS/443 or noVNC/6080; install not run |
+| Browser foundation | T32 | Secure Horizon login URL; existing Apache/OpenStack/VM preservation checks | Protected recovery/Keystone/service preflight passed; Horizon absent, Apache active on 80, no HTTPS/443 or noVNC/6080; package rollback and install remain open |
 | Tenant administration/resources | T33–T36 | Two projects/users/quotas; compute/network/image access; Cinder volume/snapshot and Swift object workflows | T18/T19 local storage functional acceptance passed; browser policy/quota workflows and staging backends remain open |
 | Usage and bills | T37–T38 | Real meters reconciled to controlled workloads; explicit prices and project statements | One-off Nova allocation-hour collection and provisional billing source tested; no complete meter feed or controlled bill |
 | Browser billing/audit and acceptance | T39–T40 | Role-limited downloadable statements, audit events, two-tenant end-to-end browser demo | Backend CSV/audit/principal adapter exist; Horizon request, views, download route and full workflow remain open |

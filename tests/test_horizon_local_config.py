@@ -61,6 +61,26 @@ class HorizonLocalConfigTests(unittest.TestCase):
         self.assertIn("ln -- \"$source_path\" \"$destination_path\"", content)
         self.assertIn("refusing to overwrite a partial set", content)
 
+    def test_package_rollback_helper_is_bash_parseable_and_snapshot_only(self):
+        helper = DEPLOYMENT / "prepare-package-rollback.sh"
+        subprocess.run(["bash", "-n", str(helper)], check=True)
+        content = helper.read_text(encoding="utf-8")
+        self.assertIn("apt-get -s --no-install-recommends install", content)
+        self.assertIn("18 newly installed, 0 to remove", content)
+        self.assertIn("python3-yaml_5.4.1-1ubuntu1_amd64.deb", content)
+        self.assertIn("6.0.1-2build2~cloud0", content)
+        self.assertIn("7ef9b534046bb838f7357091bafb368f6d1f32fb7ad2887d7c377ff4c0081b32", content)
+        self.assertIn("apache2-before.tar.gz", content)
+        for operation in (
+            "apt-get install --no-install-recommends",
+            "systemctl restart",
+            "systemctl reload",
+            "a2enconf",
+            "a2disconf",
+        ):
+            with self.subTest(operation=operation):
+                self.assertNotIn(operation, content)
+
 
 if __name__ == "__main__":
     unittest.main()
