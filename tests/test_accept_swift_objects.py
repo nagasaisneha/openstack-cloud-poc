@@ -48,6 +48,19 @@ class SwiftObjectAcceptanceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'not denied'):
             acceptance.assert_denied(cloud, 'GET', 'http://127.0.0.1/x')
 
+    def test_member_token_scope_allows_reader_and_reports_only_sanitized_scope(self):
+        record = {'user_id': 'user-id', 'project_id': 'project-id'}
+        access = NS(user_id='user-id', project_id='project-id', project_scoped=True,
+                    system_scoped=False, role_names=['member', 'reader'])
+        cloud = NS(session=NS(auth=NS(get_access=Mock(return_value=access))))
+        acceptance.check_member_scope(cloud, record)
+        access.role_names = ['member', 'admin']
+        with self.assertRaisesRegex(RuntimeError, 'scope or roles') as raised:
+            acceptance.check_member_scope(cloud, record)
+        self.assertEqual(raised.exception.context['role_names'], ['admin', 'member'])
+        self.assertNotIn('user_id', raised.exception.context)
+        self.assertNotIn('project_id', raised.exception.context)
+
     def test_unexpected_cross_project_write_restores_task_payload(self):
         response = NS(status_code=201, close=Mock())
         cloud = NS(session=NS(request=Mock(return_value=response)))

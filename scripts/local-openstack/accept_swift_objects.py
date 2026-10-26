@@ -173,10 +173,18 @@ def tenant_connection(record, password):
 def check_member_scope(cloud, record):
     access = cloud.session.auth.get_access(cloud.session)
     roles = set(access.role_names)
-    if (access.user_id != record['user_id'] or access.project_id != record['project_id']
-            or not access.project_scoped or access.system_scoped
-            or 'member' not in roles or not roles.issubset({'member'})):
-        raise RuntimeError('Swift probe token scope or roles differ from the expected member tenant')
+    checks = {'user_matches': access.user_id == record['user_id'],
+              'project_matches': access.project_id == record['project_id'],
+              'project_scoped': bool(access.project_scoped),
+              'system_scoped': bool(access.system_scoped),
+              'member_role_present': 'member' in roles,
+              'roles_allowed': roles.issubset({'member', 'reader'})}
+    if (not checks['user_matches'] or not checks['project_matches']
+            or not checks['project_scoped'] or checks['system_scoped']
+            or not checks['member_role_present'] or not checks['roles_allowed']):
+        error = RuntimeError('Swift probe token scope or roles differ from the expected member tenant')
+        error.context = {**checks, 'role_names': sorted(roles)}
+        raise error
 
 
 def ensure_identity(admin, state, label, password, member_role):
@@ -651,9 +659,14 @@ def run(args=None):
         if state is not None:
             state['failure'] = {'stage': stage, 'error_type': type(error).__name__,
                                 'call_trace': call_trace}
+            if isinstance(getattr(error, 'context', None), dict):
+                state['failure']['context'] = error.context
             save(state)
+        failure = {'stage': stage, 'error_type': type(error).__name__, 'call_trace': call_trace}
+        if isinstance(getattr(error, 'context', None), dict):
+            failure['context'] = error.context
         print('STOP: Swift object acceptance incomplete: ' + json.dumps(
-            {'stage': stage, 'error_type': type(error).__name__, 'call_trace': call_trace}, sort_keys=True)
+            failure, sort_keys=True)
               + '; task-owned resources and protected evidence are preserved.', file=sys.stderr)
         return 1
 
