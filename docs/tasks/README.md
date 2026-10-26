@@ -317,11 +317,11 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T20 — Usage data source integration
 
-- **Execution record:** [`T20.md`](T20.md) — simulated fixture source implemented and verified; real OpenStack metering remains **Blocked**.
+- **Execution record:** [`T20.md`](T20.md) — fixture source passes; read-only Nova allocation-hours adapter and protected collector are implemented and unit-tested; live collection remains pending.
 
 - **Prerequisites:** Named usage source confirmed (Ceilometer/Gnocchi, compatible CloudKitty where present, or scoped API snapshots); explicit approval for any read-only metering endpoint contact and sample data if needed.
 - **Dependencies:** T07; T17 for usage from a test VM, and T18/T19 only for their respective usage dimensions. Fixture data may be used if no real workload is approved/available.
-- **Implementation steps:** Added `FixtureUsageSource` and project-scoped `FixtureUsageCollector` with explicit source, UTC period, units, simulated provenance, and no implicit conversion or imputation. A separate `usage.viewer` role is required for fixture `usage.read`. No meter endpoint was contacted; actual Ceilometer/Gnocchi/CloudKitty support remains unverified.
+- **Implementation steps:** Added `FixtureUsageSource` and project-scoped `FixtureUsageCollector` with explicit source, UTC period, units, simulated provenance, and no implicit conversion or imputation. Added Nova `os-simple-tenant-usage` translation for measured vCPU/RAM/local-disk allocation-hours and a read-only collector scoped to the retained Task 11 project. A separate `usage.viewer` role is required for fixture `usage.read`. Ceilometer/Gnocchi/CloudKitty and storage/network meters remain unverified.
 - **Tests:** Source attribution, permissions, time range, repeatability, and incomplete-data handling.
 - **Acceptance criteria:** Reports do not claim billing-grade completeness; simulated usage is labelled.
 - **Verification:** `tests/test_usage.py` — 11 tests passed; the 183-test full offline suite is recorded in `T20.md`.
