@@ -11,16 +11,16 @@ flowchart TD
     T32 --> T33[Administer Keystone projects, users, roles, quotas]
     T32 --> T34[Enable tenant compute, image, network, access workflows]
     T33 --> T34
-    T33 --> T35{Cinder backend supported?}
+    T33 --> T35{Cinder local volume/snapshot acceptance passed;<br/>browser policy/quota/meter still open}
     T34 --> T35
-    T33 --> T36{Swift service supported?}
+    T33 --> T36{Swift local two-tenant object acceptance passed;<br/>browser/meter/recovery still open}
     T34 --> T36
-    T34 --> T37[Collect and reconcile real usage]
+    T34 --> T37[Nova allocation-hours observed once;<br/>bounded paging implemented, live completeness open]
     T35 --> T37
     T36 --> T37
-    T31 --> T38[Rate project usage and persist statements]
+    T31 --> T38[Rate project usage; Nova batches remain provisional]
     T37 --> T38
-    T32 --> T39[Add billing and audit panels]
+    T32 --> T39[Backend CSV/audit/principal adapter exist;<br/>Horizon routes and panels remain open]
     T33 --> T39
     T38 --> T39
     T39 --> T40[Run two-tenant browser/security acceptance]
@@ -32,6 +32,8 @@ flowchart TD
     K -. backend enforcement .-> T34
     K -. billing role enforcement .-> T38
 ```
+
+The local evidence behind these labels is in [T18](../tasks/T18.md), [T19](../tasks/T19.md), [T20](../tasks/T20.md), and [T32–T39](../tasks/README.md#browser-ready-platform-delivery-track). Local functional storage tests and one Nova usage query do not satisfy browser, continuous-meter, complete-bill or staging acceptance.
 
 ## Proposed browser-platform architecture
 

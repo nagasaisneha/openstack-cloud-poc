@@ -43,6 +43,7 @@ class BillingErrorCode(str, Enum):
     RATE_CARD_CONFLICT = "rate_card_conflict"
     STATEMENT_NOT_FOUND = "statement_not_found"
     LEDGER_UNAVAILABLE = "ledger_unavailable"
+    USAGE_SOURCE_UNAVAILABLE = "usage_source_unavailable"
 
 
 class BillingError(RuntimeError):
@@ -55,6 +56,7 @@ class BillingError(RuntimeError):
         BillingErrorCode.RATE_CARD_CONFLICT: "The rate card version already exists.",
         BillingErrorCode.STATEMENT_NOT_FOUND: "The billing statement was not found.",
         BillingErrorCode.LEDGER_UNAVAILABLE: "Billing records are unavailable.",
+        BillingErrorCode.USAGE_SOURCE_UNAVAILABLE: "Usage data is unavailable.",
     }
 
     def __init__(self, code: BillingErrorCode) -> None:
@@ -78,7 +80,8 @@ class BillingPrincipal:
     """Trusted identity context supplied by an authentication adapter.
 
     Never construct this from request JSON, query parameters, or UI state.
-    A Horizon adapter must derive it from its authenticated Keystone session.
+    Construct it with ``KeystoneBillingPrincipalAdapter`` from a refreshed,
+    authenticated Keystone session; never trust caller-provided role claims.
     """
 
     subject_id: str
@@ -202,6 +205,8 @@ class UsageBatch:
     provenance: UsageProvenance
     complete: bool
     samples: tuple[UsageSample, ...]
+    collected_at: datetime | None = None
+    incomplete_reasons: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         _safe_text(self.project_id)
@@ -212,6 +217,17 @@ class UsageBatch:
             raise ValueError("usage batch interval must be non-empty")
         if not isinstance(self.provenance, UsageProvenance) or not isinstance(self.complete, bool):
             raise TypeError("batch provenance and completeness are invalid")
+        if self.collected_at is not None and not _is_utc(self.collected_at):
+            raise ValueError("usage collection timestamp must be UTC")
+        if not isinstance(self.incomplete_reasons, tuple) or any(
+            not isinstance(reason, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", reason)
+            for reason in self.incomplete_reasons
+        ):
+            raise ValueError("usage incompleteness reasons must be safe reason codes")
+        if len(set(self.incomplete_reasons)) != len(self.incomplete_reasons):
+            raise ValueError("usage incompleteness reasons must be unique")
+        if self.complete and self.incomplete_reasons:
+            raise ValueError("complete usage batches cannot have incompleteness reasons")
         if not isinstance(self.samples, tuple) or any(not isinstance(sample, UsageSample) for sample in self.samples):
             raise TypeError("samples must be a tuple of UsageSample values")
         if any(
@@ -276,6 +292,8 @@ class BillingStatement:
     missing_rates: tuple[str, ...]
     created_at: datetime
     revision: int = 0
+    usage_collected_at: datetime | None = None
+    incomplete_reasons: tuple[str, ...] = ()
 
     def to_wire(self) -> dict[str, object]:
         return {
@@ -294,6 +312,10 @@ class BillingStatement:
             "missing_rates": list(self.missing_rates),
             "created_at": self.created_at.isoformat(),
             "revision": self.revision,
+            "usage_collected_at": (
+                self.usage_collected_at.isoformat() if self.usage_collected_at is not None else None
+            ),
+            "incomplete_reasons": list(self.incomplete_reasons),
         }
 
 
@@ -492,17 +514,21 @@ class BillingLedger:
             with self._lock:
                 self._db.execute("BEGIN IMMEDIATE")
                 fingerprint = _statement_fingerprint(statement)
-                previous = self._db.execute(
-                    "SELECT payload FROM statements WHERE project_id=? AND period_start=? "
-                    "AND period_end=? AND fingerprint=?",
-                    (statement.project_id, statement.period_start.isoformat(),
-                     statement.period_end.isoformat(), fingerprint),
-                ).fetchone()
-                if previous is not None:
+                previous_rows = self._db.execute(
+                    "SELECT payload FROM statements WHERE project_id=? AND period_start=? AND period_end=?",
+                    (statement.project_id, statement.period_start.isoformat(), statement.period_end.isoformat()),
+                ).fetchall()
+                previous_statement = None
+                for row in previous_rows:
+                    existing = _statement_from_wire(json.loads(row["payload"]))
+                    if _statement_fingerprint(existing) == fingerprint:
+                        previous_statement = existing
+                        break
+                if previous_statement is not None:
                     if audit_event is not None:
                         self._insert_audit_event(audit_event)
                     self._db.commit()
-                    return _statement_from_wire(json.loads(previous["payload"]))
+                    return previous_statement
                 row = self._db.execute(
                     "SELECT COALESCE(MAX(revision), 0) + 1 AS next_revision FROM statements "
                     "WHERE project_id=? AND period_start=? AND period_end=?",
@@ -520,6 +546,11 @@ class BillingLedger:
                 self._db.commit()
                 return saved
         except sqlite3.Error:
+            self._db.rollback()
+            raise BillingError(BillingErrorCode.LEDGER_UNAVAILABLE) from None
+        except (KeyError, TypeError, ValueError):
+            # A malformed historical row must not leak storage/parse details or
+            # permit a new revision to be appended on top of corrupt history.
             self._db.rollback()
             raise BillingError(BillingErrorCode.LEDGER_UNAVAILABLE) from None
 
@@ -797,7 +828,12 @@ class BillingService:
                     sample.resource_id, sample.metric, sample.quantity, sample.unit,
                     sample.interval_start, sample.interval_end, rule.rate_per_unit, amount,
                 ))
-            complete = batch.complete and not missing
+            incomplete_reasons = list(batch.incomplete_reasons)
+            if not batch.complete and not incomplete_reasons:
+                incomplete_reasons.append("coverage_not_attested")
+            if batch.collected_at is None:
+                incomplete_reasons.append("collection_timestamp_missing")
+            complete = batch.complete and not missing and not incomplete_reasons
             total = None
             if complete:
                 total = sum((line.amount for line in lines if line.amount is not None), Decimal(0))
@@ -817,6 +853,8 @@ class BillingService:
                 lines=tuple(lines),
                 missing_rates=tuple(sorted(set(missing))),
                 created_at=self.clock(),
+                usage_collected_at=batch.collected_at,
+                incomplete_reasons=tuple(sorted(set(incomplete_reasons))),
             )
             if not _is_utc(statement.created_at):
                 raise BillingError(BillingErrorCode.INVALID_REQUEST)
@@ -914,16 +952,18 @@ class BillingService:
             writer = csv.writer(output, lineterminator="\r\n")
             writer.writerow((
                 "record_type", "schema_version", "statement_id", "project_id",
-                "period_start_utc", "period_end_utc", "status", "provenance",
+                "period_start_utc", "period_end_utc", "usage_collected_at_utc",
+                "status", "provenance",
                 "source", "rate_card_version", "currency", "currency_minor_units",
                 "resource_id", "metric", "quantity", "unit", "rate_per_unit",
-                "line_amount", "statement_total", "missing_rates",
+                "line_amount", "statement_total", "missing_rates", "incomplete_reasons",
             ))
             common = (
                 statement.statement_id,
                 statement.project_id,
                 statement.period_start.isoformat(),
                 statement.period_end.isoformat(),
+                statement.usage_collected_at.isoformat() if statement.usage_collected_at else "",
                 statement.status.value,
                 statement.provenance.value,
                 statement.source,
@@ -936,13 +976,15 @@ class BillingService:
                 key=lambda item: (item.interval_start, item.resource_id, item.metric, item.interval_end, item.unit),
             ):
                 writer.writerow(_spreadsheet_safe_cells((
-                    "line", 1, *common, line.resource_id, line.metric, line.quantity,
+                    "line", 2, *common, line.resource_id, line.metric, line.quantity,
                     line.unit, line.rate_per_unit, line.amount, "", "",
+                    ";".join(statement.incomplete_reasons),
                 )))
             writer.writerow(_spreadsheet_safe_cells((
-                "statement", 1, *common, "", "", "", "", "", "",
+                "statement", 2, *common, "", "", "", "", "", "",
                 statement.total if statement.total is not None else "",
                 ";".join(statement.missing_rates),
+                ";".join(statement.incomplete_reasons),
             )))
             content = output.getvalue().encode("utf-8")
         except Exception:
@@ -1075,6 +1117,11 @@ def _statement_from_wire(value: object) -> BillingStatement:
         missing_rates=tuple(value["missing_rates"]),
         created_at=datetime.fromisoformat(value["created_at"]),
         revision=value["revision"],
+        usage_collected_at=(
+            datetime.fromisoformat(value["usage_collected_at"])
+            if value.get("usage_collected_at") is not None else None
+        ),
+        incomplete_reasons=tuple(value.get("incomplete_reasons", ())),
     )
 
 
@@ -1100,6 +1147,7 @@ def _statement_fingerprint(statement: BillingStatement) -> str:
     payload.pop("statement_id")
     payload.pop("created_at")
     payload.pop("revision")
+    payload.pop("usage_collected_at", None)
     return hashlib.sha256(_encode(payload).encode("utf-8")).hexdigest()
 
 

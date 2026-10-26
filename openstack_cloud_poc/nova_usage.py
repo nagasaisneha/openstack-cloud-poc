@@ -1,7 +1,8 @@
 """Translate Nova's project usage API into explicitly attributed raw samples.
 
-Nova simple-tenant usage is allocation-time accounting (vCPU/RAM/local disk
-hours), not guest CPU utilization, network traffic, or billing-grade telemetry.
+Nova simple-tenant usage multiplies the latest server flavor by the duration
+the server existed. It is not actual guest consumption and ignores stop/pause
+events, so consumers must not treat it as a complete active-only billing meter.
 """
 
 from datetime import datetime
@@ -36,9 +37,9 @@ def samples_from_nova_usage(
         if hours < 0:
             raise ValueError("Nova server usage hours cannot be negative")
         for field, metric, unit in (
-            ("vcpus", "compute.vcpu_hours", "vCPU-hour"),
-            ("memory_mb", "compute.memory_mb_hours", "MB-hour"),
-            ("local_gb", "compute.local_disk_gb_hours", "GB-hour"),
+            ("vcpus", "compute.instance_vcpu_hours", "vCPU-hour"),
+            ("memory_mb", "compute.instance_memory_mib_hours", "MiB-hour"),
+            ("local_gb", "compute.instance_local_disk_gib_hours", "GiB-hour"),
         ):
             quantity = hours * _decimal(row.get(field), field)
             result.append(UsageSample(

@@ -212,3 +212,16 @@ The actual host's configured apt sources include Ubuntu Jammy, Jammy updates/sec
 Canonical's Caracal UCA version tracker shows Caracal backports including OVS 3.3.0 and OVN 24.03.2 in its Updates column; these are major-version changes from the installed OVS 2.17/OVN 22.03 packages, and would affect active OVS/OVN services and possibly their databases/configuration. The tracker snapshot is not a host apt solver result and may not match the current Jammy package index. Neutron's Caracal documentation lists OVS 2.16-era and OVN 21.06 baselines, but it does not guarantee compatibility of this locally configured package set.
 
 The Caracal-aware solver plan is now available in [`task11-caracal-package-impact.md`](task11-caracal-package-impact.md): it used signed temporary indexes in `/tmp` and the actual host dpkg status, without changing system apt sources or installing packages. It planned 11 upgrades, 228 new packages, zero removals, and left 22 packages not upgraded. The host apt cache still has no Caracal source. Maintainer-script restarts, conffile behavior, disk use, and rollback of OVS/OVN database changes are not established by simulation. Do not run a broad `upgrade`/`full-upgrade`; preserve existing OVS/OVN databases, VTEP state, libvirt network, VM/backups, and the local logrotate edit. Package installation remains approval-gated. Public references: [Caracal UCA version tracker](https://openstack-ci-reports.ubuntu.com/reports/cloud-archive/caracal_versions.html), [Neutron OVS/OVN requirements](https://docs.openstack.org/neutron/latest/install/ovs-ovn-requirements.html).
+
+### OpenStack service refresh — 2026-10-26
+
+This refresh was read-only. `systemctl is-active`, package state and `ss -ltn` were inspected; no endpoint was contacted and no package, service, configuration or resource was changed.
+
+| Area | Observed state | Limit |
+|---|---|---|
+| Browser | `openstack-dashboard` package absent; its unit inactive. Apache active with wildcard port 80; no 443 or 8443 listener. Port 6080 is also absent. | No Horizon page, TLS browser URL, or dashboard login was verified. |
+| Core APIs | Nova API/compute, Glance API, Neutron server and Memcached units active. Ports 5000, 8774, 8775, 8778, 9292 and 9696 were loopback-bound. | Unit/listener presence is not tenant API/policy health. No request was made in this refresh. |
+| Cinder | Scheduler and volume units active; API unit inactive; port 8776 loopback-bound. Cinder Caracal packages installed. | The API listener was not authenticated or queried. T18 separately records operator-reported volume/snapshot functional acceptance. |
+| Swift | Proxy/account/container/object units active; server packages installed. Ports 8080 and 6200–6202 were loopback-bound. | No authenticated request was made in this refresh. T19 separately records operator-reported two-tenant object acceptance. |
+| Nova usage | T20 records a successful protected, read-only Nova usage query with three project-attributed samples. | The one-off script used the root-only administrator credential and is not a complete, paginated, least-privilege collector. |
+| Staging | No staging runtime was inspected. | Local service state is not staging acceptance. |

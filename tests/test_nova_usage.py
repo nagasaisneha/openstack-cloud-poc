@@ -24,9 +24,14 @@ class NovaUsageTests(unittest.TestCase):
     def test_maps_allocation_hours_with_measured_provenance_and_units(self):
         samples = samples_from_nova_usage(payload(), 'project-a', START, END)
         self.assertEqual([s.metric for s in samples], [
-            'compute.vcpu_hours', 'compute.memory_mb_hours', 'compute.local_disk_gb_hours'])
+            'compute.instance_vcpu_hours',
+            'compute.instance_memory_mib_hours',
+            'compute.instance_local_disk_gib_hours',
+        ])
         self.assertEqual([s.quantity for s in samples], [
             Decimal('5.0'), Decimal('1280.0'), Decimal('2.5')])
+        self.assertEqual([s.unit for s in samples], [
+            'vCPU-hour', 'MiB-hour', 'GiB-hour'])
         self.assertEqual({s.source for s in samples}, {SOURCE})
         self.assertTrue(all(s.provenance is UsageProvenance.OBSERVED for s in samples))
         self.assertTrue(all(s.project_id == 'project-a' and s.resource_id == 'server-1' for s in samples))

@@ -23,6 +23,7 @@ from openstack_cloud_poc.billing import (
     RateCard,
     RateRule,
     UsageBatch,
+    _statement_from_wire,
 )
 from openstack_cloud_poc.usage import UsageProvenance, UsageSample
 
@@ -80,11 +81,15 @@ def make_rule(*, metric="compute.vcpu_hours", unit="vCPU-hour", rate=Decimal("1.
 
 
 class Source:
-    def __init__(self, samples=(), *, complete=True, provenance=UsageProvenance.SIMULATED, project_id="project-a"):
+    def __init__(
+        self, samples=(), *, complete=True, provenance=UsageProvenance.SIMULATED,
+        project_id="project-a", collected_at=END,
+    ):
         self.samples = tuple(samples)
         self.complete = complete
         self.provenance = provenance
         self.project_id = project_id
+        self.collected_at = collected_at
         self.calls = []
 
     def collect(self, project_id, interval_start, interval_end):
@@ -97,6 +102,7 @@ class Source:
             self.provenance,
             self.complete,
             self.samples,
+            collected_at=self.collected_at,
         )
 
 
@@ -165,6 +171,8 @@ class BillingTests(unittest.TestCase):
         self.assertEqual(rows[0]["quantity"], "2")
         self.assertEqual(rows[0]["rate_per_unit"], "1.25")
         self.assertEqual(rows[0]["line_amount"], "2.50")
+        self.assertEqual(rows[0]["schema_version"], "2")
+        self.assertEqual(rows[0]["usage_collected_at_utc"], END.isoformat())
         self.assertEqual(rows[0]["provenance"], "simulated")
         self.assertEqual(rows[0]["statement_total"], "")
         self.assertEqual(rows[1]["statement_total"], "2.50")
@@ -466,6 +474,38 @@ class BillingTests(unittest.TestCase):
         self.assertEqual(len(self.service.project_statements(
             project_user("project-a", "billing_viewer"), "project-a"
         )), 2)
+
+    def test_collection_time_refresh_does_not_create_an_identical_statement_revision(self):
+        first = self.generate()
+        self.source.collected_at = datetime(2026, 11, 2, tzinfo=timezone.utc)
+
+        second = self.service.generate_statement(collector(), "project-a", START, END, "demo-v1")
+
+        self.assertEqual(second.statement_id, first.statement_id)
+        self.assertEqual(second.revision, 1)
+        self.assertEqual(second.usage_collected_at, END)
+        self.assertEqual(len(self.ledger.list_project_statements("project-a")), 1)
+
+    def test_legacy_statement_wire_without_collection_fields_remains_readable(self):
+        statement = self.generate()
+        payload = statement.to_wire()
+        payload.pop("usage_collected_at")
+        payload.pop("incomplete_reasons")
+
+        restored = _statement_from_wire(payload)
+
+        self.assertEqual(restored.statement_id, statement.statement_id)
+        self.assertIsNone(restored.usage_collected_at)
+        self.assertEqual(restored.incomplete_reasons, ())
+
+    def test_corrupt_statement_history_fails_closed_without_appending_revision(self):
+        statement = self.generate()
+        with patch("openstack_cloud_poc.billing._statement_from_wire", side_effect=ValueError("corrupt")):
+            with self.assertRaises(BillingError) as raised:
+                self.ledger.append_statement(statement)
+
+        self.assertEqual(raised.exception.code, BillingErrorCode.LEDGER_UNAVAILABLE)
+        self.assertEqual(len(self.ledger.list_project_statements("project-a")), 1)
 
     def test_sqlite_prevents_statement_and_rate_card_updates_or_deletes(self):
         statement = self.generate()
