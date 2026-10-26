@@ -21,10 +21,6 @@ import sys
 import traceback
 from urllib.parse import quote
 
-from keystoneauth1 import session
-from keystoneauth1.identity import v3
-from openstack.connection import Connection
-
 import configure_nova as common
 import configure_swift as swift_setup
 import inspect_swift_readiness as swift_readiness
@@ -165,6 +161,12 @@ def select_owned(items, saved_id, name, description):
 
 
 def tenant_connection(record, password):
+    # Keep cloud SDK imports inside the live path. Importing the acceptance
+    # module for offline unit tests must not load provider clients.
+    from keystoneauth1 import session
+    from keystoneauth1.identity import v3
+    from openstack.connection import Connection
+
     auth = v3.Password(auth_url=common.AUTH_URL, user_id=record['user_id'],
                        password=password, project_id=record['project_id'])
     return Connection(session=session.Session(auth=auth, timeout=10),
