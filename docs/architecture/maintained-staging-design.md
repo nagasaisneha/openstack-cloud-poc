@@ -1,6 +1,6 @@
 # Maintained local POC and staging design
 
-Design candidate, 2026-10-26; no target has been provisioned or approved. Both final environments use Hibiscus under the [release policy](../../deployment/release-policy.json), with separate inventories, credentials, data and acceptance. Preserve current Ubuntu 22.04 WSL2/Caracal as the migration source described in the [migration decision](maintained-release-migration.md).
+Design candidate, 2026-10-26. Local: proposed same-instance Ubuntu 24.04/Caracal → Epoxy → Gazpacho migration, with explicit approval and dependency/recovery gates pending. Staging: separate Hibiscus/Kolla candidate, unapproved/unprovisioned. [Environment-specific policy](../../deployment/release-policy.json) and the [in-place upgrade plan](maintained-release-migration.md) distinguish package-cloud migration from staging container deployment. No second local POC/host/VM/distribution is the default.
 
 ## Topology and capacity estimates
 
@@ -8,14 +8,14 @@ These are planning estimates for the mandatory service set, not measured perform
 
 | Role | Local maintained POC design | Staging design candidate |
 |---|---|---|
-| Control/API | One separate supported Ubuntu 24.04 Linux host/VM, 8 vCPU, at least 32 GiB RAM and 200 GiB free SSD for bounded full-scope tests; no HA claim | Three controller nodes in separate host/power failure domains, each 8 vCPU/32 GiB/100+ GiB SSD; Keystone, API services, scheduler/conductor, MariaDB quorum, RabbitMQ and OVN NB/SB quorum; API VIPs via HAProxy/Keepalived |
+| Control/API | Same existing WSL instance; proposed approved Ubuntu 24.04 userland and Gazpacho packages. Measure actual service/guest peak capacity before adding features; no HA claim | Three controller nodes in separate host/power failure domains, each 8 vCPU/32 GiB/100+ GiB SSD; Keystone, API services, scheduler/conductor, MariaDB quorum, RabbitMQ and OVN NB/SB quorum; API VIPs via HAProxy/Keepalived |
 | Compute/gateway | KVM verified on target; two small task-owned application VMs plus test storage; reserve host headroom | At least two KVM compute/gateway nodes, initial estimate 16 vCPU/64 GiB/500 GiB SSD each; enough spare capacity to evacuate bounded test workload; gateway chassis on two nodes |
-| Block/image storage | New bounded dedicated test backend; source Cinder VG/image is never reused writable | Reviewed Ceph RBD candidate for Cinder/Glance, at least three independent storage failure domains and dedicated devices; capacity from logical data × replicas + recovery reserve |
-| Object storage | New bounded device for functionality; explicitly no physical durability result | Swift with three reviewed storage failure domains, distinct devices/rings, three replicas and periodic audit/replication; do not assign a device simultaneously to Swift and Ceph |
+| Block/image storage | Preserve current loop-backed Cinder image/VG and data through checkpoints; never initialize or expose it to another writer | Reviewed Ceph RBD candidate for Cinder/Glance, at least three independent storage failure domains and dedicated devices; capacity from logical data × replicas + recovery reserve |
+| Object storage | Preserve existing Swift filesystem, rings, builders, hash secrets and object data; no physical durability claim | Swift with three reviewed storage failure domains, distinct devices/rings, three replicas and periodic audit/replication; do not assign a device simultaneously to Swift and Ceph |
 | Monitoring/logs | Bounded retention with explicit service overhead; host minimum alone does not size telemetry | Separate monitoring capacity or explicit controller reservation; initial 4 vCPU/8–16 GiB plus disk sized from ingest rate × retention |
 | Recovery | Independent protected target copies and isolated restore workspace | Backup repository outside the failure domains being backed up; access-controlled credentials and restore host capacity |
 
-The current WSL memory allocation (7.7 GiB total) cannot meet this design's 32-GiB full-scope guard. Physical Windows memory and the availability of another local host are unknown. A supported local target requires an explicit environment decision; no OS/WSL change is performed automatically.
+The current WSL allocation is about 7.7 GiB. Local package-cloud capacity needs measured service/guest headroom and Windows physical capacity verification; staging Kolla memory/non-WSL guards do not establish local upgrade support. No automatic WSL settings change or new host is proposed.
 
 ## Networks and ingress
 
@@ -33,7 +33,7 @@ Actual CIDRs, VLAN IDs, addresses, DNS names, gateways and certificates remain o
 
 ## Octavia and health recovery
 
-Use a matching Hibiscus Octavia API/driver-agent and OVN provider, configured through `globals.extended.example.yml`; enable the Horizon Octavia panel. Confirm the exact image includes the intended driver and matches Neutron/OVN dependencies. Provider availability, TCP listener/pool/monitor support, quota/policy and health-check flows require live tests.
+For the existing local cloud, review matching Gazpacho Octavia/OVN packages after T46. For staging, use matching Hibiscus Octavia API/driver-agent and OVN provider through `globals.extended.example.yml`; enable the Horizon Octavia panel. Confirm the exact image includes the intended driver and matches Neutron/OVN dependencies. Provider availability, TCP listener/pool/monitor support, quota/policy and health-check flows require live tests.
 
 The OVN approach avoids Amphora VM overhead. The selected initial service is IPv4 TCP with `SOURCE_IP_PORT`; use unique response markers and many fresh connections to test traffic distribution. This provides TCP backend reachability monitoring. HTTP status/path checks, L7 routing and TLS termination at the LB would require a separately reviewed provider/profile, such as Amphora with management networking and added VM capacity. Do not advertise these through the initial profile. [OVN provider capabilities](https://docs.openstack.org/ovn-octavia-provider/2024.1/admin/driver.html), [Hibiscus provider changes](https://docs.openstack.org/releasenotes/ovn-octavia-provider/2026.2.html), [Kolla provider configuration](https://docs.openstack.org/kolla-ansible/latest/reference/networking/octavia.html).
 
@@ -59,7 +59,7 @@ Proposed targets for owner review: resource/config backup RPO 24 hours; ledger/a
 
 Back up deployment config, version/image/config IDs, credentials via protected procedures, service/application databases, rings, representative VM/volume/object contents, billing/rate/audit state and recovery metadata. Define a consistency point for related stores and verify checksums before and after an isolated restore. Measure actual RPO/RTO. Restore old schema backups only to compatible old software before supported migrations; downgrading migrated databases is not rollback.
 
-Before a deployment change, retain the previous image/config set plus consistent data recovery point. Exercise an upgrade and failure on a disposable target. Roll back access/artifacts only through the reviewed change record and compatible recovery procedure; reconcile writes and task-owned provider resources. Preserve the Caracal source until migrated functionality, contents, target recovery and owner acceptance pass.
+For staging, retain the previous image/config set and consistent recovery point; rehearse upgrade/failure on authorized disposable staging resources. For the local cloud, use the same-instance checkpoint/OS rollback gates in the migration plan; another POC/VM/host/distro is not a default prerequisite. Restore matching artifacts/data through the reviewed change, reconcile writes and preserve original Caracal recovery points through acceptance.
 
 ## Operations, tests and release artifacts
 

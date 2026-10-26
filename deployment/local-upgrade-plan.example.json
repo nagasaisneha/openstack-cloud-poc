@@ -1,0 +1,19 @@
+{
+  "environment": "local_poc",
+  "openstack_release": "2026.1",
+  "host_os": {"id": "ubuntu", "version": "24.04"},
+  "is_wsl": true,
+  "same_distribution": true,
+  "deployment_method": "ubuntu_packages",
+  "source_host_os": {"id": "ubuntu", "version": "22.04"},
+  "release_checkpoints": ["2024.1", "2025.1", "2026.1"],
+  "preserve_caracal_source": true,
+  "os_upgrade_authorized": false,
+  "openstack_upgrade_authorized": false,
+  "backup_restore_verified": false,
+  "same_instance_rollback_verified": false,
+  "broker_upgrade_path_verified": false,
+  "package_plan_reviewed": false,
+  "service_upgrade_paths_verified": false,
+  "capacity_verified": false
+}

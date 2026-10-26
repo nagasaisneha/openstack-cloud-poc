@@ -40,7 +40,7 @@ enable_octavia: "no"
 
 # Mandatory final scope is activated with the reviewed extended profile.
 # Disabled services keep foundation templates safe; they cannot pass full scope.
-release_environment: "staging"  # local_poc uses a separate target/inventory.
+release_environment: "staging"  # Existing local POC follows the in-place package migration plan.
 staging_validate_full_scope: true
 staging_source_preserved: false
 staging_lb_provider_reviewed: false

@@ -1,11 +1,11 @@
 # Implementation task backlog
 
-**Superseding scope/release update (2026-10-26):** The [capability traceability matrix](../requirements/capability-traceability.md) is authoritative for implementation state and acceptance. Both final local POC and staging must run maintained OpenStack; selected target is 2026.2 Hibiscus / Kolla Ansible 23 / Ubuntu 24.04. Existing Caracal results remain historical component evidence. Octavia, floating-IP/application ingress, two real backends, automatic exclusion and rejoin are mandatory. [T45](T45.md) assesses impact; [T46](T46.md) establishes the maintained target before release-dependent feature installation. Preserve the source installation and all backups; no Ubuntu upgrade/new WSL distribution is authorized.
+**Superseding scope/release update (2026-10-26):** The [capability matrix](../requirements/capability-traceability.md) is authoritative. Both final environments require maintained OpenStack. The local POC uses the **existing WSL instance**, with the proposed Ubuntu 24.04 OS bridge and Caracal → Epoxy → Gazpacho path. No separate local POC/VM/host/distro is the default; no OS or OpenStack upgrade is authorized. Broker/package compatibility, full backup restore, same-instance rollback and capacity gates remain open. Staging retains its separate Hibiscus/Kolla candidate. Octavia, routed ingress, two real backends and automatic exclusion/rejoin remain mandatory. [T45](T45.md) records the assessment; [T46](T46.md) gates the controlled in-place migration before release-dependent installation.
 
 | New dependency | Task | Current state |
 |---|---|---|
 | First | [T45 — release impact/policy and full traceability](T45.md) | Impact/policy and offline checks pass; protected source catalog/API inventory pending |
-| T45, target authorization/capacity, expanded source recovery | [T46 — maintained local deployment and migration acceptance](T46.md) | Blocked by supported target selection; no migration/deployment started |
+| T45, same-instance OS/cloud approval, broker/package review and expanded recovery | [T46 — existing-instance upgrade and acceptance](T46.md) | Planning only; compatibility/recovery gates and explicit OS/cloud approval pending |
 | T46 and maintained core regression | [T42 — router/floating-IP/application ingress](T42.md) | Not implemented; source metadata-namespace connectivity is not ingress acceptance |
 | T46, identity/network/capacity, T42 for external VIP path | [T43 — Octavia deployment and customer lifecycle](T43.md) | Not implemented; OVN is the selected provider candidate |
 | T43 and two owned real application VMs | [T44 — traffic distribution and automatic health recovery](T44.md) | Not implemented; all request/health/failure/rejoin tests pending |

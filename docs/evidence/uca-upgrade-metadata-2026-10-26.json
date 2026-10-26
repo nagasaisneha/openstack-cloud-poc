@@ -1,0 +1,192 @@
+{
+  "apt_configuration_changed": false,
+  "installation_authorized": false,
+  "installed_abi_at_audit": {
+    "libc6": "2.35-0ubuntu3.15",
+    "libssl3": "3.0.2-0ubuntu1.30",
+    "ubuntu": "22.04"
+  },
+  "observed_at": "2026-10-26T16:58:51.290493+00:00",
+  "repositories": [
+    {
+      "inrelease_sha256": "29583aafc1d345173f723ec13b35ae3d201b9d64ee073aee0919775bac4aa771",
+      "package_installation": false,
+      "signature_verified_with_installed_uca_keyring": true,
+      "signed_release_identity": {
+        "Codename": "jammy-updates/caracal",
+        "Date": "Mon, 26 Oct 2026 16:46:18 UTC",
+        "Description": "OpenStack Caracal archive for Ubuntu 22.04 LTS",
+        "Origin": "Canonical",
+        "Suite": "jammy-updates"
+      },
+      "status": "release_identity_mismatch",
+      "suite": "jammy-updates/gazpacho"
+    },
+    {
+      "http_status": 404,
+      "inrelease_sha256": null,
+      "package_installation": false,
+      "status": "http_unavailable",
+      "suite": "jammy-updates/epoxy"
+    },
+    {
+      "inrelease_sha256": "273d2b785784e0d242f1d125541e268a56209f318ba6527bd899cd3e014706c9",
+      "package_index_size_bytes": 167819,
+      "package_installation": false,
+      "packages_digest_verified": true,
+      "packages_gz_sha256": "aa1936e092120a273746952440265480efe2f4fa229bd2cdb57ead1fd0ad0ea7",
+      "selected_versions": {
+        "cinder-common": "2:26.0.0-0ubuntu1.2~cloud1",
+        "glance-common": "2:30.0.0-0ubuntu1~cloud1.1",
+        "keystone": "2:27.0.0-0ubuntu1.1~cloud2",
+        "neutron-common": "2:26.0.0-0ubuntu1~cloud1",
+        "nova-common": "3:31.0.0-0ubuntu1.2~cloud3",
+        "octavia-api": "1:16.0.0-0ubuntu1~cloud2",
+        "openstack-dashboard": "4:25.3.0-0ubuntu1~cloud2",
+        "openvswitch-common": "3.5.1-0ubuntu0.1~cloud0",
+        "ovn-common": "25.03.1-0ubuntu0.25.04.1~cloud0",
+        "placement-api": "1:13.0.0-0ubuntu1~cloud0",
+        "python3-keystone": "2:27.0.0-0ubuntu1.1~cloud2",
+        "python3-neutron": "2:26.0.0-0ubuntu1~cloud1",
+        "python3-nova": "3:31.0.0-0ubuntu1.2~cloud3",
+        "python3-ovn-octavia-provider": "8.0.0-0ubuntu1~cloud0"
+      },
+      "signature_verified_with_installed_uca_keyring": true,
+      "signed_release_identity": {
+        "Codename": "noble-updates/epoxy",
+        "Date": "Mon, 26 Oct 2026 16:46:21 UTC",
+        "Description": "OpenStack Epoxy archive for Ubuntu 24.04 LTS",
+        "Origin": "Canonical",
+        "Suite": "noble-updates"
+      },
+      "status": "metadata_verified",
+      "suite": "noble-updates/epoxy",
+      "swift_server_package_presence": {
+        "python3-swift": false,
+        "swift": false,
+        "swift-proxy": false
+      }
+    },
+    {
+      "inrelease_sha256": "53465f44f4191124a3dd70ed8bcb810bc964f8820809290dfe0045d635d400d1",
+      "package_index_size_bytes": 145592,
+      "package_installation": false,
+      "packages_digest_verified": true,
+      "packages_gz_sha256": "ec122a051b0ab503d634a64e890964670d4172f39a3788dbe8d1132104672d94",
+      "selected_versions": {
+        "cinder-common": "2:27.0.0-0ubuntu1~cloud0",
+        "glance-common": "2:31.0.0-0ubuntu1~cloud0",
+        "keystone": "2:28.0.0-0ubuntu1.1~cloud0",
+        "neutron-common": "2:27.0.0-0ubuntu1.1~cloud0",
+        "nova-common": "3:32.0.0-0ubuntu1.3~cloud1",
+        "octavia-api": "1:17.0.0-0ubuntu1.1~cloud0",
+        "openstack-dashboard": "4:25.5.1-0ubuntu1.1~cloud0",
+        "openvswitch-common": "3.6.0-2~cloud0",
+        "ovn-common": "25.09.0-1~cloud0",
+        "placement-api": "1:14.0.0-0ubuntu1~cloud0",
+        "python3-keystone": "2:28.0.0-0ubuntu1.1~cloud0",
+        "python3-neutron": "2:27.0.0-0ubuntu1.1~cloud0",
+        "python3-nova": "3:32.0.0-0ubuntu1.3~cloud1",
+        "python3-ovn-octavia-provider": "9.0.0-0ubuntu1~cloud0"
+      },
+      "signature_verified_with_installed_uca_keyring": true,
+      "signed_release_identity": {
+        "Codename": "noble-updates/flamingo",
+        "Date": "Mon, 26 Oct 2026 16:46:23 UTC",
+        "Description": "OpenStack Flamingo archive for Ubuntu 24.04 LTS",
+        "Origin": "Canonical",
+        "Suite": "noble-updates"
+      },
+      "status": "metadata_verified",
+      "suite": "noble-updates/flamingo",
+      "swift_server_package_presence": {
+        "python3-swift": false,
+        "swift": false,
+        "swift-proxy": false
+      }
+    },
+    {
+      "inrelease_sha256": "df562b160c926b522f4b5458d42e2c78ff1076340bab698afd2d2c07a411a685",
+      "network_package_dependencies": {
+        "openvswitch-common": "openssl, libc6 (>= 2.38), libcap-ng0 (>= 0.7.9), libssl3t64 (>= 3.0.0), libunbound8 (>= 1.8.0)",
+        "ovn-common": "python3:any, libc6 (>= 2.38), libcap-ng0 (>= 0.7.9), libssl3t64 (>= 3.0.0), libunbound8 (>= 1.8.0)"
+      },
+      "package_index_size_bytes": 194396,
+      "package_installation": false,
+      "packages_digest_verified": true,
+      "packages_gz_sha256": "f57955c28753a1fe62b990385da719e07539b8f29c261ea1aca277cf62cd526d",
+      "selected_versions": {
+        "cinder-common": "2:28.0.0-0ubuntu1~cloud0",
+        "glance-common": "2:32.0.0-0ubuntu1~cloud0",
+        "keystone": "2:29.0.0-0ubuntu1~cloud0",
+        "neutron-common": "2:28.0.2-0ubuntu1~cloud0",
+        "nova-common": "3:33.0.0-0ubuntu3~cloud0",
+        "octavia-api": "1:18.0.0-0ubuntu2~cloud0",
+        "openstack-dashboard": "4:25.7.1-0ubuntu1~cloud0",
+        "openvswitch-common": "3.7.1-2~cloud0",
+        "ovn-common": "26.03.0-2~cloud0",
+        "placement-api": "1:15.0.0-0ubuntu1~cloud0",
+        "python3-keystone": "2:29.0.0-0ubuntu1~cloud0",
+        "python3-neutron": "2:28.0.2-0ubuntu1~cloud0",
+        "python3-nova": "3:33.0.0-0ubuntu3~cloud0",
+        "python3-ovn-octavia-provider": "10.0.0-0ubuntu1~cloud0"
+      },
+      "signature_verified_with_installed_uca_keyring": true,
+      "signed_release_identity": {
+        "Codename": "noble-updates/gazpacho",
+        "Date": "Mon, 26 Oct 2026 16:46:26 UTC",
+        "Description": "OpenStack Gazpacho archive for Ubuntu 24.04 LTS",
+        "Origin": "Canonical",
+        "Suite": "noble-updates"
+      },
+      "status": "metadata_verified",
+      "suite": "noble-updates/gazpacho",
+      "swift_server_package_presence": {
+        "python3-swift": false,
+        "swift": false,
+        "swift-proxy": false
+      }
+    },
+    {
+      "inrelease_sha256": "dfaaa7cef4649c44a51b8f7f054b4f14dcd9e629b3488f4691ddc2a997e63281",
+      "package_index_size_bytes": 129038,
+      "package_installation": false,
+      "packages_digest_verified": true,
+      "packages_gz_sha256": "a175701922d9c4f1a175bdea553ca24b40992895756858cb87b644374a5f7f4e",
+      "selected_versions": {
+        "cinder-common": "2:29.0.0-0ubuntu1~cloud0",
+        "glance-common": "2:33.0.0-0ubuntu1~cloud0",
+        "keystone": "2:30.0.0-0ubuntu1~cloud0",
+        "neutron-common": "2:29.0.0-0ubuntu1~cloud0",
+        "nova-common": "3:34.0.0-0ubuntu1~cloud0",
+        "octavia-api": "1:19.0.0-0ubuntu1~cloud0",
+        "openstack-dashboard": "4:27.0.0-0ubuntu1~cloud0",
+        "openvswitch-common": "4.0.0-1~cloud0",
+        "ovn-common": "26.09.0-1~cloud0",
+        "placement-api": "1:16.0.0-0ubuntu1~cloud0",
+        "python3-keystone": "2:30.0.0-0ubuntu1~cloud0",
+        "python3-neutron": "2:29.0.0-0ubuntu1~cloud0",
+        "python3-nova": "3:34.0.0-0ubuntu1~cloud0",
+        "python3-ovn-octavia-provider": "11.0.0-0ubuntu1~cloud0"
+      },
+      "signature_verified_with_installed_uca_keyring": true,
+      "signed_release_identity": {
+        "Codename": "resolute-updates/hibiscus",
+        "Date": "Mon, 26 Oct 2026 16:46:27 UTC",
+        "Description": "OpenStack Hibiscus archive for Ubuntu 26.04 LTS",
+        "Origin": "Canonical",
+        "Suite": "resolute-updates"
+      },
+      "status": "metadata_verified",
+      "suite": "resolute-updates/hibiscus",
+      "swift_server_package_presence": {
+        "python3-swift": false,
+        "swift": false,
+        "swift-proxy": false
+      }
+    }
+  ],
+  "schema": 1,
+  "scope": "Public signed repository metadata only; not installed software, supported whole-cloud upgrade proof, or live acceptance",
+  "whole_enabled_service_package_graph_verified": false
+}

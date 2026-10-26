@@ -1,6 +1,6 @@
 # OpenStack Cloud Management Platform --- Requirements Specification
 
-**Version:** 1.3\
+**Version:** 1.4\
 **Status:** The active goal is a browser-ready, multi-tenant self-service cloud platform with administration, supported resource provisioning, real usage tracking, project-level billing and auditability. Existing Task 11 evidence is a core infrastructure baseline only; API-only or Horizon-only completion does not satisfy this specification. Staging and production remain separate; the staging target is unselected. AWS-hosted OpenStack and AWS-native provisioning are outside the approved implementation scope.\
 **Development environment:** Windows 11 laptop with WSL2 Ubuntu\
 **Staging target:** Not selected or approved\
@@ -15,7 +15,7 @@ The existing fixture path is simulated. Existing Task 11 operator evidence estab
 
 ### 1.1 Local POC scope and environment boundaries
 
-**Superseding release and capability decision, 2026-10-26:** Both final local POC and staging require a currently maintained upstream OpenStack release. Caracal is preserved only as the existing migration/recovery source. Select 2026.2 Hibiscus / Kolla Ansible 23 / Ubuntu 24.04 as the technical target, with 2026.1 Gazpacho evaluated as an alternative. Do not upgrade Ubuntu, add a WSL distribution, deploy externally, or discard source assets without the required authorization. All mandatory functionality must pass real acceptance on the maintained target. The [capability traceability matrix](capability-traceability.md) is the authoritative implementation/evidence map; the [migration decision](../architecture/maintained-release-migration.md) defines release-dependent prerequisites.
+**Superseding release and capability decision, 2026-10-26:** Both final environments require maintained upstream OpenStack. The existing Ubuntu-package cloud must follow controlled migration in the same WSL instance, retaining its repository, configurations, identities, resources, data and backups. Proposed local target: Gazpacho 2026.1 after an explicitly approved Ubuntu 22.04 → 24.04 transition, retaining Caracal at the OS checkpoint, then Epoxy → Gazpacho. No second POC, Linux VM/host or WSL distribution is the default solution. Planning is authorized; OS/OpenStack upgrades and destructive migration are not. Staging independently retains the Hibiscus/Kolla 23/Ubuntu 24.04 candidate. All mandatory functionality needs real maintained-release acceptance. The [capability matrix](capability-traceability.md) and [same-instance upgrade plan](../architecture/maintained-release-migration.md) define dependencies, support limits, unresolved broker/backup/rollback gates and acceptance.
 
 - **Local POC:** Continue the original local OpenStack management POC. Use local fixtures for workflows that are not backed by a verified local service and label all such outputs simulated. Do not add AWS provisioning or AWS-hosted OpenStack as POC prerequisites.
 - **Tenant compute:** Nova is the chosen tenant compute path; Proxmox is deprecated. The supplied architecture diagram’s “Proxmox VE (initial)” and “OpenStack Nova (future)” labels are historical wording and do not change this decision.

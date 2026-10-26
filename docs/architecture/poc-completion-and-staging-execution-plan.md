@@ -1,9 +1,9 @@
 # Browser-ready POC and staging execution plan
 
-**Superseded release dependencies (2026-10-26):** Both final local POC and staging now require maintained OpenStack. Follow [T45/T46 and the migration decision](maintained-release-migration.md) before release-dependent feature installation. [The authoritative matrix](../requirements/capability-traceability.md) adds mandatory Octavia/ingress/two-backend health recovery and final maintained-release replay. Preserve Caracal as source; no Ubuntu upgrade/new WSL distribution is authorized. Historical execution sections below remain evidence of prior work, not current final-release acceptance.
+**Current release dependencies (2026-10-26):** Both final environments require maintained OpenStack. [T45/T46 and the same-instance upgrade plan](maintained-release-migration.md) supersede any separate-local-target recommendation. Propose Ubuntu 24.04 in the existing WSL instance, retaining Caracal first, then Epoxy → Gazpacho. No upgrade execution authorized; close broker/package, full recovery and same-instance rollback gates first. Staging remains a separate Kolla/Hibiscus candidate. Historical sections below are evidence of prior work, not current final-release acceptance.
 
 **Updated:** 2026-10-25
-**Purpose:** Deliver the expanded browser-ready, multi-tenant POC goal and prepare a separate, reproducible staging release without changing or replacing the existing WSL installation.
+**Purpose:** Deliver the expanded browser-ready, multi-tenant POC goal and prepare a separate, reproducible staging release while retaining the existing WSL instance and all assets; any OS/cloud change needs explicit approval.
 
 ## Active goal and current delivery path
 
@@ -54,7 +54,7 @@ Tasks do not become complete from templates, fixtures, unit tests, design docume
 
 The current [OpenStack release status](https://releases.openstack.org/) identifies **2026.2 Hibiscus** as maintained. The current [Kolla Ansible 2026.2 support matrix](https://docs.openstack.org/kolla-ansible/2026.2/user/support-matrix.html) lists Ubuntu 24.04 Noble, Rocky Linux 10, and Debian 13 as deployment host choices. The [Kolla Ansible 2026.2 release notes](https://docs.openstack.org/releasenotes/kolla-ansible/2026.2.html) require Ansible Core 2.20 or 2.21. Use Ubuntu 24.04 LTS as the initial staging design candidate, subject to operator support, security lifecycle, hardware, and storage review. The Python dependencies are pinned and hash-locked in `deployment/kolla/requirements.lock`; container-image digests, source provenance, and the operator-approved component baseline still require Gate 1 review.
 
-The existing Ubuntu 22.04 WSL2 / Caracal POC is a preserved development environment. Do not attempt an in-place upgrade to satisfy the staging baseline. The staging proposal is a separate Kolla Ansible deployment on dedicated supported hosts with separate networks, disks, credentials, inventories, and state. Decide the final control, compute, and storage topology at Gate 0/1; do not pretend a laptop or a single-node inventory demonstrates HA, production capacity, tenant isolation at scale, or failure-domain recovery.
+The existing Ubuntu 22.04 WSL2 / Caracal POC follows its own controlled same-instance migration plan to Gazpacho after approved OS/dependency changes. Its package upgrade is not a conversion to the staging Kolla baseline. The staging proposal is a separate Kolla Ansible deployment on dedicated supported hosts with separate networks, disks, credentials, inventories, and state. Decide the final control, compute, and storage topology at Gate 0/1; do not pretend a laptop or a single-node inventory demonstrates HA, production capacity, tenant isolation at scale, or failure-domain recovery.
 
 ## Gate state
 

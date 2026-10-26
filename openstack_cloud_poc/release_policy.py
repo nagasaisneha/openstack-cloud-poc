@@ -15,16 +15,35 @@ def target_blockers(policy: Mapping, target: Mapping, *, today: date) -> tuple[s
         age = (today - reviewed).days
         if age < 0 or age > policy["maintenance_review_max_age_days"]:
             blockers.append("maintenance_evidence_stale")
-        selected = policy["selected_release"]
+        environment = target.get("environment")
+        selected = policy["selected_releases"].get(environment)
+        if selected is None:
+            return tuple(blockers + ["unknown_environment"])
         candidate = policy["candidates"][selected]
         if candidate["upstream_status_at_review"] != "maintained":
             blockers.append("selected_release_not_maintained")
-        if target.get("environment") not in policy["required_environments"]:
-            blockers.append("unknown_environment")
         if target.get("openstack_release") != selected:
             blockers.append("release_does_not_match_selected_maintained_target")
         if target.get("host_os") != candidate["selected_host_os"]:
             blockers.append("unsupported_host_os")
+        if environment == "local_poc":
+            plan = policy["local_upgrade_plan"]
+            if plan["status"] != "approved" or plan["execution_authorized"] is not True:
+                blockers.append("in_place_upgrade_is_planning_only")
+            if target.get("same_distribution") is not True:
+                blockers.append("existing_distribution_must_be_retained")
+            for field in ("deployment_method", "source_host_os", "release_checkpoints"):
+                if target.get(field) != plan[field]:
+                    blockers.append("in_place_" + field + "_mismatch")
+            for field in ("os_upgrade_authorized", "openstack_upgrade_authorized",
+                          "backup_restore_verified", "same_instance_rollback_verified",
+                          "broker_upgrade_path_verified", "package_plan_reviewed",
+                          "service_upgrade_paths_verified", "capacity_verified"):
+                if target.get(field) is not True:
+                    blockers.append(field + "_required")
+            if target.get("preserve_caracal_source") is not True:
+                blockers.append("legacy_preservation_not_confirmed")
+            return tuple(blockers)
         if target.get("is_wsl") is not False:
             blockers.append("supported_non_wsl_target_not_established")
         memory = target.get("memory_mib")
@@ -54,12 +73,13 @@ def final_acceptance_blockers(policy: Mapping, evidence: Mapping, *, today: date
         age = (today - date.fromisoformat(policy["reviewed_on"])).days
         if age < 0 or age > policy["maintenance_review_max_age_days"]:
             blockers.append("maintenance_evidence_stale")
-        candidate = policy["candidates"][policy["selected_release"]]
+        selected = policy["selected_releases"].get(evidence.get("environment"))
+        candidate = policy["candidates"][selected]
         if candidate["upstream_status_at_review"] != "maintained":
             blockers.append("selected_release_not_maintained")
     except (KeyError, TypeError, ValueError):
         blockers.append("invalid_release_policy")
-    if evidence.get("openstack_release") != policy.get("selected_release"):
+    if evidence.get("openstack_release") != policy.get("selected_releases", {}).get(evidence.get("environment")):
         blockers.append("final_acceptance_requires_selected_maintained_release")
     if evidence.get("environment") not in policy.get("required_environments", ()):
         blockers.append("unknown_environment")

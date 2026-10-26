@@ -2,7 +2,7 @@
 
 This package is a target-specific staging deployment candidate, separate from the existing Ubuntu 22.04 WSL2 / Caracal POC. It does not provision infrastructure, install packages, change host state, generate secrets, or deploy OpenStack by itself.
 
-The maintained-release requirement now applies to **both** final local POC and staging. Use separate approved supported targets/inventories for each, following the [migration decision](../../docs/architecture/maintained-release-migration.md). The existing Caracal source stays intact. `deployment/release-policy.json` selects Hibiscus, requires fresh maintenance review, and blocks source-host reuse. `scripts/check_release_policy.py` is an offline plan/evidence validator; passing it does not deploy or prove live behavior.
+The maintained-release requirement applies to **both** final environments. This Kolla package is **staging only**. The existing local Ubuntu-package cloud follows the [same-instance migration plan](../../docs/architecture/maintained-release-migration.md), proposing Gazpacho after an approved Ubuntu 24.04 transition. It is not converted to Kolla or replaced by another host/VM/distribution. `deployment/release-policy.json` separates these planning targets and requires fresh maintenance review. `scripts/check_release_policy.py` validates submitted fields only; it neither authorizes an upgrade nor proves live behavior. Its local example remains blocked by explicit approval, dependency, capacity and restore gates.
 
 ## Version and host baseline
 

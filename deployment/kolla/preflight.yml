@@ -6,17 +6,17 @@
   vars:
     release_policy: "{{ lookup('ansible.builtin.file', playbook_dir + '/../release-policy.json') | from_json }}"
   tasks:
-    - name: Require the selected maintained release for both final environments
+    - name: Require the selected maintained staging release
       ansible.builtin.assert:
         that:
           - openstack_release | default('unselected') == release_policy.selected_release
-          - release_environment | default('unselected') in release_policy.required_environments
+          - release_environment | default('unselected') == 'staging'
           - release_policy.candidates[release_policy.selected_release].upstream_status_at_review == 'maintained'
           - ((ansible_facts.date_time.date | to_datetime('%Y-%m-%d')) - (release_policy.reviewed_on | to_datetime('%Y-%m-%d'))).days >= 0
           - ((ansible_facts.date_time.date | to_datetime('%Y-%m-%d')) - (release_policy.reviewed_on | to_datetime('%Y-%m-%d'))).days <= release_policy.maintenance_review_max_age_days
           - staging_source_preserved | default(false) | bool
           - "'microsoft' not in (ansible_facts.kernel | lower)"
-        fail_msg: "Refresh release maintenance evidence, select a supported separate target, and confirm source preservation. Caracal/WSL is not this deployment target."
+        fail_msg: "Refresh maintenance evidence and confirm the approved staging target/source preservation. This Kolla playbook does not assess or upgrade the existing WSL package cloud."
         quiet: true
 
     - name: Require Ubuntu 24.04 Noble for the initial staging candidate
