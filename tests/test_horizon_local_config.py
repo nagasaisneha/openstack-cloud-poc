@@ -71,6 +71,9 @@ class HorizonLocalConfigTests(unittest.TestCase):
         self.assertIn("6.0.1-2build2~cloud0", content)
         self.assertIn("7ef9b534046bb838f7357091bafb368f6d1f32fb7ad2887d7c377ff4c0081b32", content)
         self.assertIn("apache2-before.tar.gz", content)
+        self.assertIn("BEGIN: %s\\n", content)
+        self.assertIn("PASS: %s\\n", content)
+        self.assertIn("rollback preparation exited during", content)
         for operation in (
             "apt-get install --no-install-recommends",
             "systemctl restart",

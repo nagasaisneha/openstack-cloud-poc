@@ -59,7 +59,7 @@ Windows/WSL localhost forwarding and the Apache `Require local` rule must still 
    sudo bash deployment/horizon-local/prepare-package-rollback.sh
    ```
 
-   It rechecks the exact package scope, saves the old `python3-yaml` package, package versions and Apache configuration under the root-only POC acceptance directory, and makes no service or package changes. The old `python3-yaml` package was downloaded to `/tmp` and its digest is pinned in the helper. Preserve the script's root-only output path; do not copy the snapshot into Git.
+   It prints `BEGIN`/`PASS` markers for each preflight and snapshot phase, rechecks the exact package scope, then saves the old `python3-yaml` package, package versions and Apache configuration under the root-only POC acceptance directory. It makes no service or package changes. The apt simulation can take time; if it fails, the last phase and `STOP` line identify where. If no first `BEGIN` appears, check whether `sudo` is still waiting for authentication or whether the command returned before the script started. The old `python3-yaml` package was downloaded to `/tmp` and its digest is pinned in the helper. Preserve the script's root-only output path; do not copy the snapshot into Git.
 3. Install only the pinned dashboard package without recommended packages and with Apache maintscript actions deferred:
 
    ```bash
