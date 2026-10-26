@@ -71,6 +71,12 @@ class SwiftSetupTests(unittest.TestCase):
         self.assertFalse(parser.getboolean('app:proxy-server', 'allow_account_management'))
         self.assertEqual(parser['DEFAULT']['bind_ip'], '127.0.0.1')
 
+    def test_role_ids_support_nested_keystone_role_assignment_resources(self):
+        assignments = [NS(role={'id': 'admin-id'}), NS(role=NS(id='service-id')),
+                       NS(role=None, role_id='legacy-id')]
+        self.assertEqual(setup.role_ids_from_assignments(assignments),
+                         {'admin-id', 'service-id', 'legacy-id'})
+
     def test_backends_require_mount_and_restrict_workers_and_listeners(self):
         for name, port in setup.PORTS.items():
             text = setup.rendered_config('backend-server.conf.tmpl', {'server': name, 'port': port})

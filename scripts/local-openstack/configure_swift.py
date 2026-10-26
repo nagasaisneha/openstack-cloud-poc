@@ -491,6 +491,22 @@ def setup_secrets(state):
     return values
 
 
+def role_ids_from_assignments(assignments):
+    """Read Keystone role IDs without relying on SDK's flattened role_id."""
+    role_ids = set()
+    for assignment in assignments:
+        role = getattr(assignment, 'role', None)
+        if isinstance(role, dict):
+            role_id = role.get('id')
+        else:
+            role_id = getattr(role, 'id', None)
+        if role_id is None:
+            role_id = getattr(assignment, 'role_id', None)
+        if role_id:
+            role_ids.add(role_id)
+    return role_ids
+
+
 def ensure_identity(cloud, values, state):
     identity = cloud.identity
     marker = 'T19 local Swift ' + state['run_id']
@@ -509,10 +525,13 @@ def ensure_identity(cloud, values, state):
     state['user_id'] = user.id
     save(state)
     project = identity.find_project('service', domain_id='default', ignore_missing=False)
+    assignments = list(identity.role_assignments(user_id=user.id, scope_project_id=project.id))
+    assigned_role_ids = role_ids_from_assignments(assignments)
     for role_name in ('admin', 'service'):
         role = identity.find_role(role_name, ignore_missing=False)
-        if not identity.validate_user_has_project_role(project, user, role):
+        if role.id not in assigned_role_ids:
             identity.assign_project_role_to_user(project, user, role)
+            assigned_role_ids.add(role.id)
     with common.connection(values, 'swift') as candidate:
         candidate.session.get_token()
     unused = 'poc_swift_unused_' + state['run_id']
