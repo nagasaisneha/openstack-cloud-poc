@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 from types import SimpleNamespace as NS
 import unittest
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock, patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts/local-openstack'
 sys.path.insert(0, str(SCRIPTS))
@@ -47,6 +47,30 @@ class SwiftObjectAcceptanceTests(unittest.TestCase):
         cloud = NS(session=NS(request=Mock(return_value=response)))
         with self.assertRaisesRegex(RuntimeError, 'not denied'):
             acceptance.assert_denied(cloud, 'GET', 'http://127.0.0.1/x')
+
+    def test_anonymous_denial_accepts_401_403_or_404(self):
+        for status in (401, 403, 404):
+            response = NS(status_code=status, close=Mock())
+            session = MagicMock()
+            session.head.return_value = response
+            manager = MagicMock()
+            manager.__enter__.return_value = session
+            with patch('requests.Session', return_value=manager):
+                self.assertEqual(acceptance.anonymous_denial('http://127.0.0.1/object'), status)
+            session.head.assert_called_once_with('http://127.0.0.1/object',
+                                                 allow_redirects=False, timeout=10)
+            response.close.assert_called_once()
+
+    def test_anonymous_success_is_not_reported_as_denied(self):
+        response = NS(status_code=200, close=Mock())
+        session = MagicMock()
+        session.head.return_value = response
+        manager = MagicMock()
+        manager.__enter__.return_value = session
+        with patch('requests.Session', return_value=manager):
+            with self.assertRaisesRegex(RuntimeError, 'HTTP 401/403/404') as raised:
+                acceptance.anonymous_denial('http://127.0.0.1/object')
+        self.assertEqual(raised.exception.context['http_status'], 200)
 
     def test_member_token_scope_allows_reader_and_reports_only_sanitized_scope(self):
         record = {'user_id': 'user-id', 'project_id': 'project-id'}

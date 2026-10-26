@@ -40,6 +40,7 @@ SETUP_STATE = DATA / 'swift-setup.json'
 LOCK = Path('/root/.openstack-poc-nova-prerequisites.lock')
 PAYLOAD_SIZE = 4096
 DENIED_STATUSES = {403, 404}
+ANONYMOUS_DENIED_STATUSES = {401, 403, 404}
 
 
 def progress(text):
@@ -380,8 +381,10 @@ def anonymous_denial(url):
         response = anonymous.head(url, allow_redirects=False, timeout=10)
         status = response.status_code
         response.close()
-    if status not in DENIED_STATUSES:
-        raise RuntimeError('anonymous Swift object request was not denied with HTTP 403/404')
+    if status not in ANONYMOUS_DENIED_STATUSES:
+        error = RuntimeError('anonymous Swift object request was not denied with HTTP 401/403/404')
+        error.context = {'http_status': status}
+        raise error
     return status
 
 
