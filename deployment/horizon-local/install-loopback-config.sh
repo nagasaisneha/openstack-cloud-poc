@@ -230,7 +230,7 @@ if [[ $custom_conf_status -eq 0 ]]; then
     printf 'PASS: loopback Horizon TLS config was already installed and verified.\n'
     exit 0
 fi
-[[ $custom_conf_status -eq 32 || $custom_conf_status -eq 33 ]] \
+[[ $custom_conf_status -eq 1 || $custom_conf_status -eq 32 || $custom_conf_status -eq 33 ]] \
     || die 'dedicated Apache config state is unexpected'
 if ss -H -ltn | awk '$4 ~ /:8443$/ { found=1 } END { exit !found }'; then
     die 'port 8443 is already in use'

@@ -99,6 +99,7 @@ class HorizonLocalConfigTests(unittest.TestCase):
         self.assertIn("ports.conf.before", content)
         self.assertIn("port 443 is already in use", content)
         self.assertIn("wildcard443", content)
+        self.assertIn("$custom_conf_status -eq 1", content)
         for operation in (
             "systemctl restart",
             "a2enconf openstack-dashboard",
