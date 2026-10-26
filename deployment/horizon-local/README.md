@@ -1,6 +1,6 @@
 # Local Horizon browser slice
 
-**Status:** Horizon 24.0.1 is installed, but its default global Apache configuration was enabled by the package maintainer script. Containment is pending; the loopback TLS vhost is not installed and no browser URL is verified.
+**Status:** Horizon 24.0.1 is installed and its default global Apache configuration is disabled. The dedicated loopback TLS vhost and certificate are not installed; no browser URL is verified.
 
 This package targets the existing Ubuntu 22.04 / OpenStack Caracal WSL POC. It keeps the shared Apache service and existing OpenStack APIs in place. It is not a staging or production deployment.
 
@@ -14,7 +14,7 @@ The package's maintainer script has material shared-service effects:
 - It enables `/etc/apache2/conf-available/openstack-dashboard.conf` and requests an Apache reload through `apache2_invoke`. On this host, the sourced Apache maintainer helper resets `APACHE2_MAINTSCRIPT_DEFER` when Apache is already installed, so setting that variable in the `apt-get` environment does not defer the action.
 - That default Apache config mounts Horizon globally at `/horizon`, publishes static assets, and grants access. The packaged settings default to `ALLOWED_HOSTS = ['*']`; secure-cookie settings are commented out. Enabling that config as-is would expose an HTTP login route on the current wildcard port 80.
 
-The operator installed the pinned package after the protected rollback snapshot passed. The transaction matched the reviewed 1-upgrade/18-new/0-remove plan, but the attempted maintscript deferral did not work: `a2query -c openstack-dashboard` now reports the global config enabled by the maintainer script. Disable it, run `apache2ctl configtest`, and gracefully reload Apache only if the check passes. Verify the config is disabled and the shared routes still work before installing the loopback-only TLS vhost. The install also performed the planned `python3-yaml` upgrade and can restart Memcached; verify current service health.
+The operator installed the pinned package after the protected rollback snapshot passed. The transaction matched the reviewed 1-upgrade/18-new/0-remove plan, but the attempted maintscript deferral did not work: the sourced helper resets `APACHE2_MAINTSCRIPT_DEFER` when Apache is already installed. The operator disabled the global config, `apache2ctl configtest` returned `Syntax OK`, and `a2query` reports it disabled by the site administrator. After reload, `/horizon/` returned 404, `/` returned 200, direct Keystone and Placement endpoints returned 200, and the existing `/identity` and `/placement` alias responses remained at their previously recorded 503 and 500. Configtest emitted existing proxy worker-sharing warnings. The install also performed the planned `python3-yaml` upgrade and can restart Memcached; verify current service health.
 
 ## Browser boundary
 
@@ -60,17 +60,15 @@ Windows/WSL localhost forwarding and the Apache `Require local` rule must still 
    ```
 
    It prints `BEGIN`/`PASS` markers for each preflight and snapshot phase, rechecks the exact package scope, then saves the old `python3-yaml` package, package versions and Apache configuration under the root-only POC acceptance directory. It makes no service or package changes. The apt simulation can take time; if it fails, the last phase and `STOP` line identify where. If no first `BEGIN` appears, check whether `sudo` is still waiting for authentication or whether the command returned before the script started. The old `python3-yaml` package was downloaded to `/tmp` and its digest is pinned in the helper. Preserve the script's root-only output path; do not copy the snapshot into Git.
-3. The pinned dashboard package is installed. The package maintainer enabled its default global Apache config despite the attempted environment deferral. Contain it and remove it from Apache's active configuration:
+3. The pinned dashboard package is installed. The package maintainer enabled its default global Apache config despite the attempted environment deferral. The operator disabled it, passed `apache2ctl configtest`, reloaded Apache, and confirmed `/horizon/` returns 404 while the existing API endpoints still respond. Keep this config disabled.
+4. After reviewing the certificate helper, create the private localhost certificate:
 
    ```bash
-   sudo a2disconf openstack-dashboard && \
-     sudo apache2ctl configtest && \
-     sudo systemctl reload apache2
+   sudo bash deployment/horizon-local/generate-local-cert.sh
    ```
 
-   Then confirm `a2query -c openstack-dashboard` reports the config disabled and verify the existing shared routes. If `configtest` fails, do not reload Apache; stop and review the error. Keep the default config disabled while installing the dedicated loopback TLS vhost.
-4. After reviewing the certificate helper, create the private localhost certificate and install the settings block and Apache config from this directory. Keep generated keys and host-specific files outside the repository.
-5. Run `apache2ctl configtest`; only then enable the dedicated config and reload Apache. Do not restart the shared Apache service.
+   Record only the printed CA SHA-256 fingerprint. The `ssl` Apache module is currently disabled and must be enabled as part of the reviewed TLS configuration step. Keep generated keys and host-specific files outside the repository.
+5. Append the secure settings block without replacing the package settings, install the dedicated Apache config, enable only the required modules/config, and run `apache2ctl configtest`. Reload Apache only after the test passes. Do not enable the package global dashboard config or restart the shared Apache service.
 6. Confirm the listener is exactly `127.0.0.1:8443`, HTTPS serves the Horizon login, and existing root/identity/placement routes and core services match their pre-change results.
 7. Verify the certificate in the Windows browser and sign in using an existing Keystone account. No credentials are provided by this repository.
 
