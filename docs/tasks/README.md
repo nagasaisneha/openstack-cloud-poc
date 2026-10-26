@@ -1,5 +1,18 @@
 # Implementation task backlog
 
+**Superseding scope/release update (2026-10-26):** The [capability traceability matrix](../requirements/capability-traceability.md) is authoritative for implementation state and acceptance. Both final local POC and staging must run maintained OpenStack; selected target is 2026.2 Hibiscus / Kolla Ansible 23 / Ubuntu 24.04. Existing Caracal results remain historical component evidence. Octavia, floating-IP/application ingress, two real backends, automatic exclusion and rejoin are mandatory. [T45](T45.md) assesses impact; [T46](T46.md) establishes the maintained target before release-dependent feature installation. Preserve the source installation and all backups; no Ubuntu upgrade/new WSL distribution is authorized.
+
+| New dependency | Task | Current state |
+|---|---|---|
+| First | [T45 — release impact/policy and full traceability](T45.md) | Impact/policy and offline checks pass; protected source catalog/API inventory pending |
+| T45, target authorization/capacity, expanded source recovery | [T46 — maintained local deployment and migration acceptance](T46.md) | Blocked by supported target selection; no migration/deployment started |
+| T46 and maintained core regression | [T42 — router/floating-IP/application ingress](T42.md) | Not implemented; source metadata-namespace connectivity is not ingress acceptance |
+| T46, identity/network/capacity, T42 for external VIP path | [T43 — Octavia deployment and customer lifecycle](T43.md) | Not implemented; OVN is the selected provider candidate |
+| T43 and two owned real application VMs | [T44 — traffic distribution and automatic health recovery](T44.md) | Not implemented; all request/health/failure/rejoin tests pending |
+| Maintained core/storage/browser/ingress/LB/meters/billing/security/recovery | [T28](T28.md), [T40](T40.md) | Every mandatory customer step remains required on maintained local POC, then independent staging |
+
+Safe source, test, CI and design work can proceed while target-dependent work remains blocked. T18/T19/T20/T27 results are preserved and must be replayed on the maintained target; they are not discarded or silently upgraded to new-release evidence.
+
 **Current goal update (2026-10-25):** The user expanded the definition of done to a browser-ready, secure, multi-tenant self-service platform with administration, project-level usage/billing, and auditability. The Task 11 core-cloud acceptance remains useful baseline evidence, but it is **not** final platform acceptance. Horizon, web login, complete project administration, real metering, pricing, bill statements, billing visibility roles, and application audit history remain open. See the [goal audit](../architecture/browser-ready-cloud-goal.md). Historical statements that the original API-focused POC was complete are preserved as dated evidence and do not override this new goal.
 
 **Status: Original T01–T28 implementation history plus active T29–T41 browser-platform delivery.** This file preserves original requirement mappings and evidence, and adds the current goal's dependency-ordered tasks. Staging is separate; local results do not pass staging or production gates. AWS provisioning, AWS-hosted OpenStack, and AWS-native tenant provisioning remain outside scope.
@@ -88,7 +101,8 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | Project goal, source-file preservation, small tasks and no production claims (§1–2) | T01–T03, T28 | Covered | Audit and mapping retain the actual image path; production/H100 equivalence is excluded. |
 | Layer 1 — Keystone, required Horizon/browser portal, CLI/SDK, honest billing | T06–T14, T21, T28; active T32–T40 | Partially covered | Keystone is the OpenStack identity source, not a full Keycloak equivalent; mobile is deferred. The original portal-optional scope is superseded; browser login, billing UI, and complete audit remain open. |
 | Layer 2 — local security controls and TLS | T07, T15, T25, T32 | Partially covered | Offline policy/configuration tests exist; live TLS, listener, firewall and browser-session review remain pending. |
-| Layer 2 — Cloudflare/DDoS, WAF, separate gateway, Octavia | T28 | Deferred | Requirements make these optional; no public ingress or external protection is assumed. Reconsider only if a required workflow and supported deployment justify it. |
+| Layer 2 — controlled ingress and Octavia | T42–T44, T28/T40 | Missing live implementation | Mandatory floating-IP route, Octavia lifecycle, two-backend traffic distribution and automatic health exclusion/rejoin; maintained target required first. |
+| Layer 2 — Cloudflare/DDoS, WAF, separate gateway | T28 | Deferred | External protections and public internet publication are not authorized or assumed. |
 | Layer 3 — catalog, provisioning, jobs, database/queue restraint, metering, demo price/payment | T08–T14, T20–T22 | Partially covered | PostgreSQL/Redis/Celery remain conditional, not defaults. Local asynchronous lifecycle jobs are integrated with fixture execution, but state/idempotency are process-local and no real provider operation is tracked. Metering and pricing remain subject to their existing source and limitation requirements. |
 | Layer 4 — Nova/Glance/Neutron/Cinder and repeatable orchestration | T07–T19, T22 | Partially covered | Real local Nova/Glance/Neutron lifecycle/isolation and scoped Cinder lifecycle/snapshot recovery passed; staging must independently validate selected services and topology. |
 | Layer 4 — Kubernetes/JupyterHub/Harbor/Ceph, GPU scheduler/MIG | T22–T24, T28 | Deferred | Requirements make these optional and this laptop does not support H100 MIG or production multi-tenant GPU scheduling. |

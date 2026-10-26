@@ -5,7 +5,10 @@
 
 openstack_release: "2026.2"
 kolla_base_distro: "ubuntu"
-kolla_install_type: "binary"
+# Compatibility value for a legacy exporter default in the inspected package.
+# Image release/base/tag/digests are reviewed separately; this value does not
+# establish availability of native Hibiscus packages on the host OS.
+kolla_install_type: "source"
 
 network_interface: "REPLACE_WITH_MANAGEMENT_INTERFACE"
 api_interface: "{{ network_interface }}"
@@ -22,6 +25,7 @@ enable_placement: "yes"
 enable_nova: "yes"
 enable_neutron: "yes"
 enable_horizon: "yes"
+neutron_plugin_agent: "ovn"
 
 # T18/T19/T20/T26 staging services. These are enabled only after their
 # backend, storage topology, resource budget, and Gate 1 review are complete.
@@ -32,6 +36,17 @@ enable_gnocchi: "no"
 enable_prometheus: "no"
 enable_grafana: "no"
 enable_fluentd: "no"
+enable_octavia: "no"
+
+# Mandatory final scope is activated with the reviewed extended profile.
+# Disabled services keep foundation templates safe; they cannot pass full scope.
+release_environment: "staging"  # local_poc uses a separate target/inventory.
+staging_validate_full_scope: true
+staging_source_preserved: false
+staging_lb_provider_reviewed: false
+staging_provider_network_reviewed: false
+staging_health_monitor_reviewed: false
+staging_backend_vm_count: 0
 
 # Operator-facing guard variables consumed by preflight.yml, not Kolla.
 staging_change_id: "REPLACE_WITH_APPROVED_CHANGE_ID"

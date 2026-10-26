@@ -1,6 +1,6 @@
 # OpenStack Cloud Management Platform --- Requirements Specification
 
-**Version:** 1.2\
+**Version:** 1.3\
 **Status:** The active goal is a browser-ready, multi-tenant self-service cloud platform with administration, supported resource provisioning, real usage tracking, project-level billing and auditability. Existing Task 11 evidence is a core infrastructure baseline only; API-only or Horizon-only completion does not satisfy this specification. Staging and production remain separate; the staging target is unselected. AWS-hosted OpenStack and AWS-native provisioning are outside the approved implementation scope.\
 **Development environment:** Windows 11 laptop with WSL2 Ubuntu\
 **Staging target:** Not selected or approved\
@@ -14,6 +14,8 @@ Deliver the local OpenStack POC as a browser-ready, secure, multi-tenant self-se
 The existing fixture path is simulated. Existing Task 11 operator evidence establishes a real core Keystone/Glance/Placement/Nova/Neutron and guest lifecycle baseline, but not a browser portal, Horizon deployment, real metering, pricing, billing statements, full administrative web workflows, or complete audit history. See the [current goal audit and acceptance map](../architecture/browser-ready-cloud-goal.md) and [T29–T41 delivery track](../tasks/README.md#browser-ready-platform-delivery-track). Local POC completion contributes evidence to a separate staging release; it is not staging or production acceptance.
 
 ### 1.1 Local POC scope and environment boundaries
+
+**Superseding release and capability decision, 2026-10-26:** Both final local POC and staging require a currently maintained upstream OpenStack release. Caracal is preserved only as the existing migration/recovery source. Select 2026.2 Hibiscus / Kolla Ansible 23 / Ubuntu 24.04 as the technical target, with 2026.1 Gazpacho evaluated as an alternative. Do not upgrade Ubuntu, add a WSL distribution, deploy externally, or discard source assets without the required authorization. All mandatory functionality must pass real acceptance on the maintained target. The [capability traceability matrix](capability-traceability.md) is the authoritative implementation/evidence map; the [migration decision](../architecture/maintained-release-migration.md) defines release-dependent prerequisites.
 
 - **Local POC:** Continue the original local OpenStack management POC. Use local fixtures for workflows that are not backed by a verified local service and label all such outputs simulated. Do not add AWS provisioning or AWS-hosted OpenStack as POC prerequisites.
 - **Tenant compute:** Nova is the chosen tenant compute path; Proxmox is deprecated. The supplied architecture diagram’s “Proxmox VE (initial)” and “OpenStack Nova (future)” labels are historical wording and do not change this decision.
@@ -59,6 +61,12 @@ The browser workflow is required for POC completion. OpenStack APIs and Horizon 
 **Completion demonstration:** An administrator creates two projects with distinct users and quotas; each tenant logs in, sees only authorized data, provisions and accesses its own supported resources, and receives backend denial for cross-project requests. Real usage is collected and rated, each tenant views its own bill, and the administrator compares both projects' usage and statements. Local verification and staging verification are recorded separately.
 
 **Delivery and staging:** Provide verified browser URLs and secure login setup, startup/shutdown/recovery/backup/restore/troubleshooting instructions, and reproducible deployment templates. Staging acceptance requires HTTPS, protected secret management, monitoring, security checks, backup/restore, and a documented operator. Record exact laptop resource constraints and blockers. Do not call the POC complete or staging-ready until the corresponding acceptance evidence passes.
+
+### 1.4 Mandatory complete-cloud and maintained-release acceptance
+
+The [authoritative matrix](capability-traceability.md) specifies objective acceptance for identity/isolation; dashboard; admin/customer workflows; Nova; Glance; Neutron network/router/security groups; floating-IP/application ingress; Octavia; traffic distribution over two real VMs; automatic failed-backend exclusion and rejoin; Cinder; objects; real compute/storage/network metering; configurable demo billing; quotas; dashboards/logs/alerts; TLS/secrets/security; backup/restore/recovery; deployment automation; and automated end-to-end regression. These are mandatory capabilities, not optional extensions. Original AI feasibility/workload requirements remain in force.
+
+An administrator creates a customer/project/quota; the customer logs in, creates a network/VM, attaches a volume, stores/retrieves an object, creates an Octavia LB, and receives traffic through two real application VMs. Failure of one backend must trigger automatic exclusion and recovery must trigger automatic rejoin. The customer sees actual usage and a reproducible demo bill; the administrator sees customer usage/service health; backend cross-tenant operations are denied; every task-owned resource is safely cleaned up. All fourteen steps must pass on the selected maintained local release, then independently in staging. Fixtures, templates, API status alone, or a historical Caracal PASS cannot complete the workflow.
 
 ## 2. Scope and constraints
 
@@ -132,8 +140,9 @@ publicly by default. - Use existing Neutron security groups and host
 firewall controls. - Verify TLS and endpoint configuration where
 relevant. - Treat Cloudflare, external DDoS protection, a WAF, and a
 separate API gateway as optional external integrations, not mandatory
-OpenStack services. - Evaluate Octavia only if load-balancing behavior
-is required and the local deployment supports it. - Use Keystone as the
+OpenStack services. - Implement Octavia load balancing, traffic distribution
+over two real VMs, and automatic health-monitor exclusion/recovery on the
+selected maintained release. - Use Keystone as the
 OpenStack identity service; do not treat it as an exact equivalent of
 every Keycloak feature. - Keep secrets outside source control.
 
@@ -491,8 +500,9 @@ OpenStack behavior where applicable. 7. Review the diff and scan for
 secrets. 8. Update docs and task status. 9. Commit with a descriptive
 message. 10. Record the local commit SHA and test evidence. 11. Push only
 when explicitly requested and record the actual remote result. 12. Report
-completion before starting the next task. Do not start the next task until
-the current task's acceptance criteria pass and its local commit is reviewed.
+completion before starting the next task. Safe independent development may
+continue when an environment-dependent task is blocked; that task remains open
+until its real acceptance criteria pass and its local commit is reviewed.
 
 If tests fail, do not mark the task complete. If a requested push fails,
 report "locally committed; push pending." Avoid destructive Git commands

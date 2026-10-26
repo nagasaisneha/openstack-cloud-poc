@@ -1,5 +1,5 @@
 ---
-# Optional service profile overlay. Merge only after backend and resource
+# Mandatory full-scope service profile. Merge only after backend and resource
 # decisions are approved; this file alone is not a deployable configuration.
 enable_cinder: "yes"
 enable_swift: "yes"
@@ -8,6 +8,11 @@ enable_gnocchi: "yes"
 enable_prometheus: "yes"
 enable_grafana: "yes"
 enable_fluentd: "yes"
+enable_octavia: "yes"
+enable_horizon_octavia: "yes"
+neutron_plugin_agent: "ovn"
+octavia_provider_drivers: "ovn:OVN provider"
+octavia_provider_agents: "ovn"
 
 # Cinder backend configuration is vendor/target-specific. Never point the
 # LVM backend at an existing or unreviewed device. Create/verify a dedicated

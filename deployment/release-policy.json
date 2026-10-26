@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "reviewed_on": "2026-10-26",
+  "maintenance_review_max_age_days": 7,
+  "selected_release": "2026.2",
+  "required_environments": ["local_poc", "staging"],
+  "preserved_source_release": "2024.1",
+  "source_use": "preservation, read-only inventory, isolated recovery and migration source only",
+  "minimum_full_scope_memory_mib": 32768,
+  "minimum_memory_basis": "Project planning guard for all mandatory services and two application VMs; not an upstream benchmark",
+  "candidates": {
+    "2026.1": {
+      "name": "Gazpacho",
+      "upstream_status_at_review": "maintained",
+      "slurp": true,
+      "kolla_major": 22,
+      "ansible_core_minors": ["2.19", "2.20"],
+      "selected_host_os": {"id": "ubuntu", "version": "24.04"}
+    },
+    "2026.2": {
+      "name": "Hibiscus",
+      "upstream_status_at_review": "maintained",
+      "slurp": false,
+      "kolla_major": 23,
+      "ansible_core_minors": ["2.20", "2.21"],
+      "selected_host_os": {"id": "ubuntu", "version": "24.04"}
+    }
+  },
+  "sources": [
+    "https://releases.openstack.org/",
+    "https://docs.openstack.org/kolla-ansible/2026.1/user/support-matrix.html",
+    "https://docs.openstack.org/kolla-ansible/2026.2/user/support-matrix",
+    "https://docs.openstack.org/releasenotes/kolla-ansible/2026.1.html",
+    "https://docs.openstack.org/releasenotes/kolla-ansible/2026.2.html"
+  ]
+}

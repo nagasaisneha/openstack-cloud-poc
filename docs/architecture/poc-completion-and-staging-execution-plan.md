@@ -1,5 +1,7 @@
 # Browser-ready POC and staging execution plan
 
+**Superseded release dependencies (2026-10-26):** Both final local POC and staging now require maintained OpenStack. Follow [T45/T46 and the migration decision](maintained-release-migration.md) before release-dependent feature installation. [The authoritative matrix](../requirements/capability-traceability.md) adds mandatory Octavia/ingress/two-backend health recovery and final maintained-release replay. Preserve Caracal as source; no Ubuntu upgrade/new WSL distribution is authorized. Historical execution sections below remain evidence of prior work, not current final-release acceptance.
+
 **Updated:** 2026-10-25
 **Purpose:** Deliver the expanded browser-ready, multi-tenant POC goal and prepare a separate, reproducible staging release without changing or replacing the existing WSL installation.
 

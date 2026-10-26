@@ -25,6 +25,8 @@ jobs:
         run: PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -v
       - name: Compile Python sources
         run: python -m compileall -q openstack_cloud_poc scripts/local-openstack tests
+      - name: Validate maintained-release guard CLI
+        run: python -B scripts/check_release_policy.py --help
       - name: Check patch whitespace
         run: git diff --check
 

@@ -1,5 +1,7 @@
 # Task 11 — final local POC acceptance
 
+**Historical core scope:** This Caracal acceptance remains preserved component evidence. It does not satisfy the expanded [mandatory capability matrix](../requirements/capability-traceability.md) or the [maintained-release final POC requirement](maintained-release-migration.md). All mandatory tests must be rerun after T46 migration.
+
 **Updated:** 2026-10-25
 
 ## Result

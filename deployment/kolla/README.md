@@ -2,6 +2,8 @@
 
 This package is a target-specific staging deployment candidate, separate from the existing Ubuntu 22.04 WSL2 / Caracal POC. It does not provision infrastructure, install packages, change host state, generate secrets, or deploy OpenStack by itself.
 
+The maintained-release requirement now applies to **both** final local POC and staging. Use separate approved supported targets/inventories for each, following the [migration decision](../../docs/architecture/maintained-release-migration.md). The existing Caracal source stays intact. `deployment/release-policy.json` selects Hibiscus, requires fresh maintenance review, and blocks source-host reuse. `scripts/check_release_policy.py` is an offline plan/evidence validator; passing it does not deploy or prove live behavior.
+
 ## Version and host baseline
 
 - OpenStack: 2026.2 Hibiscus.
@@ -21,7 +23,7 @@ At this review, the [Kolla Ansible 23.0.0 PyPI files](https://pypi.org/project/k
 - `requirements.in`: exact top-level deployment tool versions. Generate, review, and commit a full transitive, hash-locked `requirements.lock` on Python 3.12 before a real deployment; the lock is software metadata and contains no secrets.
 - `inventory/multinode.example.ini`: topology example with RFC 5737 documentation addresses. Replace it only with Gate 0/1 approved hostnames and addresses in the ignored `inventory/local.ini`.
 - `globals.example.yml`: secret-free Kolla configuration template. Copy to protected `/etc/kolla/globals.yml` after replacing each `REPLACE_*` value.
-- `globals.extended.example.yml`: optional Cinder, Swift, metering, and monitoring service profile. Resolve every storage/backend and resource-budget decision before enabling.
+- `globals.extended.example.yml`: mandatory full-scope Cinder, Swift, Octavia/OVN/Horizon, metering, and monitoring profile. Resolve every backend, ring, network, health-monitor and capacity decision before enabling. The base template deliberately leaves services disabled; it fails the full-scope preflight until the reviewed overlay and target values are supplied.
 - `preflight.yml`: read-only Ansible assertions for OS, memory, interfaces, storage mount, review/change IDs and optional-service decisions. It never installs or modifies a service.
 
 Kolla passwords, clouds.yaml, private inventories, generated Swift rings, TLS material, image digests, and local configuration belong in protected deployment storage and are excluded by `.gitignore`. Use a dedicated deployment account and SSH agent/key provisioned by the operator. Never copy administrative cloud credentials into a repository file.
@@ -38,3 +40,7 @@ Kolla passwords, clouds.yaml, private inventories, generated Swift rings, TLS ma
 8. Capture immutable software/image/config identifiers; run service, tenant, storage, metering, security, recovery and application smoke tests; archive sanitized evidence.
 
 Kolla bootstrap/deploy and package changes mutate hosts. They are deliberately not invoked in this workspace. The production upgrade path, rollback, and data migration must be tested on staging first; this package does not declare an in-place Jammy/Caracal upgrade safe.
+
+Provider configuration was checked against the locally installed isolated Kolla 23.0.0 package: `octavia_provider_drivers`, `octavia_provider_agents`, `enable_horizon_octavia` and OVN driver-agent selection exist. The package retains a legacy exporter reference to `kolla_install_type`; the example uses `source` as its compatibility value. Actual images are selected by release/base/tag and must be pinned/reviewed separately. This variable does not prove host package or service-image availability. Embedded plugin versions/digests and real deployment compatibility are still unverified. Do not copy package-sourced Caracal API/Apache templates into the new images.
+
+The full-scope host planning guard defaults to 32 GiB. A separate monitoring-only node can use a reviewed role-specific `staging_full_scope_host_min_memory_mib` in its protected inventory; the preflight still refuses values below the 8-GiB foundation minimum. This is a capacity planning check, not a measured service sizing result.

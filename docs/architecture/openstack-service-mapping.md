@@ -1,5 +1,7 @@
 # OpenStack service mapping
 
+**Current mandatory mapping (2026-10-26):** [The capability matrix](../requirements/capability-traceability.md) and [maintained-release migration decision](maintained-release-migration.md) override conditional/historical mappings below. Octavia with a reviewed OVN provider, Neutron routed floating-IP/application ingress, two real backend VMs, automatic health exclusion/rejoin and maintained OpenStack in both final environments are required. Existing Caracal remains the preserved source only.
+
 This mapping follows the original local POC scope in [`requirements-specification.md`](../requirements/requirements-specification.md) and links its evidence to the separate [`staging-release-plan.md`](../staging-release-plan.md). The local POC uses deterministic fixtures where no verified local OpenStack service is available; fixtures are simulated evidence. The long-term production direction is OpenStack on organization-owned physical data-center infrastructure. The staging target is not selected. AWS-hosted OpenStack and AWS-native tenant provisioning are outside the approved implementation scope. The Option A documents are deferred evaluations retained for traceability. A service is only considered available after environment-specific discovery and provider evidence confirm it. Endpoint contact and cloud mutations require scoped approval.
 
 | Diagram capability | Proposed staging / production mapping | Current evidence and limits |

@@ -3,7 +3,22 @@
   hosts: all
   gather_facts: true
   become: false
+  vars:
+    release_policy: "{{ lookup('ansible.builtin.file', playbook_dir + '/../release-policy.json') | from_json }}"
   tasks:
+    - name: Require the selected maintained release for both final environments
+      ansible.builtin.assert:
+        that:
+          - openstack_release | default('unselected') == release_policy.selected_release
+          - release_environment | default('unselected') in release_policy.required_environments
+          - release_policy.candidates[release_policy.selected_release].upstream_status_at_review == 'maintained'
+          - ((ansible_facts.date_time.date | to_datetime('%Y-%m-%d')) - (release_policy.reviewed_on | to_datetime('%Y-%m-%d'))).days >= 0
+          - ((ansible_facts.date_time.date | to_datetime('%Y-%m-%d')) - (release_policy.reviewed_on | to_datetime('%Y-%m-%d'))).days <= release_policy.maintenance_review_max_age_days
+          - staging_source_preserved | default(false) | bool
+          - "'microsoft' not in (ansible_facts.kernel | lower)"
+        fail_msg: "Refresh release maintenance evidence, select a supported separate target, and confirm source preservation. Caracal/WSL is not this deployment target."
+        quiet: true
+
     - name: Require Ubuntu 24.04 Noble for the initial staging candidate
       ansible.builtin.assert:
         that:
@@ -70,3 +85,35 @@
           - (not (enable_prometheus | default(false) | bool) and not (enable_grafana | default(false) | bool) and not (enable_fluentd | default(false) | bool)) or (staging_monitoring_budget_reviewed | default(false) | bool)
         fail_msg: "Metering sources and monitoring resource budget must be approved first."
         quiet: true
+
+    - name: Require reviewed OVN load balancing and two-backend health acceptance plan
+      ansible.builtin.assert:
+        that:
+          - (not (enable_octavia | default(false) | bool)) or (staging_lb_provider_reviewed | default(false) | bool)
+          - (not (enable_octavia | default(false) | bool)) or (staging_provider_network_reviewed | default(false) | bool)
+          - (not (enable_octavia | default(false) | bool)) or (staging_health_monitor_reviewed | default(false) | bool)
+          - (not (enable_octavia | default(false) | bool)) or (neutron_plugin_agent | default('unselected') == 'ovn')
+          - (not (enable_octavia | default(false) | bool)) or (octavia_provider_drivers | default('') == 'ovn:OVN provider')
+          - (not (enable_octavia | default(false) | bool)) or (octavia_provider_agents | default('') == 'ovn')
+          - (not (enable_octavia | default(false) | bool)) or (staging_backend_vm_count | default(0) | int >= 2)
+        fail_msg: "Review Octavia/OVN compatibility, provider networking, health monitors and at least two real backend VMs."
+        quiet: true
+
+    - name: Prevent a reduced service profile from passing mandatory full-scope preparation
+      ansible.builtin.assert:
+        that:
+          - enable_cinder | default(false) | bool
+          - enable_swift | default(false) | bool
+          - enable_octavia | default(false) | bool
+          - enable_horizon | default(false) | bool
+          - enable_horizon_octavia | default(false) | bool
+          - enable_ceilometer | default(false) | bool
+          - enable_gnocchi | default(false) | bool
+          - enable_prometheus | default(false) | bool
+          - enable_grafana | default(false) | bool
+          - enable_fluentd | default(false) | bool
+          - staging_full_scope_host_min_memory_mib | default(release_policy.minimum_full_scope_memory_mib) | int >= 8192
+          - ansible_facts.memtotal_mb | int >= (staging_full_scope_host_min_memory_mib | default(release_policy.minimum_full_scope_memory_mib) | int)
+        fail_msg: "Full mandatory scope requires reviewed storage, LB, metering, dashboard/logging services and the project's capacity planning guard."
+        quiet: true
+      when: staging_validate_full_scope | default(false) | bool

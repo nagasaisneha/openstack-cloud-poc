@@ -1,0 +1,11 @@
+{
+  "environment": "local_poc",
+  "openstack_release": "2026.2",
+  "host_os": {"id": "ubuntu", "version": "24.04"},
+  "is_wsl": false,
+  "memory_mib": 0,
+  "kolla_major": 23,
+  "ansible_core_minor": "2.20",
+  "preserve_caracal_source": true,
+  "target_change_authorized": false
+}
