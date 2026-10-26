@@ -89,6 +89,49 @@ class SwiftSetupTests(unittest.TestCase):
         self.assertTrue(raised.exception.context['url_matches_expected_loopback_template'])
         self.assertFalse(raised.exception.context['service_id_matches_task_service'])
 
+    def test_regionless_task_endpoint_repair_requires_preflight_and_is_journaled(self):
+        endpoint = NS(id='endpoint-id', service_id='service-id', interface='internal',
+                      region_id=None, url=setup.API_URL, is_enabled=True)
+        region = NS(id='RegionOne')
+        service = NS(id='service-id')
+        state = dict(self.state(), service_create_intent=True, service_id='service-id',
+                     readiness_report=str(setup.DATA / ('swift-readiness-' + 'a' * 32 + '.json')))
+        def update(resource, **attrs):
+            resource.region_id = attrs['region_id']
+            return resource
+        identity = NS(update_endpoint=Mock(side_effect=update),
+                      get_endpoint=Mock(return_value=endpoint))
+        with patch.object(setup, 'protected_json', return_value={
+                'installation': {'status': 'ready_for_guarded_setup'},
+                'cloud': {'endpoint_present': False, 'endpoint_status': 'not_in_catalog'}}), \
+                patch.object(setup, 'save'):
+            setup.repair_regionless_owned_endpoint(identity, endpoint, region, service, state)
+        identity.update_endpoint.assert_called_once_with(endpoint, region_id='RegionOne')
+        self.assertEqual(state['endpoint_region_repairs']['endpoint-id']['phase'], 'verified')
+
+    def test_regionless_endpoint_repair_refuses_wrong_url_without_update(self):
+        endpoint = NS(id='endpoint-id', service_id='service-id', interface='internal',
+                      region_id=None, url='http://127.0.0.1:8080/unexpected', is_enabled=True)
+        identity = NS(update_endpoint=Mock(), get_endpoint=Mock())
+        with self.assertRaisesRegex(setup.GuardError, 'unexpected_swift_endpoint'):
+            setup.repair_regionless_owned_endpoint(
+                identity, endpoint, NS(id='RegionOne'), NS(id='service-id'),
+                dict(self.state(), service_create_intent=True, service_id='service-id'))
+        identity.update_endpoint.assert_not_called()
+
+    def test_endpoint_repair_intent_is_completed_after_interrupted_update(self):
+        endpoint = NS(id='endpoint-id', service_id='service-id', interface='internal',
+                      region_id='RegionOne', url=setup.API_URL, is_enabled=True)
+        entry = {'phase': 'intent', 'service_id': 'service-id', 'interface': 'internal',
+                 'region_id': 'RegionOne',
+                 'url_sha256': setup.hashlib.sha256(setup.API_URL.encode()).hexdigest()}
+        state = dict(self.state(), endpoint_region_repairs={'endpoint-id': entry})
+        with patch.object(setup, 'save') as save:
+            setup.complete_interrupted_endpoint_repair(endpoint, NS(id='RegionOne'),
+                                                       NS(id='service-id'), state)
+        self.assertEqual(entry['phase'], 'verified')
+        save.assert_called_once_with(state)
+
     def test_backends_require_mount_and_restrict_workers_and_listeners(self):
         for name, port in setup.PORTS.items():
             text = setup.rendered_config('backend-server.conf.tmpl', {'server': name, 'port': port})

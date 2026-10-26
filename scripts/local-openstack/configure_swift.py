@@ -528,6 +528,59 @@ def validate_swift_endpoint(endpoint, region_id, service_id):
         raise error
 
 
+def repair_regionless_owned_endpoint(identity, endpoint, region, service, state):
+    """Repair only endpoints created by this run with the old region field."""
+    valid_interface = endpoint.interface in {'public', 'internal', 'admin'}
+    exact_task_endpoint = (valid_interface and endpoint.url == API_URL
+                           and endpoint.is_enabled is True
+                           and endpoint.service_id == service.id
+                           and endpoint.region_id is None)
+    require(exact_task_endpoint and state.get('service_create_intent') is True
+            and state.get('service_id') == service.id, 'unexpected_swift_endpoint')
+
+    readiness_path = Path(state.get('readiness_report', ''))
+    require(readiness_path.parent == DATA
+            and re.fullmatch(r'swift-readiness-[0-9a-f]{32}\.json', readiness_path.name),
+            'swift_endpoint_repair_missing_preflight')
+    readiness = protected_json(readiness_path)
+    require(readiness.get('installation', {}).get('status') == 'ready_for_guarded_setup'
+            and readiness.get('cloud', {}).get('endpoint_present') is False
+            and readiness.get('cloud', {}).get('endpoint_status') == 'not_in_catalog',
+            'swift_endpoint_repair_missing_catalog_absence')
+
+    repairs = state.setdefault('endpoint_region_repairs', {})
+    key = endpoint.id
+    intent = repairs.get(key)
+    expected_intent = {'phase': 'intent', 'service_id': service.id,
+                       'interface': endpoint.interface, 'region_id': region.id,
+                       'url_sha256': hashlib.sha256(API_URL.encode()).hexdigest()}
+    if intent is None:
+        repairs[key] = expected_intent
+        save(state)
+    else:
+        require(all(intent.get(field) == value for field, value in expected_intent.items()),
+                'swift_endpoint_repair_intent_drifted')
+
+    identity.update_endpoint(endpoint, region_id=region.id)
+    repaired = identity.get_endpoint(endpoint.id)
+    validate_swift_endpoint(repaired, region.id, service.id)
+    repairs[key] = dict(expected_intent, phase='verified')
+    save(state)
+
+
+def complete_interrupted_endpoint_repair(endpoint, region, service, state):
+    intent = state.get('endpoint_region_repairs', {}).get(endpoint.id)
+    if intent is None or intent.get('phase') != 'intent':
+        return
+    require(intent.get('service_id') == service.id
+            and intent.get('interface') == endpoint.interface
+            and intent.get('region_id') == region.id
+            and intent.get('url_sha256') == hashlib.sha256(API_URL.encode()).hexdigest(),
+            'swift_endpoint_repair_intent_drifted')
+    intent['phase'] = 'verified'
+    save(state)
+
+
 def ensure_identity(cloud, values, state):
     identity = cloud.identity
     marker = 'T19 local Swift ' + state['run_id']
@@ -576,7 +629,10 @@ def ensure_identity(cloud, values, state):
     region = identity.find_region('RegionOne', ignore_missing=False)
     endpoints = list(identity.endpoints(service_id=service.id))
     for endpoint in endpoints:
+        if endpoint.region_id is None:
+            repair_regionless_owned_endpoint(identity, endpoint, region, service, state)
         validate_swift_endpoint(endpoint, region.id, service.id)
+        complete_interrupted_endpoint_repair(endpoint, region, service, state)
     for interface in ('public', 'internal', 'admin'):
         matches = [item for item in endpoints if item.interface == interface]
         require(len(matches) <= 1, 'duplicate_swift_endpoint')
