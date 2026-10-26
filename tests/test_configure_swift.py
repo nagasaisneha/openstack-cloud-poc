@@ -281,8 +281,13 @@ class SwiftSetupTests(unittest.TestCase):
             path = Path(directory) / 'existing.conf'
             path.write_text('matching\n')
             with patch.object(setup, 'protected_file'), patch.object(setup, 'save'):
-                with self.assertRaisesRegex(setup.GuardError, 'not_owned'):
+                with self.assertRaisesRegex(setup.GuardError, 'not_owned') as raised:
                     setup.write_owned(path, 'matching\n', self.state())
+            self.assertEqual(raised.exception.context['path'], str(path))
+            self.assertTrue(raised.exception.context['expected_content_matches'])
+            self.assertFalse(raised.exception.context['recorded_file_matches_expected'])
+            self.assertFalse(raised.exception.context['recorded_intent_matches_expected'])
+            self.assertNotIn('sha256', repr(raised.exception.context))
             self.assertEqual(path.read_text(), 'matching\n')
 
     def test_interrupted_owned_write_is_adopted_only_with_matching_intent(self):

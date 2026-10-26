@@ -214,9 +214,24 @@ def write_owned(path, content, state, mode=0o644, gid=0):
     expected = hashlib.sha256(encoded).hexdigest()
     key = str(path)
     if path.exists() or path.is_symlink():
-        protected_file(path, mode, gid)
-        require((state['files'].get(key) or state['file_intents'].get(key)) == expected
-                and digest_file(path) == expected, 'existing_file_not_owned_or_drifted')
+        info = protected_file(path, mode, gid)
+        actual = digest_file(path)
+        recorded_file = state['files'].get(key)
+        recorded_intent = state['file_intents'].get(key)
+        if not ((recorded_file or recorded_intent) == expected and actual == expected):
+            error = GuardError('existing_file_not_owned_or_drifted')
+            error.context = {
+                'path': key,
+                'expected_content_matches': actual == expected,
+                'recorded_file_matches_expected': recorded_file == expected,
+                'recorded_intent_matches_expected': recorded_intent == expected,
+                'recorded_file_matches_actual': recorded_file == actual,
+                'recorded_intent_matches_actual': recorded_intent == actual,
+                'owner_uid': info.st_uid,
+                'group_gid': info.st_gid,
+                'mode': format(mode, '04o'),
+            }
+            raise error
     else:
         require(key not in state['files'], 'owned_file_missing')
         state['file_intents'][key] = expected
