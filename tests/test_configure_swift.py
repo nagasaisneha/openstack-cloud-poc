@@ -79,11 +79,15 @@ class SwiftSetupTests(unittest.TestCase):
                          {'admin-id', 'service-id', 'legacy-id'})
 
     def test_keystone_endpoint_validation_uses_region_id_resource_field(self):
-        endpoint = Endpoint(interface='internal', region_id='RegionOne',
-                            url=setup.API_URL, enabled=True)
-        setup.validate_swift_endpoint(endpoint, 'RegionOne')
+        endpoint = Endpoint(id='endpoint-id', service_id='service-id', interface='internal',
+                            region_id='RegionOne', url=setup.API_URL, enabled=True)
+        setup.validate_swift_endpoint(endpoint, 'RegionOne', 'service-id')
         with self.assertRaisesRegex(setup.GuardError, 'unexpected_swift_endpoint'):
-            setup.validate_swift_endpoint(endpoint, 'another-region')
+            setup.validate_swift_endpoint(endpoint, 'another-region', 'service-id')
+        with self.assertRaises(setup.GuardError) as raised:
+            setup.validate_swift_endpoint(endpoint, 'RegionOne', 'different-service')
+        self.assertTrue(raised.exception.context['url_matches_expected_loopback_template'])
+        self.assertFalse(raised.exception.context['service_id_matches_task_service'])
 
     def test_backends_require_mount_and_restrict_workers_and_listeners(self):
         for name, port in setup.PORTS.items():

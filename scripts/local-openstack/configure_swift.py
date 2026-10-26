@@ -507,10 +507,25 @@ def role_ids_from_assignments(assignments):
     return role_ids
 
 
-def validate_swift_endpoint(endpoint, region_id):
-    require(endpoint.interface in {'public', 'internal', 'admin'}
-            and endpoint.region_id == region_id and endpoint.url == API_URL
-            and endpoint.is_enabled, 'unexpected_swift_endpoint')
+def validate_swift_endpoint(endpoint, region_id, service_id):
+    interface_valid = endpoint.interface in {'public', 'internal', 'admin'}
+    region_matches = endpoint.region_id == region_id
+    url_matches = endpoint.url == API_URL
+    enabled = endpoint.is_enabled is True
+    service_matches = endpoint.service_id == service_id
+    if not (interface_valid and region_matches and url_matches and enabled and service_matches):
+        error = GuardError('unexpected_swift_endpoint')
+        error.context = {
+            'endpoint_id': endpoint.id,
+            'interface': endpoint.interface,
+            'interface_valid': interface_valid,
+            'region_id_present': bool(endpoint.region_id),
+            'region_id_matches_expected': region_matches,
+            'url_matches_expected_loopback_template': url_matches,
+            'enabled': enabled,
+            'service_id_matches_task_service': service_matches,
+        }
+        raise error
 
 
 def ensure_identity(cloud, values, state):
@@ -561,7 +576,7 @@ def ensure_identity(cloud, values, state):
     region = identity.find_region('RegionOne', ignore_missing=False)
     endpoints = list(identity.endpoints(service_id=service.id))
     for endpoint in endpoints:
-        validate_swift_endpoint(endpoint, region.id)
+        validate_swift_endpoint(endpoint, region.id, service.id)
     for interface in ('public', 'internal', 'admin'):
         matches = [item for item in endpoints if item.interface == interface]
         require(len(matches) <= 1, 'duplicate_swift_endpoint')
