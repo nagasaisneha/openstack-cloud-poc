@@ -1,0 +1,616 @@
+{
+  "constraints_sha256": "778a2873b3aee59110af8d00aa6f0b659fb98e51a86650840e1a8604719a2f37",
+  "rabbitmq": {
+    "bridge_artifacts": [
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-asn1_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-asn1",
+        "SHA256": "3590e53392ef7a7dc208130e111a4073ea6aa086d1abb285a4e214e7bd4e65dc",
+        "Size": "920768",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-asn1_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-asn1",
+        "SHA256": "3560fec1d5064dfa2121d88dd3ce2cfba884653ccefd120b530f4ec8d7564ba1",
+        "Size": "930188",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-base_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-base",
+        "SHA256": "dea3ff3ecf18e061c98d946b463b7245911d8f18a0f5456e9689fb311d8403f8",
+        "Size": "9721760",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-base_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-base",
+        "SHA256": "2ea293ddbeb5e25e5bb9dfa2fac1f245429f6ad468836cd40d2f31a3bcfa61c1",
+        "Size": "9425068",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-crypto_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-crypto",
+        "SHA256": "7008a4e7d80447547182566f3720803e9f03a158380307440835c6a87341ba82",
+        "Size": "190076",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-crypto_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-crypto",
+        "SHA256": "9a2f0b791b8de515676011a4264a9d0c48053a8f1be613829ce37a5fe5417170",
+        "Size": "190124",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-eldap_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-eldap",
+        "SHA256": "d7cf43405b8fead90d05193957df2813f0943f28cc1833dc644e2669e45272b4",
+        "Size": "154804",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-eldap_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-eldap",
+        "SHA256": "9923165db5de276ecf95e8d49c8077c6c049885c70dac8eb19e18c4c1c038edc",
+        "Size": "163600",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-ftp_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-ftp",
+        "SHA256": "71fbdb34eaefb2c63ede4c87f1a0bb8f4ba864fb214de4941863e971ea3d9029",
+        "Size": "117960",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-ftp_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-ftp",
+        "SHA256": "3f927a94f8e5e82c4663c11841bbd1253ef589cfac0ffbe1d90236e703854410",
+        "Size": "125296",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-inets_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-inets",
+        "SHA256": "1a118cbad95ddcb6cfd1186c1d1f1d6e2219d7a8777fab11414bde93cf3ea60b",
+        "Size": "662936",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-inets_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-inets",
+        "SHA256": "54dc1f1d407458a0d8fb3c91c80db3da85ef4c40fbcad7c8703268667a328cc3",
+        "Size": "657072",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-mnesia_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-mnesia",
+        "SHA256": "3b6721b31154b4116f1e72bea8ef654b75a6547cc0d66701175af7e37f1b6854",
+        "Size": "901000",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-mnesia_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-mnesia",
+        "SHA256": "ee2bc65f6daba7bfa5f1747630502186f29ddb26020b18f5def2476739283254",
+        "Size": "906864",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-os-mon_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-os-mon",
+        "SHA256": "b381508defbb965165fbed268bf1a52f54fa0cdec36374597f0aac4c110acdd2",
+        "Size": "123080",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-os-mon_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-os-mon",
+        "SHA256": "923916033b9bf007bb044ce6c680363f9602d2b735028899bd0a3b14d06fbcd2",
+        "Size": "131672",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-parsetools_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-parsetools",
+        "SHA256": "af7f28315c2efbb807d9c411f03b23de5b6aebe18e8cdbe9556de6b4b58948d2",
+        "Size": "221600",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-parsetools_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-parsetools",
+        "SHA256": "76bb93ff18fc8aefe0386ef985462815c61aa4b3b6f736573ad20df356cc406f",
+        "Size": "229500",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-public-key_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-public-key",
+        "SHA256": "f0fd7be2422bf162df303e8c97acd55c64d3ebbdde524f3679930ea65aad70e3",
+        "Size": "762116",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-public-key_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-public-key",
+        "SHA256": "9baac29a2b30a588b466c6333d9506e5f2aa9067d3343f77ea2ab114469047c3",
+        "Size": "783392",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-runtime-tools_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-runtime-tools",
+        "SHA256": "2b3e734343a61c6458119ab65624c26fa6fc967da16e2d8e9a016428692a00f3",
+        "Size": "254408",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-runtime-tools_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-runtime-tools",
+        "SHA256": "55f31e64a9c4e3122485dcef178a4b996d1460ef6b3599243e7d4e52041a714d",
+        "Size": "262684",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-snmp_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-snmp",
+        "SHA256": "72da4da3b5e0a6905363ba6af220b23bf99f5658e60cd95c1fe937c026512cbb",
+        "Size": "1852096",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-snmp_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-snmp",
+        "SHA256": "bbe816b87b55029f2f1dfd1b3a4bb872766b77763b0b37dcb571a9cc6ca25c8d",
+        "Size": "1876340",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-ssl_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-ssl",
+        "SHA256": "bde45f86f81f597bb9f96e9a673c4eb86468b6d80d41fddba8b749d575209901",
+        "Size": "1642252",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-ssl_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-ssl",
+        "SHA256": "db228c20ca2b9d1068b78785d1cf73aa56f0a74bc9d27a582e0c8f3777c0b43e",
+        "Size": "1618748",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-syntax-tools_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-syntax-tools",
+        "SHA256": "869c73622d9dbeb0c042ea176ac4059a692bf4da7481acc01cce5ee2776d3179",
+        "Size": "327192",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-syntax-tools_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-syntax-tools",
+        "SHA256": "4fc97b5392a5dc5f29806f6ee2eac28d390adf55e2b246e1730d6829a08c1c6b",
+        "Size": "332856",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-tftp_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-tftp",
+        "SHA256": "ce9ef15e74cc21287dc66bb9a3dd33faf622357d24fe45767b20bb89d2f95707",
+        "Size": "134136",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-tftp_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-tftp",
+        "SHA256": "ba01c7068eab1cd65d17762b0ffcf5c9638cfc294e6f469eff1905ded1986b41",
+        "Size": "143704",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-tools_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-tools",
+        "SHA256": "08e0addb0ca48ff16158ddbca1f727967a584f1a48f3bc5916d85069f4d33237",
+        "Size": "601444",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-tools_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-tools",
+        "SHA256": "c0c534225627534b90684e7b51ed43872aa3c4d7cd82e0f1a41e052a0f725d0f",
+        "Size": "651996",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-xmerl_25.3.2.21-1_amd64.deb",
+        "Package": "erlang-xmerl",
+        "SHA256": "23b85fa1a59a6b9a22fceb1fb9158e5700bc4b04af7292314901dc10c1c48983",
+        "Size": "1350420",
+        "Version": "1:25.3.2.21-1"
+      },
+      {
+        "Architecture": "amd64",
+        "Filename": "pool/main/e/erlang/erlang-xmerl_24.3.4.17-1_amd64.deb",
+        "Package": "erlang-xmerl",
+        "SHA256": "4c9cca6a1defc490d9926fcaabe649dce43937aee53fb1f461d6199d2d3f5f36",
+        "Size": "1364592",
+        "Version": "1:24.3.4.17-1"
+      },
+      {
+        "Architecture": "all",
+        "Filename": "pool/main/r/rabbitmq-server/rabbitmq-server_3.11.28-1_all.deb",
+        "Package": "rabbitmq-server",
+        "SHA256": "4d2b5aeded9dd0c517a7ff3eb370c79314a9e6e103e1ec49545e57199ad4bca2",
+        "Size": "15624500",
+        "Version": "3.11.28-1"
+      },
+      {
+        "Architecture": "all",
+        "Filename": "pool/main/r/rabbitmq-server/rabbitmq-server_3.10.25-1_all.deb",
+        "Package": "rabbitmq-server",
+        "SHA256": "2cdee5b5c62b687db1c260fd2813cc554a2f8a419580d849682f541fc13fff90",
+        "Size": "15043180",
+        "Version": "3.10.25-1"
+      }
+    ],
+    "broker_data_migration_verified": false,
+    "dependency_simulations": {
+      "erlang24_rabbitmq3_10": {
+        "exit_code": 0,
+        "no_remove_required": true,
+        "packages_planned": 18,
+        "simulation_only": true
+      },
+      "erlang24_rabbitmq3_9": {
+        "exit_code": 0,
+        "no_remove_required": true,
+        "packages_planned": 18,
+        "simulation_only": true
+      },
+      "erlang25_rabbitmq3_11": {
+        "exit_code": 0,
+        "no_remove_required": true,
+        "packages_planned": 18,
+        "simulation_only": true
+      }
+    },
+    "installation_performed": false,
+    "observed_at": "2026-10-26T19:05:58.397557+00:00",
+    "package_index_sha256": {
+      "rabbitmq-erlang": "1f1eb9b3295bd60394a734347c5cd08fe7016ae801f3be4fef99f76576cb0bb9",
+      "rabbitmq-server": "c3c069353adc453fc1af567c89ae02d8eca880bf00f830d73296eed646b94cf2"
+    },
+    "rabbitmq_3_9_29": {
+      "filename": "rabbitmq-server_3.9.29-1_all.deb",
+      "sha256": "0ed480cb2824212e30282932cd93456b3e8fb0e6da07eeef4dca8ed1b530a25a",
+      "signature_verified": true
+    },
+    "runtime_rehearsals": {
+      "24": {
+        "broker_started": false,
+        "crypto_hash_checked": true,
+        "distributed_node_started": false,
+        "package_version": "1:24.3.4.17-1",
+        "status": "PASS"
+      },
+      "25": {
+        "broker_started": false,
+        "crypto_hash_checked": true,
+        "distributed_node_started": false,
+        "package_version": "1:25.3.2.21-1",
+        "status": "PASS"
+      }
+    },
+    "signing_key_fingerprint": "0A9AF2115F4687BD29803A206B73A36E6026DFCA"
+  },
+  "schema": 1,
+  "scope": "isolated_component_and_public_artifact_evidence_not_live_upgrade_acceptance",
+  "security_advisory_query": {
+    "findings": [
+      {
+        "advisory_id": "GHSA-h8rc-w822-q8vq",
+        "package": "swift",
+        "url": "https://osv.dev/vulnerability/GHSA-h8rc-w822-q8vq",
+        "version": "2.35.5"
+      },
+      {
+        "advisory_id": "PYSEC-2026-4173",
+        "package": "swift",
+        "url": "https://osv.dev/vulnerability/PYSEC-2026-4173",
+        "version": "2.35.5"
+      }
+    ],
+    "full_security_validation_passed": false,
+    "lock_hashes_still_match": true,
+    "locks": {
+      "deployment/kolla/requirements.lock": "6d3e12795381d71906df07547cb3d97df840cb2a11d97e4cf2dd9bcb839f01e0",
+      "deployment/swift-maintained/epoxy-requirements.lock": "693a4fc7e0c73da7137afc2f78d10cfb555db5f8041eca77f708bf320f08691f",
+      "deployment/swift-maintained/requirements.lock": "9f624a8a5624aae0d8dfec52e8094ac3b4ef7b1ccde4807b7a79e01283c3e08d",
+      "requirements-test.lock": "95d22b0a88493773f38ff433add817001e754e0feeaaeb9ee91e1b0ce81d1692"
+    },
+    "observed_at": "2026-10-26T21:07:09.650227+00:00",
+    "package_version_count": 111,
+    "public_package_metadata_only": true,
+    "query_complete": true,
+    "reviewed_matches": [
+      {
+        "advisory_id": "GHSA-h8rc-w822-q8vq",
+        "disposition": {
+          "advisory_ids": [
+            "GHSA-h8rc-w822-q8vq",
+            "PYSEC-2026-4173"
+          ],
+          "evidence": "OSSA-2026-024 fixes Epoxy in 2.35.3; 2.35.5 retains the patch. Signed source/wheel modules verified; isolated Gatekeeper header-filter check required. Raw OSV ranges flatten the backport below 2.37.2. This does not waive any other advisory or live security acceptance.",
+          "expires_at": "2026-11-26",
+          "package": "swift",
+          "primary_source": "https://security.openstack.org/ossa/OSSA-2026-024.html",
+          "reason": "upstream_fixed_backport",
+          "release_notes": "https://docs.openstack.org/releasenotes/swift/2025.1.html",
+          "reviewed_at": "2026-10-27",
+          "version": "2.35.5"
+        },
+        "package": "swift",
+        "url": "https://osv.dev/vulnerability/GHSA-h8rc-w822-q8vq",
+        "version": "2.35.5"
+      },
+      {
+        "advisory_id": "PYSEC-2026-4173",
+        "disposition": {
+          "advisory_ids": [
+            "GHSA-h8rc-w822-q8vq",
+            "PYSEC-2026-4173"
+          ],
+          "evidence": "OSSA-2026-024 fixes Epoxy in 2.35.3; 2.35.5 retains the patch. Signed source/wheel modules verified; isolated Gatekeeper header-filter check required. Raw OSV ranges flatten the backport below 2.37.2. This does not waive any other advisory or live security acceptance.",
+          "expires_at": "2026-11-26",
+          "package": "swift",
+          "primary_source": "https://security.openstack.org/ossa/OSSA-2026-024.html",
+          "reason": "upstream_fixed_backport",
+          "release_notes": "https://docs.openstack.org/releasenotes/swift/2025.1.html",
+          "reviewed_at": "2026-10-27",
+          "version": "2.35.5"
+        },
+        "package": "swift",
+        "url": "https://osv.dev/vulnerability/PYSEC-2026-4173",
+        "version": "2.35.5"
+      }
+    ],
+    "schema": 1,
+    "status": "published_matches_reviewed",
+    "unresolved_findings": []
+  },
+  "security_overlay_sha256": "c9dc1d05cb5b5f616d845e77e5cb3ed26509c3bc675a6b8c125ce0e7a320bd7a",
+  "swift_backend_hops": [
+    {
+      "all_owned_child_processes_stopped": true,
+      "full_live_swift_recovery_verified": false,
+      "keystone_integration_verified": false,
+      "live_services_changed": false,
+      "network_path_verified": false,
+      "restored_artifact": {
+        "extended_attributes": 2,
+        "files": 7,
+        "sha256": "c93106b87fb9242d05b2164ec44c780ef4be983cf7c7c69b16c7881bde9aadcf"
+      },
+      "schema": 1,
+      "scope": "isolated_real_swift_backend_component",
+      "stages": {
+        "new_read_old": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "cbe55d4d35c6b36cc4524824982a17d23734677d1bb4e410e323c44e807bd1df",
+          "python": "3.12.15",
+          "ssrf_control_header_filter": "PASS",
+          "swift_version": "2.35.5"
+        },
+        "new_read_restored": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+          "python": "3.12.15",
+          "ssrf_control_header_filter": "PASS",
+          "swift_version": "2.35.5"
+        },
+        "new_write": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+          "python": "3.12.15",
+          "ssrf_control_header_filter": "PASS",
+          "swift_version": "2.35.5"
+        },
+        "old_read_new": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+          "python": "3.10.12",
+          "ssrf_control_header_filter": "not_asserted_for_preserved_source",
+          "swift_version": "2.33.0"
+        },
+        "old_write": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "cbe55d4d35c6b36cc4524824982a17d23734677d1bb4e410e323c44e807bd1df",
+          "python": "3.10.12",
+          "ssrf_control_header_filter": "not_asserted_for_preserved_source",
+          "swift_version": "2.33.0"
+        }
+      },
+      "verified": true
+    },
+    {
+      "all_owned_child_processes_stopped": true,
+      "full_live_swift_recovery_verified": false,
+      "keystone_integration_verified": false,
+      "live_services_changed": false,
+      "network_path_verified": false,
+      "restored_artifact": {
+        "extended_attributes": 2,
+        "files": 7,
+        "sha256": "116be4515f254b1d7da147a584af04632823ca4fcb53f505407a7fdb9eb9f189"
+      },
+      "schema": 1,
+      "scope": "isolated_real_swift_backend_component",
+      "stages": {
+        "new_read_old": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "cbe55d4d35c6b36cc4524824982a17d23734677d1bb4e410e323c44e807bd1df",
+          "python": "3.12.15",
+          "ssrf_control_header_filter": "PASS",
+          "swift_version": "2.37.4"
+        },
+        "new_read_restored": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+          "python": "3.12.15",
+          "ssrf_control_header_filter": "PASS",
+          "swift_version": "2.37.4"
+        },
+        "new_write": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+          "python": "3.12.15",
+          "ssrf_control_header_filter": "PASS",
+          "swift_version": "2.37.4"
+        },
+        "old_read_new": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+          "python": "3.12.15",
+          "ssrf_control_header_filter": "PASS",
+          "swift_version": "2.35.5"
+        },
+        "old_write": {
+          "account_head": "PASS",
+          "container_head": "PASS",
+          "object_get_sha256": "cbe55d4d35c6b36cc4524824982a17d23734677d1bb4e410e323c44e807bd1df",
+          "python": "3.12.15",
+          "ssrf_control_header_filter": "PASS",
+          "swift_version": "2.35.5"
+        }
+      },
+      "verified": true
+    }
+  ],
+  "swift_backend_rehearsal": {
+    "all_owned_child_processes_stopped": true,
+    "full_live_swift_recovery_verified": false,
+    "keystone_integration_verified": false,
+    "live_services_changed": false,
+    "network_path_verified": false,
+    "restored_artifact": {
+      "extended_attributes": 2,
+      "files": 7,
+      "sha256": "e6c26f11f12abe7562f2619c1148d7239533dc4a85acb0dfa2214513837163b8"
+    },
+    "schema": 1,
+    "scope": "isolated_real_swift_backend_component",
+    "stages": {
+      "new_read_old": {
+        "account_head": "PASS",
+        "container_head": "PASS",
+        "object_get_sha256": "cbe55d4d35c6b36cc4524824982a17d23734677d1bb4e410e323c44e807bd1df",
+        "python": "3.12.15",
+        "swift_version": "2.37.4"
+      },
+      "new_read_restored": {
+        "account_head": "PASS",
+        "container_head": "PASS",
+        "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+        "python": "3.12.15",
+        "swift_version": "2.37.4"
+      },
+      "new_write": {
+        "account_head": "PASS",
+        "container_head": "PASS",
+        "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+        "python": "3.12.15",
+        "swift_version": "2.37.4"
+      },
+      "old_read_new": {
+        "account_head": "PASS",
+        "container_head": "PASS",
+        "object_get_sha256": "1994497aaf18b41980074189a667887252225ef7d794fa4c9380878414887746",
+        "python": "3.10.12",
+        "swift_version": "2.33.0"
+      },
+      "old_write": {
+        "account_head": "PASS",
+        "container_head": "PASS",
+        "object_get_sha256": "cbe55d4d35c6b36cc4524824982a17d23734677d1bb4e410e323c44e807bd1df",
+        "python": "3.10.12",
+        "swift_version": "2.33.0"
+      }
+    },
+    "verified": true
+  },
+  "swift_epoxy_source_verification": {
+    "full_wheel_build_attestation_verified": false,
+    "installation_performed": false,
+    "observed_at": "2026-10-26T20:24:24.469964+00:00",
+    "python_module_bytes_match": true,
+    "python_module_count": 175,
+    "schema": 1,
+    "signing_primary_fingerprint": "7F0F63951535B4D12D3FA55DECE58D3984D688D7",
+    "source_sha256": "cd2b916c5ad9d72b93d97ee5612928b56f0501b9bbbb9c63a6bcc0aab80ce67a",
+    "verified": true,
+    "version": "2.35.5",
+    "wheel_filename": "swift-2.35.5-py3-none-any.whl",
+    "wheel_sha256": "25f4bca1ce5cb0ff6bcd293dce6a149156e32ce0558fc22f0c9ccc261651c744"
+  },
+  "swift_source_verification": {
+    "full_wheel_build_attestation_verified": false,
+    "installation_performed": false,
+    "observed_at": "2026-10-26T19:44:35.774439+00:00",
+    "python_module_bytes_match": true,
+    "python_module_count": 176,
+    "schema": 1,
+    "signing_primary_fingerprint": "7F0F63951535B4D12D3FA55DECE58D3984D688D7",
+    "source_sha256": "d8dace21beb2184fde4c6ffad3c9b7653dd79f168220c9fa8a5bd14ed2186403",
+    "verified": true,
+    "version": "2.37.4",
+    "wheel_filename": "swift-2.37.4-py3-none-any.whl",
+    "wheel_sha256": "7b38adc2082267560e46241ce7141569be1a715d6bcd36202014ba683fbc20e7"
+  }
+}

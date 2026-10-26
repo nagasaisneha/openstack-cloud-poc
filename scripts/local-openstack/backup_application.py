@@ -130,10 +130,18 @@ def snapshot_journal(output):
     guest.protected_file(output, 0o600)
 
 
-def snapshot_databases(directory):
-    names = ','.join("'" + name + "'" for name in DATABASES)
+def database_scope(databases=None):
+    selected = DATABASES if databases is None else tuple(databases)
+    if selected not in (DATABASES, DATABASES + ('cinder',)):
+        raise RuntimeError('unsupported recovery database scope')
+    return selected
+
+
+def snapshot_databases(directory, *, databases=None):
+    databases = database_scope(databases)
+    names = ','.join("'" + name + "'" for name in databases)
     actual = common.sql('SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME IN (' + names + ')')
-    if set(actual.splitlines()) != set(DATABASES):
+    if set(actual.splitlines()) != set(databases):
         raise RuntimeError('required cloud database is missing; no deletion')
     if common.sql("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA IN (" + names
                   + ") AND TABLE_TYPE='BASE TABLE' AND COALESCE(ENGINE,'') <> 'InnoDB'"):
@@ -141,16 +149,16 @@ def snapshot_databases(directory):
     output = directory / 'cloud-databases.sql'
     command_to_file(['mariadb-dump', '--no-defaults', '--protocol=socket', '--user=root',
         '--single-transaction', '--quick', '--routines', '--events', '--triggers', '--hex-blob',
-        '--databases', *DATABASES], output)
+        '--databases', *databases], output)
     seen = set()
     with output.open('rb') as stream:
         for line in stream:
-            for name in DATABASES:
+            for name in databases:
                 if line.strip() == f'USE `{name}`;'.encode():
                     seen.add(name)
         stream.seek(max(0, output.stat().st_size - 4096))
         trailer = stream.read()
-    if seen != set(DATABASES) or b'-- Dump completed' not in trailer:
+    if seen != set(databases) or b'-- Dump completed' not in trailer:
         raise RuntimeError('SQL backup lacks expected database sections/completion trailer')
     for filename, endpoint, database in OVSDB:
         target = directory / filename

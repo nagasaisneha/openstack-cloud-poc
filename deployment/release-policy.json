@@ -13,7 +13,16 @@
     "planned_host_os": {"id": "ubuntu", "version": "24.04"},
     "release_checkpoints": ["2024.1", "2025.1", "2026.1"],
     "requires_new_distribution": false,
-    "whole_cloud_upgrade_verified": false
+    "whole_cloud_upgrade_verified": false,
+    "swift_runtime_proposal": {
+      "status": "assessed_not_approved",
+      "method": "versioned_isolated_upstream_python_runtime",
+      "epoxy_version": "2.35.5",
+      "gazpacho_version": "2.37.4",
+      "vendor_package_support_verified": false,
+      "live_cutover_verified": false,
+      "maintenance_ownership_accepted": false
+    }
   },
   "required_environments": ["local_poc", "staging"],
   "preserved_source_release": "2024.1",

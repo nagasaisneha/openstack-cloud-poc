@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "dispositions": [
+    {
+      "package": "swift",
+      "version": "2.35.5",
+      "advisory_ids": ["GHSA-h8rc-w822-q8vq", "PYSEC-2026-4173"],
+      "reason": "upstream_fixed_backport",
+      "reviewed_at": "2026-10-27",
+      "expires_at": "2026-11-26",
+      "primary_source": "https://security.openstack.org/ossa/OSSA-2026-024.html",
+      "release_notes": "https://docs.openstack.org/releasenotes/swift/2025.1.html",
+      "evidence": "OSSA-2026-024 fixes Epoxy in 2.35.3; 2.35.5 retains the patch. Signed source/wheel modules verified; isolated Gatekeeper header-filter check required. Raw OSV ranges flatten the backport below 2.37.2. This does not waive any other advisory or live security acceptance."
+    }
+  ]
+}

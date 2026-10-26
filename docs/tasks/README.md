@@ -1,10 +1,13 @@
 # Implementation task backlog
 
+**Execution update (2026-10-27):** Use the [single completion checklist](../poc-completion-checklist.md) for current status and the capability matrix for requirement mappings. [T47 recovery/runtime engineering](T47.md) precedes T46 approval. Fresh protected source inventory, eight SQL/three OVSDB restores and actual jobs recovery passed. Swift runtime compatibility and broker artifacts have isolated evidence; whole-WSL recovery, live service migration and final POC acceptance remain open. These results supersede older “source inventory pending” wording below. No upgrade or staging deployment is authorized or performed.
+
 **Superseding scope/release update (2026-10-26):** The [capability matrix](../requirements/capability-traceability.md) is authoritative. Both final environments require maintained OpenStack. The local POC uses the **existing WSL instance**, with the proposed Ubuntu 24.04 OS bridge and Caracal → Epoxy → Gazpacho path. No separate local POC/VM/host/distro is the default; no OS or OpenStack upgrade is authorized. Broker/package compatibility, full backup restore, same-instance rollback and capacity gates remain open. Staging retains its separate Hibiscus/Kolla candidate. Octavia, routed ingress, two real backends and automatic exclusion/rejoin remain mandatory. [T45](T45.md) records the assessment; [T46](T46.md) gates the controlled in-place migration before release-dependent installation.
 
 | New dependency | Task | Current state |
 |---|---|---|
-| First | [T45 — release impact/policy and full traceability](T45.md) | Impact/policy and offline checks pass; protected source catalog/API inventory pending |
+| First | [T45 — release impact/policy and full traceability](T45.md) | Impact/policy and protected source catalog/API inventory verified for stated scope |
+| T45 source baseline | [T47 — recovery and runtime compatibility](T47.md) | Source SQL/jobs recovery and isolated runtime checks pass; cold WSL boot recovery and service hops pending |
 | T45, same-instance OS/cloud approval, broker/package review and expanded recovery | [T46 — existing-instance upgrade and acceptance](T46.md) | Planning only; compatibility/recovery gates and explicit OS/cloud approval pending |
 | T46 and maintained core regression | [T42 — router/floating-IP/application ingress](T42.md) | Not implemented; source metadata-namespace connectivity is not ingress acceptance |
 | T46, identity/network/capacity, T42 for external VIP path | [T43 — Octavia deployment and customer lifecycle](T43.md) | Not implemented; OVN is the selected provider candidate |
@@ -69,7 +72,7 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | Original requirement | Task IDs | Status | Coverage note / reason |
 |---|---|---|---|
 | POC-001 — Read-only laptop and virtualization audit | T01, T02 | Covered | Includes Windows/WSL context where available, OS, CPU/RAM/disk/GPU/driver, KVM, Docker, Git, listening ports, and resource constraints; missing evidence is labelled unknown. |
-| POC-002 — Git/GitHub audit and project baseline | T01, T02 | Covered for repository publication | Branch/history and remote inventory are recorded. Sanitized local commits are pushed to `origin/main`; secret-bearing files and runtime recovery artifacts remain excluded. |
+| POC-002 — Git/GitHub audit and project baseline | T01, T02 | Covered for repository publication | Branch/history and remote inventory are recorded. Sanitized closeout commits through `d07edef` were pushed to `origin/main`; later local commits require separately recorded push evidence. Secret-bearing files and runtime recovery artifacts remain excluded. |
 | POC-003 — OpenStack availability and deployment inventory | T02, T07 | Covered | Local package/container/service/config and endpoint-presence checks plus approved read-only API inventory; credential presence may be recorded, values are never printed, and no resources are changed. |
 | POC-004 — OpenStack and VM-launch feasibility | T02, T03, T06, T07, T16, T17 | Covered for the local POC | Real local OpenStack integration and Nova/KVM VM launch passed. The initial deployment gate is historical; staging support and remote endpoint feasibility require separate evidence. |
 | POC-005 — Keystone project and role validation | T06, T11, T25 | Covered | Project/user/role scope and authorized/unauthorized cases; creating identities requires explicit approval. |
@@ -411,7 +414,7 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T27 — Backup and restore procedure
 
-- **Execution record:** [`T27.md`](T27.md) — verified real backups plus successful operator isolated restore/recovered guest boot; **In Progress** pending repository closeout. Restart validation and final POC acceptance are separate next checkpoints.
+- **Execution record:** [`T27.md`](T27.md) — historical core backup/isolated restore, service cycle and WSL restart passed; sanitized closeout was pushed through `d07edef`. Expanded pre-upgrade recovery is tracked in T47; full POC acceptance remains open.
 
 - **Prerequisites:** Identify POC data that matters and approved local backup destination; stable workflow.
 - **Dependencies:** T14 and only the implemented state-bearing tasks (for example T18-T22 and T26); skipped optional tasks do not block a backup of the remaining approved POC data.

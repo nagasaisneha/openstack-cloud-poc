@@ -1,0 +1,96 @@
+{
+  "actual_extended_database_recovery": {
+    "all_owned_children_stopped": true,
+    "live_databases_overwritten": false,
+    "ovsdb_restores": 3,
+    "private_report_reference": "extended-database-recovery-uglbhz4c/report.json",
+    "restored_schemas": [
+      "cinder",
+      "glance",
+      "keystone",
+      "neutron",
+      "nova",
+      "nova_api",
+      "nova_cell0",
+      "placement"
+    ],
+    "status": "PASS"
+  },
+  "actual_jobs_recovery": {
+    "billing_recovery_verified": false,
+    "components": [
+      "jobs"
+    ],
+    "live_database_overwritten": false,
+    "private_report_reference": "application-recovery-19hcppgg",
+    "status": "PASS"
+  },
+  "cold_preview": {
+    "active_poc_units_to_stop": 25,
+    "guest_stop_required": true,
+    "host_changes_performed": false,
+    "status": "PASS"
+  },
+  "full_storage_recovery_verified": false,
+  "maintained_upgrade_started": false,
+  "provenance": "operator_supplied_sanitized_stdout_and_readonly_windows_observation",
+  "schema": 1,
+  "scope": "existing_caracal_recovery_preparation",
+  "source_service_audit": {
+    "active_images": 1,
+    "active_servers": 1,
+    "cinder_api_observed": true,
+    "cloud_mutations": false,
+    "external_networks": 0,
+    "floating_ips": 0,
+    "keystone_authenticated": true,
+    "observed_at": "2026-10-26T18:22:28.217898+00:00",
+    "octavia_catalog_present": false,
+    "routers": 0,
+    "swift_account_head_observed": true
+  },
+  "staging_deployed": false,
+  "upgrade_recovery_inventory": {
+    "all_required_present": true,
+    "billing_ledger_location_verified": false,
+    "non_innodb_table_count": 0,
+    "observed_at": "2026-10-26T18:56:45.944695+00:00",
+    "rabbitmq": {
+      "classic_queues": 51,
+      "consumers": 98,
+      "enabled_feature_flags": 6,
+      "erlang_base_version": "1:24.2.1+dfsg-1ubuntu0.8",
+      "messages": 0,
+      "messages_unacknowledged": 0,
+      "version": "3.9.27-0ubuntu0.6",
+      "vhosts": 1
+    },
+    "required_schemas": [
+      "cinder",
+      "glance",
+      "keystone",
+      "neutron",
+      "nova",
+      "nova_api",
+      "nova_cell0",
+      "placement"
+    ]
+  },
+  "whole_wsl_backup_created": false,
+  "whole_wsl_restore_or_boot_verified": false,
+  "windows_readonly_plan": {
+    "backup_drive_free_bytes": 820153077760,
+    "capacity_sufficient": true,
+    "distribution": "Ubuntu",
+    "execution_requested": false,
+    "other_running_distribution_count": 0,
+    "persistent_execution_policy_changed": false,
+    "physical_memory_bytes": 17022767104,
+    "required_free_bytes": 97007960064,
+    "source_running": true,
+    "source_vhd_bytes": 43135270912,
+    "syntax_verified": true,
+    "unconfirmed_export_rejected": true,
+    "wsl_version": 2
+  }
+}

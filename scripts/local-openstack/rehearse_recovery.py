@@ -171,7 +171,8 @@ def sql_client(directory):
             '--batch', '--raw', '--skip-column-names', '--skip-reconnect']
 
 
-def restore_sql(source, directory):
+def restore_sql(source, directory, *, databases=None):
+    databases = backup.database_scope(databases)
     datadir = subdirectory(directory, 'data')
     account = pwd.getpwuid(os.geteuid()).pw_name
     run(['mariadb-install-db', '--no-defaults', '--datadir=' + str(datadir),
@@ -180,18 +181,19 @@ def restore_sql(source, directory):
         '--socket=' + str(directory / 'sql.sock'), '--pid-file=' + str(directory / 'sql.pid'),
         '--log-error=' + str(directory / 'sql.log'), '--tmpdir=' + str(directory),
         '--skip-networking', '--skip-log-bin', '--skip-slave-start', '--event-scheduler=OFF',
-        '--performance-schema=OFF', '--innodb-buffer-pool-size=64M', '--max-connections=5']
+        '--performance-schema=OFF', '--innodb-buffer-pool-size=64M', '--max-connections=5',
+        '--local-infile=0', '--secure-file-priv=' + str(directory)]
     with child(command, directory) as process:
         client = sql_client(directory)
         wait_ready(process, lambda: run(client, input_text='SELECT 1;\n', timeout=5))
         with source.open() as stream:
             run(client, input_file=stream, timeout=180)
         actual = run(client, input_text='SHOW DATABASES;\n').splitlines()
-        if set(actual) != set(backup.DATABASES) | {'information_schema', 'mysql', 'performance_schema', 'sys'}:
-            raise RehearsalError('restored SQL database inventory differs from the seven-cloud-database scope')
+        if set(actual) != set(databases) | {'information_schema', 'mysql', 'performance_schema', 'sys'}:
+            raise RehearsalError('restored SQL database inventory differs from the selected recovery scope')
         inventories = {}
-        for name in backup.DATABASES:
-            # Names come only from the fixed seven-database allowlist.
+        for name in databases:
+            # Names come only from the fixed legacy/extended database allowlist.
             tables = run(client, input_text=f"SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='{name}' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;\n").splitlines()
             if not tables or any(not re.fullmatch('[a-zA-Z_][a-zA-Z0-9_]*', table) for table in tables):
                 raise RehearsalError('missing or unexpected restored SQL table inventory')

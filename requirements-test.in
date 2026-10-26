@@ -1,0 +1,4 @@
+# Offline SDK contract tests; no cloud credentials or provider calls.
+# Resolve against the rendered Gazpacho constraints plus explicit security overlay.
+openstacksdk==4.10.0
+requests==2.34.2

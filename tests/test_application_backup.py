@@ -25,6 +25,13 @@ finally:
 
 
 class ApplicationBackupTests(unittest.TestCase):
+    def test_extended_database_scope_adds_cinder_without_allowing_arbitrary_sql_identifiers(self):
+        self.assertEqual(setup.database_scope(), setup.DATABASES)
+        self.assertEqual(setup.database_scope(setup.DATABASES + ('cinder',)), setup.DATABASES + ('cinder',))
+        for scope in (('mysql',), setup.DATABASES + ('arbitrary',), ('keystone;DROP DATABASE nova',)):
+            with self.assertRaises(RuntimeError):
+                setup.database_scope(scope)
+
     def test_disk_selection_rejects_foreign_paths_extra_disks_and_nvram(self):
         server_id = str(uuid4())
         with tempfile.TemporaryDirectory() as directory, patch.object(setup, 'INSTANCES_ROOT', Path(directory)):

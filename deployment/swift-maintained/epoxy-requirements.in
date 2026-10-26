@@ -1,0 +1,3 @@
+# Intermediate source SLURP checkpoint on the proposed Ubuntu 24.04 bridge.
+swift==2.35.5
+keystonemiddleware==10.9.1

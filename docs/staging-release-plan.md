@@ -1,5 +1,7 @@
 # Staging Release Plan
 
+**2026-10-27 recovery update:** The [single completion checklist](poc-completion-checklist.md) distinguishes current local work from external gates. Fresh source database/jobs restores and isolated maintained-runtime checks passed; whole-WSL recovery and upgrade approval remain open. [T47](tasks/T47.md) records the next implementation milestone. The upstream Swift runtime proposal is a local integration/maintenance decision, not staging Kolla acceptance. Gate definitions below remain authoritative; in particular Gate 5 is controlled production rollout, not an automatic staging deployment authorization.
+
 **Status:** Planning baseline; the active local POC goal is a browser-ready, secure, multi-tenant self-service platform; staging target, scope, and owners are not yet selected or approved
 **Delivery path:** Complete the expanded local browser/usage/billing acceptance, then carry its evidence into a separate staging validation; promote only after staging acceptance and production approval
 **Purpose:** Connect the expanded platform requirements and evidence to a distinct staging release process and the long-term data-center production direction.

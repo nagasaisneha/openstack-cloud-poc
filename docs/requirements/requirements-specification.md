@@ -1,6 +1,6 @@
 # OpenStack Cloud Management Platform --- Requirements Specification
 
-**Version:** 1.4\
+**Version:** 1.5\
 **Status:** The active goal is a browser-ready, multi-tenant self-service cloud platform with administration, supported resource provisioning, real usage tracking, project-level billing and auditability. Existing Task 11 evidence is a core infrastructure baseline only; API-only or Horizon-only completion does not satisfy this specification. Staging and production remain separate; the staging target is unselected. AWS-hosted OpenStack and AWS-native provisioning are outside the approved implementation scope.\
 **Development environment:** Windows 11 laptop with WSL2 Ubuntu\
 **Staging target:** Not selected or approved\
@@ -8,6 +8,8 @@
 **Purpose:** Define the browser-ready local OpenStack platform and its acceptance evidence, and connect that evidence to a separate staging release process without treating local results as staging or production proof.
 
 ## 1. Project goal
+
+The [single execution checklist](../poc-completion-checklist.md) tracks completion, blockers and staging-only evidence; the [capability matrix](capability-traceability.md) maps each requirement to implementation and acceptance. Recovery preparation T47 precedes upgrade approval T46. Passing an isolated source database or Swift-engine restore does not complete whole-WSL recovery, live service migration or any final maintained-release workflow. A proposed upstream Swift runtime requires explicit maintenance ownership; it must not be described as a vendor-supported Ubuntu package path.
 
 Deliver the local OpenStack POC as a browser-ready, secure, multi-tenant self-service platform. Administrators must manage projects, users, roles, quotas, service availability, resource usage, pricing, project billing and audit history. Tenant users must see and manage only their authorized account, projects and resources, with project-level usage and billing shared by authorized project roles. The backend must enforce every authorization decision; hiding controls in the UI is insufficient. Real supported-resource usage must be distinguished from allocation and from calculated charge. Simulated data, estimates, payments and tax-compliant invoices must be labelled accurately and must not be claimed as implemented when absent.
 

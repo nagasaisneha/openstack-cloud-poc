@@ -214,17 +214,18 @@ class RecoveryRehearsalTests(unittest.TestCase):
 @unittest.skipUnless(os.environ.get('POC_ISOLATED_DAEMON_TESTS') == '1',
                      'opt-in private daemon round trips; no live service access')
 class IsolatedDaemonRecoveryTests(unittest.TestCase):
-    def test_actual_seven_database_import_in_a_private_datadir(self):
-        with tempfile.TemporaryDirectory(prefix='poc-test-sql-') as directory:
-            root = Path(directory)
-            source = root / 'sample.sql'
-            source.write_text('\n'.join(f'CREATE DATABASE `{name}`; USE `{name}`; CREATE TABLE evidence (value INT); INSERT INTO evidence VALUES (42);'
-                                        for name in setup.backup.DATABASES))
-            digest = setup.backup.checksum(source)
-            result = setup.restore_sql(source, setup.subdirectory(root, 'sql'))
-            self.assertEqual(result['databases'], dict.fromkeys(setup.backup.DATABASES, 1))
-            self.assertTrue(result['child_stopped'])
-            self.assertEqual(setup.backup.checksum(source), digest)
+    def test_actual_supported_database_scopes_import_in_private_datadirs(self):
+        for databases in (setup.backup.DATABASES, setup.backup.DATABASES + ('cinder',)):
+            with self.subTest(databases=databases), tempfile.TemporaryDirectory(prefix='poc-test-sql-') as directory:
+                root = Path(directory)
+                source = root / 'sample.sql'
+                source.write_text('\n'.join(f'CREATE DATABASE `{name}`; USE `{name}`; CREATE TABLE evidence (value INT); INSERT INTO evidence VALUES (42);'
+                                            for name in databases))
+                digest = setup.backup.checksum(source)
+                result = setup.restore_sql(source, setup.subdirectory(root, 'sql'), databases=databases)
+                self.assertEqual(result['databases'], dict.fromkeys(databases, 1))
+                self.assertTrue(result['child_stopped'])
+                self.assertEqual(setup.backup.checksum(source), digest)
 
     def test_actual_ovsdb_restore_into_an_empty_isolated_database(self):
         with tempfile.TemporaryDirectory(prefix='poc-test-ovs-') as directory:
