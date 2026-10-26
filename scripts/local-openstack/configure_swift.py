@@ -530,12 +530,8 @@ def validate_swift_endpoint(endpoint, region_id, service_id):
 
 def repair_regionless_owned_endpoint(identity, endpoint, region, service, state):
     """Repair only endpoints created by this run with the old region field."""
-    valid_interface = endpoint.interface in {'public', 'internal', 'admin'}
-    exact_task_endpoint = (valid_interface and endpoint.url == API_URL
-                           and endpoint.is_enabled is True
-                           and endpoint.service_id == service.id
-                           and endpoint.region_id is None)
-    require(exact_task_endpoint and state.get('service_create_intent') is True
+    require(regionless_endpoint_matches(endpoint, service)
+            and state.get('service_create_intent') is True
             and state.get('service_id') == service.id, 'unexpected_swift_endpoint')
 
     readiness_path = Path(state.get('readiness_report', ''))
@@ -566,6 +562,12 @@ def repair_regionless_owned_endpoint(identity, endpoint, region, service, state)
     validate_swift_endpoint(repaired, region.id, service.id)
     repairs[key] = dict(expected_intent, phase='verified')
     save(state)
+
+
+def regionless_endpoint_matches(endpoint, service):
+    return (endpoint.interface in {'public', 'internal', 'admin'}
+            and endpoint.url == API_URL and endpoint.is_enabled is True
+            and endpoint.service_id == service.id and endpoint.region_id is None)
 
 
 def complete_interrupted_endpoint_repair(endpoint, region, service, state):
@@ -629,13 +631,23 @@ def ensure_identity(cloud, values, state):
     region = identity.find_region('RegionOne', ignore_missing=False)
     endpoints = list(identity.endpoints(service_id=service.id))
     for endpoint in endpoints:
+        require(endpoint.interface in {'public', 'internal', 'admin'}, 'unexpected_swift_endpoint')
+    for interface in ('public', 'internal', 'admin'):
+        require(sum(item.interface == interface for item in endpoints) <= 1,
+                'duplicate_swift_endpoint')
+    # Validate every existing endpoint before repairing any region field.
+    for endpoint in endpoints:
+        if endpoint.region_id is None:
+            require(regionless_endpoint_matches(endpoint, service), 'unexpected_swift_endpoint')
+        else:
+            validate_swift_endpoint(endpoint, region.id, service.id)
+    for endpoint in endpoints:
         if endpoint.region_id is None:
             repair_regionless_owned_endpoint(identity, endpoint, region, service, state)
         validate_swift_endpoint(endpoint, region.id, service.id)
         complete_interrupted_endpoint_repair(endpoint, region, service, state)
     for interface in ('public', 'internal', 'admin'):
         matches = [item for item in endpoints if item.interface == interface]
-        require(len(matches) <= 1, 'duplicate_swift_endpoint')
         if not matches:
             identity.create_endpoint(service_id=service.id, interface=interface,
                                      region_id=region.id, url=API_URL, is_enabled=True)
