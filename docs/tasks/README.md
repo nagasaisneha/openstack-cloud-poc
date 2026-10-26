@@ -72,7 +72,7 @@ Status definitions: **Covered** means the planned tasks address all stated claus
 | POC-015 — Management API design and skeleton | T12 | Covered | Contract, auth, schemas, errors, and tests precede implementation. |
 | POC-016 — OpenStack SDK integration | T13 | Covered | Scoped read/provision operations; cloud mutations need explicit task-specific approval. |
 | POC-017 — Job tracking | T14, T16, Task 11 | Covered for the accepted local application path | The real SDK application records durable job/phase/idempotency state and observed Nova provider results. The separate fixture service remains simulated; this does not claim a general distributed worker platform or staging behavior. |
-| POC-018 — Usage data collection | T20, T37 | Partially covered | Fixture samples preserve project, unit and provenance; no real meter is installed or verified. |
+| POC-018 — Usage data collection | T20, T37 | Partially covered | Nova compute allocation-hours are read-only and project-attributed; no Ceilometer/Gnocchi, network, Cinder, or Swift meters are verified. |
 | POC-019 — Monitoring and dashboards | T26, T41 | Partially covered | PCP host load/memory metrics and units are verified; retention remains unknown, and no POC/OpenStack metric source, dashboard, alert or application logging was validated. |
 | POC-020 — Usage reporting and automation | T21, T22, T31, T38 | Partially covered | Fixture summaries, a configurable offline billing domain and staging automation package exist; no real meter-backed demonstration bill has passed. |
 | POC-021 — GPU feasibility assessment | T23 | Covered | Separates RTX host/container checks from Nova passthrough; no MIG assumption. |
@@ -317,7 +317,7 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 
 ### T20 — Usage data source integration
 
-- **Execution record:** [`T20.md`](T20.md) — fixture source passes; read-only Nova allocation-hours adapter and protected collector are implemented and unit-tested; live collection remains pending.
+- **Execution record:** [`T20.md`](T20.md) — fixture path and live read-only Nova allocation-hours collection pass; broader utilization, network, Cinder, Swift and staging meters remain unverified.
 
 - **Prerequisites:** Named usage source confirmed (Ceilometer/Gnocchi, compatible CloudKitty where present, or scoped API snapshots); explicit approval for any read-only metering endpoint contact and sample data if needed.
 - **Dependencies:** T07; T17 for usage from a test VM, and T18/T19 only for their respective usage dimensions. Fixture data may be used if no real workload is approved/available.
