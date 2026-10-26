@@ -81,7 +81,10 @@ def main():
                     raise RuntimeError('retained VM project ownership check failed')
                 response = cloud.compute.get(
                     '/os-simple-tenant-usage/' + state['project_id'],
-                    params={'start': start.isoformat(), 'end': end.isoformat()},
+                    # Nova's usage API expects UTC timestamps without an
+                    # offset suffix (unlike many other OpenStack APIs).
+                    params={'start': start.strftime('%Y-%m-%dT%H:%M:%S'),
+                            'end': end.strftime('%Y-%m-%dT%H:%M:%S')},
                     raise_exc=True,
                 )
                 samples = samples_from_nova_usage(response.json(), state['project_id'], start, end)
