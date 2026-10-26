@@ -74,6 +74,8 @@ class HorizonLocalConfigTests(unittest.TestCase):
         self.assertIn("BEGIN: %s\\n", content)
         self.assertIn("PASS: %s\\n", content)
         self.assertIn("rollback preparation exited during", content)
+        self.assertIn('awk \'$1 == "Candidate:" {candidate=$2} END {if (candidate == "") exit 1; print candidate}\'', content)
+        self.assertNotIn("awk '/Candidate:/ {print $2; exit}'", content)
         for operation in (
             "apt-get install --no-install-recommends",
             "systemctl restart",

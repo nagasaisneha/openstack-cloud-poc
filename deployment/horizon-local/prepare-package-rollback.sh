@@ -69,7 +69,9 @@ fi
 installed_yaml=$(dpkg-query -W -f='${Version}' python3-yaml 2>/dev/null) || die 'python3-yaml installed version is unavailable'
 [[ $installed_yaml == "$YAML_VERSION" ]] || die 'python3-yaml version differs from the reviewed rollback artifact'
 
-candidate=$(apt-cache policy openstack-dashboard | awk '/Candidate:/ {print $2; exit}')
+candidate=$(apt-cache policy openstack-dashboard \
+    | awk '$1 == "Candidate:" {candidate=$2} END {if (candidate == "") exit 1; print candidate}') \
+    || die 'Horizon package candidate lookup failed'
 [[ $candidate == "$HORIZON_VERSION" ]] || die 'Horizon package candidate differs from the reviewed Caracal version'
 
 [[ -f "$YAML_DEB" && ! -L "$YAML_DEB" ]] || die 'verified python3-yaml rollback package is missing from /tmp'
