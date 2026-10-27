@@ -290,6 +290,7 @@ def main():
     action.add_argument('--plan', action='store_true')
     action.add_argument('--prepare', action='store_true')
     action.add_argument('--resume', type=Path)
+    action.add_argument('--verify-prepared', type=Path)
     parser.add_argument('--confirm-recovery-maintenance', action='store_true')
     args = parser.parse_args()
     if os.geteuid() != 0:
@@ -302,12 +303,36 @@ def main():
         descriptor = os.open(LOCK, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         with os.fdopen(descriptor, 'a') as lock:
             protected(LOCK); fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            if args.resume:
-                path = args.resume.absolute()
+            if args.resume or args.verify_prepared:
+                path = (args.resume or args.verify_prepared).absolute()
                 if path.parent.parent != DATA or not path.parent.name.startswith('cold-recovery-') or path.name != 'checkpoint.json':
                     raise ColdRecoveryError('unexpected_checkpoint_path')
                 protected(path.parent, directory=True); protected(path)
-                record = json.loads(path.read_text()); resume(path, record)
+                record = json.loads(path.read_text())
+                if args.verify_prepared:
+                    if (record.get('purpose') != 'cold_recovery_maintenance' or record.get('schema') != 1
+                            or record.get('server_id') != readiness.DEMO_SERVER
+                            or set(record.get('units_before', {})) != set(UNITS)):
+                        raise ColdRecoveryError('unexpected_checkpoint_scope')
+                    bundle = verify_prepared_checkpoint(path, record)
+                    if record.get('guest_stop') != {'nova_status': 'SHUTOFF', 'power_state': 4,
+                                                    'libvirt_confirmed': True}:
+                        raise ColdRecoveryError('guest_stop_not_verified')
+                    active = [unit for unit, before in record['units_before'].items()
+                              if before.get('ActiveState') == 'active']
+                    current = {unit: operations.systemd_state(unit).get('ActiveState') for unit in active}
+                    not_quiesced = {unit: value for unit, value in current.items() if value != 'inactive'}
+                    if not_quiesced:
+                        raise ColdRecoveryError('services_not_quiesced')
+                    print('POC cold recovery checkpoint: ' + json.dumps({
+                        'phase': record['phase'], 'services_quiesced': True,
+                        'guest_stop_verified': True, 'bundle_hashes_verified': True,
+                        'bundle_files': [{'name': item.name, 'bytes': item.stat().st_size}
+                                         for item in sorted(bundle.iterdir())],
+                        'active_services_before': len(active), 'source_upgrade_performed': False,
+                        'full_wsl_recovery_verified': False}, sort_keys=True))
+                    return 0
+                resume(path, record)
             else:
                 if args.prepare and not args.confirm_recovery_maintenance:
                     raise ColdRecoveryError('explicit_recovery_maintenance_confirmation_required')

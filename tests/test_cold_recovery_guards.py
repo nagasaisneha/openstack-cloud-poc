@@ -71,6 +71,10 @@ class ColdRecoveryGuardTests(unittest.TestCase):
                 cold.resume(Path('/unused/checkpoint.json'), record)
             run.assert_not_called()
 
+    def test_checkpoint_verifier_rejects_incomplete_phase_without_reading_bundle(self):
+        with self.assertRaisesRegex(RuntimeError, 'checkpoint_not_fully_prepared'):
+            cold.verify_prepared_checkpoint(Path('/missing/checkpoint.json'), {'phase': 'stopping_services'})
+
     def test_ovn_database_snapshot_precedes_stopping_ovn_database_servers(self):
         events = []
         with tempfile.TemporaryDirectory() as directory:
