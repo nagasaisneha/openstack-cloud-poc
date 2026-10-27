@@ -290,11 +290,40 @@ class RestartReadinessTests(unittest.TestCase):
             (root / 'demo-resume.json').write_text(json.dumps({
                 'server_id': setup.DEMO_SERVER, 'run_id': 'run-marker', 'phase': 'active',
                 'observed_at': '2026-10-25T12:07:37Z'}))
-            (root / 'demo-resume-reviewed-retry.json').write_text('{"phase":"start_intent"}')
+            (root / 'demo-resume-reviewed-retry.json').write_text(json.dumps({
+                'server_id': setup.DEMO_SERVER, 'run_id': 'run-marker', 'phase': 'start_intent'}))
             cloud = NS(compute=NS(start_server=Mock()))
-            with self.assertRaisesRegex(setup.ReadinessError, 'already exists'):
+            with self.assertRaisesRegex(setup.ReadinessError, 'intent is incomplete'):
                 setup.reviewed_retry_demo(cloud, self.demo_scope())
             cloud.compute.start_server.assert_not_called()
+
+    def test_reviewed_retry_appends_new_intent_after_later_confirmed_stop(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(setup.launch, 'DATA_DIR', Path(directory)), \
+             patch.object(setup.guest, 'protected_file'), \
+             patch.object(setup, 'owned_demo', side_effect=[self.demo(), self.demo('ACTIVE', 1)]), \
+             patch.object(setup.lifecycle, 'settled', side_effect=[True, True]), \
+             patch.object(setup.common, 'run', return_value=setup.DEMO_SERVER + '\n'), \
+             patch.object(setup, 'confirmed_stop_after_previous_start', return_value={'action': 'stop'}) as stop, \
+             patch.object(setup.operations, 'capacity', return_value={'meminfo_kib': {'MemAvailable': 2 * 1024 * 1024}}), \
+             contextlib.redirect_stdout(io.StringIO()):
+            root = Path(directory)
+            (root / 'demo-resume.json').write_text(json.dumps({
+                'server_id': setup.DEMO_SERVER, 'run_id': 'run-marker', 'phase': 'active',
+                'observed_at': '2026-10-25T12:07:37Z'}))
+            legacy = root / 'demo-resume-reviewed-retry.json'
+            legacy.write_text(json.dumps({
+                'server_id': setup.DEMO_SERVER, 'run_id': 'run-marker', 'phase': 'stable',
+                'stable_at': '2026-10-25T17:42:35Z'}))
+            cloud = NS(compute=NS(start_server=Mock()))
+            result = setup.reviewed_retry_demo(cloud, self.demo_scope())
+            new_intent = Path(result['intent_record'])
+            self.assertNotEqual(new_intent, legacy)
+            self.assertTrue(new_intent.is_file())
+            self.assertEqual(json.loads(new_intent.read_text())['phase'], 'active')
+            self.assertEqual(json.loads(legacy.read_text())['phase'], 'stable')
+            stop.assert_called_once()
+            cloud.compute.start_server.assert_called_once_with(setup.DEMO_SERVER)
 
     def test_stability_watch_records_active_observation_without_sleep_for_zero_window(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(setup.guest, 'protected_file'):

@@ -36,11 +36,15 @@ from audit_upgrade_recovery import DATA, LOCK, PACKAGES, SCHEMAS, broker_invento
 
 APPS = tuple(dict.fromkeys((*swift.ALL_UNITS, 'apache2.service', *cycle.STOP_UNITS,
                            'cinder-scheduler.service', 'cinder-volume.service')))
-NETWORK_WRITERS = ('ovn-controller-vtep.service', 'ovn-controller.service', 'ovn-northd.service')
-INFRA = ('rabbitmq-server.service', 'mariadb.service', 'ovn-central.service',
+NETWORK_CONTROLLERS = ('ovn-controller-vtep.service', 'ovn-controller.service')
+INFRA = ('ovn-northd.service', 'ovn-ovsdb-server-nb.service', 'ovn-ovsdb-server-sb.service',
+         'rabbitmq-server.service', 'mariadb.service', 'ovn-central.service',
          'openvswitch-switch.service', 'libvirtd.service', 'tgt.service')
-UNITS = APPS + NETWORK_WRITERS + INFRA
-START = ('openvswitch-switch.service', 'ovn-central.service', 'ovn-northd.service',
+POST_SNAPSHOT_INFRA = tuple(unit for unit in INFRA if unit not in {
+    'ovn-northd.service', 'ovn-ovsdb-server-nb.service', 'ovn-ovsdb-server-sb.service'})
+UNITS = APPS + NETWORK_CONTROLLERS + INFRA
+START = ('openvswitch-switch.service', 'ovn-central.service',
+         'ovn-ovsdb-server-nb.service', 'ovn-ovsdb-server-sb.service', 'ovn-northd.service',
          'ovn-controller.service', 'ovn-controller-vtep.service', 'mariadb.service',
          'rabbitmq-server.service', 'libvirtd.service', 'tgt.service', 'apache2.service',
          'glance-api.service', 'neutron-server.service', 'neutron-ovn-metadata-agent.service',
@@ -173,7 +177,10 @@ def prepare(cloud, state, record, path):
         cloud.compute.stop_server(readiness.DEMO_SERVER)
     record['guest_stop'] = cycle.wait_vm(cloud, state, 'SHUTOFF', 4)
     save(path, record, 'vm_stopped')
-    stop_units(APPS + NETWORK_WRITERS, record, path)
+    # Controllers can write Southbound state. Stop them before taking the
+    # OVSDB snapshots, but leave northd and both OVSDB servers available until
+    # all three online snapshots have completed.
+    stop_units(APPS + NETWORK_CONTROLLERS, record, path)
     broker, private = broker_inventory()
     if broker['consumers'] or broker['messages'] or broker['messages_unacknowledged']:
         raise ColdRecoveryError('broker_clients_or_work_remain')
@@ -190,7 +197,11 @@ def prepare(cloud, state, record, path):
     targets = common.run(['tgtadm', '--lld', 'iscsi', '--op', 'show', '--mode', 'target'], timeout=15)
     if targets.strip():
         raise ColdRecoveryError('unexpected_iscsi_export_requires_review')
-    stop_units(INFRA, record, path)
+    # Database snapshots above require the OVN sockets. Stop northd first,
+    # then its database servers, before shutting down the remaining platform.
+    stop_units(('ovn-northd.service', 'ovn-ovsdb-server-nb.service',
+                'ovn-ovsdb-server-sb.service'), record, path)
+    stop_units(POST_SNAPSHOT_INFRA, record, path)
     common.run(['sync'], timeout=120)
     record['bundle_sha256'] = {item.name: backup.checksum(item) for item in bundle.iterdir() if item.is_file()}
     record['critical_files'] = file_manifest()
@@ -198,11 +209,44 @@ def prepare(cloud, state, record, path):
     save(path, record, 'prepared_for_operator_poweroff')
 
 
+def verify_prepared_checkpoint(path, record):
+    required_files = {'cloud-databases.sql', 'open_vswitch.ovsdb',
+                      'ovn_northbound.ovsdb', 'ovn_southbound.ovsdb',
+                      'domain.xml', 'guest-root.qcow2', 'application-jobs.sqlite'}
+    if (record.get('phase') != 'prepared_for_operator_poweroff'
+            or record.get('services_quiesced') is not True
+            or not isinstance(record.get('critical_files'), dict)
+            or not record.get('critical_files')
+            or not isinstance(record.get('guest_disk_backup'), dict)):
+        raise ColdRecoveryError('checkpoint_not_fully_prepared')
+    bundle = path.parent / 'bundle'
+    try:
+        info = bundle.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0
+                or stat.S_IMODE(info.st_mode) != 0o700):
+            raise ColdRecoveryError('unsafe_recovery_bundle_metadata')
+        files = {item.name for item in bundle.iterdir()}
+        hashes = record.get('bundle_sha256')
+        if files != required_files or not isinstance(hashes, dict) or set(hashes) != required_files:
+            raise ColdRecoveryError('recovery_bundle_incomplete')
+        for name in sorted(required_files):
+            item = bundle / name
+            item_info = item.lstat()
+            if (not stat.S_ISREG(item_info.st_mode) or item_info.st_uid != 0
+                    or stat.S_IMODE(item_info.st_mode) != 0o600 or item_info.st_size == 0
+                    or backup.checksum(item) != hashes[name]):
+                raise ColdRecoveryError('recovery_bundle_hash_or_metadata_mismatch')
+    except OSError as error:
+        raise ColdRecoveryError('recovery_bundle_unavailable') from error
+    return bundle
+
+
 def resume(path, record):
     if (record.get('purpose') != 'cold_recovery_maintenance' or record.get('schema') != 1
             or record.get('server_id') != readiness.DEMO_SERVER or set(record.get('units_before', {})) != set(UNITS)
             or record.get('initial_guest_status') not in ('ACTIVE', 'SHUTOFF')):
         raise ColdRecoveryError('unexpected_checkpoint_scope')
+    verify_prepared_checkpoint(path, record)
     for unit in START:
         if record['units_before'][unit]['ActiveState'] == 'active':
             state = operations.systemd_state(unit)

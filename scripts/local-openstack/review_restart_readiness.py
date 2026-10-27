@@ -404,9 +404,12 @@ def confirmed_stop_after_previous_start(cloud, previous_observed_at):
 
 
 def reviewed_retry_demo(cloud, state):
-    """Start once after a reviewed stop; preserve the original active intent."""
+    """Append one new start intent after a later, confirmed stop.
+
+    Completed stable retry records are immutable history. An incomplete prior
+    intent blocks another start so an uncertain Nova request is never replayed.
+    """
     previous_path = launch.DATA_DIR / 'demo-resume.json'
-    retry_path = launch.DATA_DIR / 'demo-resume-reviewed-retry.json'
     if not (previous_path.exists() or previous_path.is_symlink()):
         raise ReadinessError('saved active demo start intent is required for reviewed retry')
     guest.protected_file(previous_path, 0o600)
@@ -414,7 +417,24 @@ def reviewed_retry_demo(cloud, state):
     if (previous.get('server_id') != DEMO_SERVER or previous.get('run_id') != state['run_id']
             or previous.get('phase') != 'active'):
         raise ReadinessError('saved demo start intent differs from the reviewed active scope')
-    previous_observed_at = parse_utc_timestamp(previous.get('observed_at'))
+    legacy_retry = launch.DATA_DIR / 'demo-resume-reviewed-retry.json'
+    retry_paths = ([legacy_retry] if legacy_retry.exists() or legacy_retry.is_symlink() else [])
+    retry_paths.extend(sorted(launch.DATA_DIR.glob('demo-resume-reviewed-retry-*.json')))
+    completed_retries = []
+    for path in retry_paths:
+        guest.protected_file(path, 0o600)
+        record = json.loads(path.read_text())
+        if record.get('server_id') != DEMO_SERVER or record.get('run_id') != state['run_id']:
+            raise ReadinessError('existing reviewed retry history differs from this scope')
+        if record.get('phase') != 'stable':
+            raise ReadinessError('existing reviewed retry intent is incomplete; preserve it and do not retry')
+        stable_at = parse_utc_timestamp(record.get('stable_at'))
+        completed_retries.append((stable_at, path, record))
+    if completed_retries:
+        previous_observed_at, previous_retry_path, previous_retry = max(completed_retries, key=lambda row: row[0])
+    else:
+        previous_observed_at = parse_utc_timestamp(previous.get('observed_at'))
+        previous_retry_path = None
     server = owned_demo(cloud, state)
     if not lifecycle.settled(server, 'SHUTOFF', 4):
         raise ReadinessError('reviewed retry requires Nova SHUTOFF, power 4 and no pending task')
@@ -427,11 +447,12 @@ def reviewed_retry_demo(cloud, state):
     stop = confirmed_stop_after_previous_start(cloud, previous_observed_at)
     if operations.capacity()['meminfo_kib']['MemAvailable'] < 768 * 1024:
         raise ReadinessError('less than 768 MiB available memory; reviewed retry not submitted')
+    retry_path = launch.DATA_DIR / ('demo-resume-reviewed-retry-' + uuid.uuid4().hex + '.json')
     if retry_path.exists() or retry_path.is_symlink():
-        guest.protected_file(retry_path, 0o600)
-        raise ReadinessError('reviewed retry intent already exists; preserve it and do not retry')
+        raise ReadinessError('new reviewed retry path already exists; preserve it and do not retry')
     record = {'server_id': DEMO_SERVER, 'run_id': state['run_id'], 'phase': 'start_intent',
-              'previous_observed_at': previous['observed_at'], 'reviewed_stop': stop,
+              'previous_observed_at': previous_observed_at.isoformat(), 'reviewed_stop': stop,
+              'previous_retry_record': previous_retry_path.name if previous_retry_path else None,
               'created_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'stability_seconds': RETRY_STABILITY_SECONDS}
     launch.atomic_state(retry_path, record)
@@ -546,7 +567,7 @@ def review(cloud, state, *, report=None, path=None, resume=False, retry_reviewed
         result['reviewed_retry_demo'] = run_check(
             result, 'reviewed_retry_demo', lambda: reviewed_retry_demo(cloud, state), path)
         run_check(result, 'guest_kvm', lambda: lifecycle.verify_acceleration(state), path)
-        retry_path = launch.DATA_DIR / 'demo-resume-reviewed-retry.json'
+        retry_path = Path(result['reviewed_retry_demo']['intent_record'])
         result['stability'] = run_check(
             result, 'stability', lambda: watch_demo_stability(cloud, state, retry_path), path)
     elif resume:
