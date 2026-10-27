@@ -35,6 +35,20 @@ GLOBAL = '#node.session.auth.chap_algs = MD5\n[DEFAULT]\nnode.session.auth.chap_
 
 
 class LoopbackChapTests(unittest.TestCase):
+    def test_continuation_requires_explicit_reviewed_namespace_and_exact_ownership(self):
+        volume, state = self.resources()
+        volume.metadata = {'task49_run_id': state['run_id']}
+        state['ownership_metadata_key'] = 'task49_run_id'
+        chap.assert_owned(volume, state)
+        for key in ('arbitrary_key', 'task18_run_id'):
+            state['ownership_metadata_key'] = key
+            with self.assertRaises(RuntimeError):
+                chap.assert_owned(volume, state)
+        state['ownership_metadata_key'] = 'task49_run_id'
+        volume.project_id = 'foreign'
+        with self.assertRaises(RuntimeError):
+            chap.assert_owned(volume, state)
+
     def resources(self):
         volume_id = '11111111-2222-4333-8444-555555555555'
         state = {'project_id': 'project', 'run_id': 'a' * 32,

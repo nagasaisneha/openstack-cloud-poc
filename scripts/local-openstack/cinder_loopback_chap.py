@@ -117,10 +117,13 @@ def assert_no_session(iqn):
 
 
 def assert_owned(volume, state):
+    metadata_key = state.get('ownership_metadata_key', 'task18_run_id')
+    if metadata_key not in {'task18_run_id', 'task49_run_id'}:
+        raise RuntimeError('unreviewed CHAP ownership metadata key')
     if (str(uuid.UUID(volume.id)) != volume.id
             or volume.id not in {state.get('volume_id'), state.get('clone_id')}
             or volume.project_id != state['project_id']
-            or (volume.metadata or {}).get('task18_run_id') != state['run_id']
+            or (volume.metadata or {}).get(metadata_key) != state['run_id']
             or volume.description != state['marker']
             or volume.status != 'available' or volume.attachments):
         raise RuntimeError('CHAP compatibility requires the exact owned, available, detached test volume')
