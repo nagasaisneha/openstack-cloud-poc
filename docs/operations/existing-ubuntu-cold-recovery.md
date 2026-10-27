@@ -45,17 +45,30 @@ The following are exact procedure steps, **not authorization to run them now**. 
 
    Require `prepared_for_operator_poweroff`. Stop on unknown workloads, volumes, databases, broker consumers/messages, checksum errors or failed service stops. Record the precise `checkpoint.json` path. Do not replay `--prepare` after any partial failure; inspect the checkpoint and use the guarded resume if the original remains available.
 
-3. Before stopping Ubuntu, copy `Export-PocWslBackup.ps1` from the repository into a protected Windows-local folder. Loading it through `\\wsl.localhost\Ubuntu\...` after poweroff can start Ubuntu. In Windows PowerShell, verify **no** WSL distributions are running, then cleanly power off the existing distribution:
+3. Before stopping Ubuntu, copy `Export-PocWslBackup.ps1` from the repository into a protected Windows-local folder. Loading it through `\\wsl.localhost\Ubuntu\...` after poweroff can start Ubuntu. In Windows PowerShell, first verify Ubuntu is running and every other WSL distribution is stopped. This check must allow the expected running Ubuntu; it must not require an empty running list before poweroff:
 
    ```powershell
    $running = @(& wsl.exe --list --running --quiet)
-   if ($LASTEXITCODE -ne 0 -or @($running | Where-Object { ($_ -replace "`0", '').Trim() }).Count -ne 0) { throw 'A WSL distribution is running' }
+   if ($LASTEXITCODE -ne 0) { throw 'WSL running-state observation failed' }
+   $runningNames = @($running | ForEach-Object { ($_ -replace "`0", '').Trim() } | Where-Object { $_ })
+   $otherRunning = @($runningNames | Where-Object { $_ -ne 'Ubuntu' })
+   if ($runningNames -notcontains 'Ubuntu' -or $otherRunning.Count -ne 0) { throw 'Expected Ubuntu only to be running' }
    & wsl.exe --distribution Ubuntu --user root --exec /sbin/poweroff
+   if ($LASTEXITCODE -ne 0) { throw 'Ubuntu poweroff request failed' }
+   $deadline = (Get-Date).AddMinutes(2)
+   do {
+       Start-Sleep -Seconds 2
+       $running = @(& wsl.exe --list --running --quiet)
+       if ($LASTEXITCODE -ne 0) { throw 'WSL running-state observation failed after poweroff' }
+       $runningNames = @($running | ForEach-Object { ($_ -replace "`0", '').Trim() } | Where-Object { $_ })
+       if ($runningNames.Count -eq 0) { break }
+   } while ((Get-Date) -lt $deadline)
+   if ($runningNames.Count -ne 0) { throw 'A WSL distribution is still running; do not export or shut down WSL' }
    ```
 
    Wait for it to stop. Do not shut down WSL if another distribution starts. The Windows export helper must independently observe Ubuntu stopped before proceeding.
 
-4. Run the copied Windows-local helper first in read-only mode, inspect source size and free NTFS capacity, and use a new protected destination outside WSL. Only a later separately approved export may use its `-Execute -ConfirmServicesQuiesced` options:
+4. Run the copied Windows-local helper first in read-only mode, inspect source size and free NTFS capacity, and use a new protected destination outside WSL. Confirm that **all** WSL distributions are stopped; the helper now refuses export if any distribution is running. Only the approved export may use its `-Execute -ConfirmServicesQuiesced` options:
 
    ```powershell
    .\Export-PocWslBackup.ps1 -BackupRoot C:\OpenStackPocBackups
@@ -64,11 +77,11 @@ The following are exact procedure steps, **not authorization to run them now**. 
 
    Require a new export report, source VHDX unchanged before/after export, export SHA256 recorded, and a second independently calculated export hash matching. Keep the VHDX and report in the protected directory. Do not run any WSL import command. This verifies the export's integrity only.
 
-5. With no other WSL distribution running and the independent export safely outside WSL, shut down the **shared utility VM** and boot only the original registration. Verify the registration still points to its original storage path before starting it.
+5. With no WSL distribution running and the independent export safely outside WSL, shut down the **shared utility VM** and boot only the original registration. Verify the registration still points to its original storage path before starting it.
 
    ```powershell
    $running = @(& wsl.exe --list --running --quiet)
-   if ($LASTEXITCODE -ne 0 -or @($running | Where-Object { ($_ -replace "`0", '').Trim() }).Count -ne 0) { throw 'A WSL distribution is running' }
+   if ($LASTEXITCODE -ne 0 -or @($running | ForEach-Object { ($_ -replace "`0", '').Trim() } | Where-Object { $_ }).Count -ne 0) { throw 'A WSL distribution is running' }
    & wsl.exe --shutdown
    if ($LASTEXITCODE -ne 0) { throw 'WSL shutdown failed' }
    & wsl.exe --distribution Ubuntu --user sneha --exec /bin/true

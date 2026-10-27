@@ -75,7 +75,9 @@ $plan = [ordered]@{
     restore_or_boot_verified = $false; host_upgrade_performed = $false
 }
 if (-not $Execute) { $plan | ConvertTo-Json -Depth 4; exit 0 }
-if (-not $ConfirmServicesQuiesced -or $running) { throw 'Approved maintenance must quiesce services and stop Ubuntu before export; no action performed' }
+if (-not $ConfirmServicesQuiesced -or $runningNames.Count -ne 0) {
+    throw 'Approved maintenance must quiesce services and stop every WSL distribution before export; no action performed'
+}
 if ($drive.AvailableFreeSpace -lt $required) { throw 'Insufficient backup capacity' }
 # Reject pre-existing reparse points anywhere in the destination path.
 $ancestor = $root
@@ -104,15 +106,18 @@ $destination = Join-Path $root ('wsl-recovery-' + [Guid]::NewGuid().ToString('N'
 New-Item -ItemType Directory -Path $destination | Out-Null
 Set-PrivateDirectory $destination
 $before = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
-if ((Get-RunningDistributions) -contains $Distribution) { throw 'Source started during backup preparation; private partial directory retained' }
+$runningBeforeExport = @(Get-RunningDistributions)
+if ($runningBeforeExport.Count -ne 0) { throw 'A WSL distribution started during backup preparation; private partial directory retained' }
 $output = Join-Path $destination 'Ubuntu.vhdx'
 & wsl.exe --export $Distribution $output --vhd
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $output)) { throw 'Export failed; preserve partial evidence' }
-if ((Get-RunningDistributions) -contains $Distribution) { throw 'Source unexpectedly running; export not accepted' }
+$runningAfterExport = @(Get-RunningDistributions)
+if ($runningAfterExport.Count -ne 0) { throw 'A WSL distribution unexpectedly started; export not accepted' }
 $after = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
 if ($before -ne $after) { throw 'Source VHD changed; export not accepted' }
 $backupHash = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash
-if ((Get-RunningDistributions) -contains $Distribution) { throw 'Source started during final backup verification; export not accepted' }
+$runningFinal = @(Get-RunningDistributions)
+if ($runningFinal.Count -ne 0) { throw 'A WSL distribution started during final backup verification; export not accepted' }
 $report = [ordered]@{
     schema = 1; created_at = [DateTime]::UtcNow.ToString('o'); distribution = $Distribution;
     export_file = 'Ubuntu.vhdx'; export_sha256 = $backupHash;
