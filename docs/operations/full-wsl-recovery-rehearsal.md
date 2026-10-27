@@ -1,6 +1,6 @@
 # Existing Ubuntu cold backup and reboot rehearsal
 
-**Execution update 2026-10-27:** The user directed continuation under existing backup approval. The checkpoint is prepared and Ubuntu reboot is verified, but the planned backup root is absent and no completed export is evidenced. The stopped retained VM and missing Cinder service still need recovery. Follow the [current handoff](existing-ubuntu-cold-recovery.md#current-continuation-handoff), inspect external reports and reuse the existing checkpoint. Do not repeat preparation/snapshots/VM stop or assume an export exists. No upgrade or backup restore is authorized/performed.
+**Execution update 2026-10-27:** The approved continuation quiesced services but failed reading the locked source VHDX before invoking export. One empty destination is preserved; no backup exists. The original checkpoint/bundle remains valid, guest SHUTOFF, recovery pending. The corrected worker requires all distributions stopped, utility VM shutdown and observed offline file readability before a new export. Follow the [current handoff](existing-ubuntu-cold-recovery.md#current-continuation-handoff); do not relaunch the failed worker or repeat snapshots/VM stop. No upgrade or backup restore is authorized/performed.
 
 Use only the existing Ubuntu WSL registration. No additional distribution may be created/imported/registered. The sections below describe the original rehearsal plan; the current handoff supersedes their earlier preparation-only status.
 

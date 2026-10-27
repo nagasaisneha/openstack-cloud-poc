@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "observed_on": "2026-10-27",
+  "previous_attempt": {
+    "windows_state": "C:\\Users\\ACER\\AppData\\Local\\OpenStackPocContinuation-20261027-4c29e0d1\\state.json",
+    "phase": "failed",
+    "failure_at_phase": "exporting_stopped_original",
+    "failed_at_utc": "2026-10-27T11:36:59.3174351Z",
+    "failure_category": "source_vhd_read_sharing_violation",
+    "exact_lock_owner": "not established",
+    "wsl_export_invoked": false,
+    "export_report_created": false,
+    "backup_created": false,
+    "preserved_empty_directory": "C:\\OpenStackPocBackups\\wsl-recovery-8b54ec8a118644a886948fbf61895209",
+    "empty_directory_verified": true,
+    "linux_quiescence": "passed",
+    "quiesced_at_utc": "2026-10-27T11:36:44.561121+00:00",
+    "explicitly_stopped_units": 24,
+    "dependency_stopped_units": 2,
+    "linux_report_phase": "quiesced_for_missing_export"
+  },
+  "current_source": {
+    "checkpoint": "/root/openstack-poc-acceptance/cold-recovery-qg9_6571/checkpoint.json",
+    "phase": "prepared_for_operator_poweroff",
+    "bundle_hashes_verified": true,
+    "guest": "SHUTOFF",
+    "vm_start_intent": false,
+    "packages_unchanged": true,
+    "reopened_boot_id": "4e0bbf8e-baaf-4418-87b1-6dcf450368ae",
+    "active_original_units": 26,
+    "inactive_original_unit": "cinder-volume.service"
+  },
+  "correction": {
+    "state_at_recording": "prepared; inspect external execution reports for progress",
+    "windows_directory": "C:\\Users\\ACER\\AppData\\Local\\OpenStackPocContinuation-20261027-unlock-9b821e65",
+    "linux_report": "/root/openstack-poc-acceptance/cold-export-continuation-20261027-unlock-9b821e65/report.json",
+    "shutdown_quiesced_utility_vm_before_source_read": true,
+    "refuse_shutdown_if_any_distribution_running": true,
+    "bounded_sharing_violation_read_retry_seconds": 60,
+    "open_source_read_only_and_deny_writes_while_hashing": true,
+    "readable_source_hash_required_before_creating_backup_artifacts": true,
+    "preserve_previous_attempt_and_empty_directory": true,
+    "repeat_snapshots": false,
+    "repeat_vm_stop": false,
+    "automatic_export_or_power_action_retry": false
+  },
+  "verification": {
+    "windows_synthetic_file_tests_passed": 5,
+    "linux_continuation_guard_tests_passed": 8,
+    "existing_cold_guard_tests_passed": 10,
+    "corrected_windows_copy_hashes_and_syntax": "PASS",
+    "corrected_windows_read_only_plan": "PASS; original registration, only Ubuntu running, preserved empty partial directory and adequate capacity"
+  },
+  "primary_guidance": "https://learn.microsoft.com/en-us/windows/wsl/wsl2-mount-disk",
+  "backup_export_completed": false,
+  "checkpoint_resumed": false,
+  "source_upgrade_performed": false,
+  "full_wsl_restore_verified": false
+}

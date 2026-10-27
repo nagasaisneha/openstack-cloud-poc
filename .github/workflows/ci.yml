@@ -50,6 +50,9 @@ jobs:
             [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
             if ($errors.Count) { throw ($errors | Out-String) }
           }
+      - name: Verify offline VHD read guards with synthetic files
+        shell: pwsh
+        run: ./tests/windows/Test-ExportPocWslBackup.ps1
 
   dependency-advisories:
     name: Published dependency advisories (exact pins and dated dispositions)

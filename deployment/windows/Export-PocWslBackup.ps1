@@ -11,7 +11,8 @@ param(
     [ValidateSet('Ubuntu')][string]$Distribution = 'Ubuntu',
     [Parameter(Mandatory = $true)][string]$BackupRoot,
     [switch]$Execute,
-    [switch]$ConfirmServicesQuiesced
+    [switch]$ConfirmServicesQuiesced,
+    [ValidateRange(1, 120)][int]$SourceReleaseTimeoutSeconds = 60
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -20,6 +21,37 @@ function Get-RunningDistributions {
     $names = @(& wsl.exe --list --running --quiet)
     if ($LASTEXITCODE -ne 0) { throw 'WSL running-state observation failed' }
     return @($names | ForEach-Object { ($_ -replace "`0", '').Trim() } | Where-Object { $_ })
+}
+
+function Get-OfflineVhdHash([string]$Path, [int]$ReleaseTimeoutSeconds) {
+    # Stopped distro state alone does not prove that the utility VM released
+    # its VHD. Retry only read-open sharing violations, never export/power actions.
+    $timer = [Diagnostics.Stopwatch]::StartNew()
+    $stream = $null
+    while ($null -eq $stream) {
+        if (@(Get-RunningDistributions).Count -ne 0) {
+            throw 'A WSL distribution is running; offline source hash refused'
+        }
+        try {
+            $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        } catch {
+            $cause = $_.Exception.GetBaseException()
+            $code = $cause.HResult -band 0xffff
+            if ($cause -isnot [IO.IOException] -or $code -notin @(32, 33)) { throw }
+            if ($timer.Elapsed.TotalSeconds -ge $ReleaseTimeoutSeconds) {
+                throw 'Source VHD remains locked; verify WSL utility VM shutdown; preserve existing artifacts'
+            }
+            Start-Sleep -Milliseconds 200
+        }
+    }
+    $algorithm = $null
+    try {
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+    } finally {
+        if ($null -ne $algorithm) { $algorithm.Dispose() }
+        $stream.Dispose()
+    }
 }
 
 function Write-NewJson([string]$Path, $Value) {
@@ -72,7 +104,8 @@ $plan = [ordered]@{
     source_vhd_bytes = $sourceFile.Length; backup_drive_free_bytes = $drive.AvailableFreeSpace;
     required_free_bytes = $required; capacity_sufficient = ($drive.AvailableFreeSpace -ge $required);
     services_quiesced_operator_assertion = [bool]$ConfirmServicesQuiesced;
-    restore_or_boot_verified = $false; host_upgrade_performed = $false
+    restore_or_boot_verified = $false; host_upgrade_performed = $false;
+    source_offline_read_required = $true; source_release_timeout_seconds = $SourceReleaseTimeoutSeconds
 }
 if (-not $Execute) { $plan | ConvertTo-Json -Depth 4; exit 0 }
 if (-not $ConfirmServicesQuiesced -or $runningNames.Count -ne 0) {
@@ -90,6 +123,9 @@ while ($ancestor) {
     }
     $ancestor = [IO.Path]::GetDirectoryName($ancestor)
 }
+# Confirm readable offline source before creating any new backup artifacts.
+# The Windows maintenance worker must first shut down the quiesced WSL VM.
+$before = Get-OfflineVhdHash $source $SourceReleaseTimeoutSeconds
 if (-not (Test-Path -LiteralPath $root)) {
     New-Item -ItemType Directory -Path $root | Out-Null
     Set-PrivateDirectory $root
@@ -105,7 +141,6 @@ foreach ($rule in (Get-Acl -LiteralPath $root).Access) {
 $destination = Join-Path $root ('wsl-recovery-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $destination | Out-Null
 Set-PrivateDirectory $destination
-$before = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
 $runningBeforeExport = @(Get-RunningDistributions)
 if ($runningBeforeExport.Count -ne 0) { throw 'A WSL distribution started during backup preparation; private partial directory retained' }
 $output = Join-Path $destination 'Ubuntu.vhdx'
@@ -113,7 +148,7 @@ $output = Join-Path $destination 'Ubuntu.vhdx'
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $output)) { throw 'Export failed; preserve partial evidence' }
 $runningAfterExport = @(Get-RunningDistributions)
 if ($runningAfterExport.Count -ne 0) { throw 'A WSL distribution unexpectedly started; export not accepted' }
-$after = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
+$after = Get-OfflineVhdHash $source $SourceReleaseTimeoutSeconds
 if ($before -ne $after) { throw 'Source VHD changed; export not accepted' }
 $backupHash = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash
 $runningFinal = @(Get-RunningDistributions)
@@ -122,7 +157,7 @@ $report = [ordered]@{
     schema = 1; created_at = [DateTime]::UtcNow.ToString('o'); distribution = $Distribution;
     export_file = 'Ubuntu.vhdx'; export_sha256 = $backupHash;
     export_bytes = (Get-Item -LiteralPath $output).Length; source_vhd_sha256 = $before;
-    source_unchanged = $true; exported_from_stopped_distribution = $true;
+    source_unchanged = $true; exported_from_stopped_distribution = $true; source_offline_read_verified = $true;
     services_quiesced_operator_assertion = $true; restore_or_boot_verified = $false;
     source_registered_storage_path = $sourceRoot; source_registration = $items[0].PSChildName;
     no_unregistration_or_import_performed = $true
