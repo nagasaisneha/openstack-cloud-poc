@@ -1,6 +1,8 @@
 # Existing Ubuntu cold backup and reboot rehearsal
 
-**Prepared 2026-10-27. Procedure only.** Use only the existing registered `Ubuntu` WSL distribution containing the POC. No second distribution may be created/imported/registered. No maintenance, poweroff, export, restore, or upgrade has been run under this procedure.
+**Execution update 2026-10-27:** The user directed continuation under existing backup approval. The checkpoint is prepared and Ubuntu reboot is verified, but the planned backup root is absent and no completed export is evidenced. The stopped retained VM and missing Cinder service still need recovery. Follow the [current handoff](existing-ubuntu-cold-recovery.md#current-continuation-handoff), inspect external reports and reuse the existing checkpoint. Do not repeat preparation/snapshots/VM stop or assume an export exists. No upgrade or backup restore is authorized/performed.
+
+Use only the existing Ubuntu WSL registration. No additional distribution may be created/imported/registered. The sections below describe the original rehearsal plan; the current handoff supersedes their earlier preparation-only status.
 
 The [detailed procedure](existing-ubuntu-cold-recovery.md) quiesces the sole retained demo and its active POC services, creates a protected service-level recovery checkpoint, cleanly stops Ubuntu, exports the distro to a new protected Windows file, then boots the same Ubuntu registration and resumes its services/guest from the checkpoint. The export is an independent backup file and remains unregistered.
 
@@ -24,4 +26,4 @@ If any step fails or its result is ambiguous, stop and preserve the original reg
 
 ## Authorization boundary
 
-The commands in the detailed procedure are not permission to run maintenance. A separate explicit approval is required for the downtime window and service/guest stop. The existing Windows script accepts only an already stopped source and creates a new export directory. It does not import or restore a distro. OS/OpenStack upgrade approval remains a later gate after recovery evidence and unresolved service-compatibility decisions are reviewed.
+Existing backup approval covers this scoped cold export and existing-checkpoint recovery, preserving completed work. The Windows script accepts only a stopped source and creates a new export directory; it does not import or restore a distro. OS/OpenStack upgrade approval remains a later gate after recovery and compatibility review.

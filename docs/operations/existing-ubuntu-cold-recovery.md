@@ -1,6 +1,18 @@
 # Existing Ubuntu cold backup and reboot procedure
 
-Prepared 2026-10-27. **Procedure preparation only. Maintenance, poweroff, export, recovery and upgrades have not been authorized or run by this procedure.** It operates only on the already registered `Ubuntu` WSL distribution containing the POC. The independent VHDX export is a backup file; this procedure never imports, registers, clones, or boots it as a distribution.
+Prepared 2026-10-27. **Execution update:** Existing backup approval covers continuation. The original cold checkpoint is prepared, its seven bundle hashes pass, and Ubuntu has rebooted. The planned Windows backup folder is absent; no completed export is evidenced. Checkpoint recovery remains pending. The historical command sequence below must not be replayed from the beginning. No upgrade is authorized. Only the existing Ubuntu registration is used; an exported backup remains unregistered.
+
+## Current continuation handoff
+
+Reuse /root/openstack-poc-acceptance/cold-recovery-qg9_6571/checkpoint.json, phase prepared_for_operator_poweroff. The retained VM is SHUTOFF with no start intent. Of 27 originally active services, 26 restarted; Cinder volume is inactive because Swift mounted its image on /dev/loop0, reserved by unchanged Cinder configuration. Database/OVSDB, guest disk and application-journal snapshots are already prepared. Do not rerun preparation, snapshots or VM stop.
+
+The prepared Windows-local continuation lives at C:\Users\ACER\AppData\Local\OpenStackPocContinuation-20261027-4c29e0d1. Its state.json, export.log, linux-quiesce.log and linux-resume.log record execution. Do not launch it again if state exists. Its Linux worker/report live under /root/openstack-poc-acceptance/cold-export-continuation-20261027-4c29e0d1/. Scripts/raw reports stay private outside Git. The [sanitized observations](../evidence/cold-export-continuation-2026-10-27.json) describe preparation, not completed export.
+
+After read-only plans and a clean repository check, the worker pauses only restarted original services, powers Ubuntu off for the missing cold export, invokes the existing helper with a new protected destination, independently rehashes the export, verifies the original registration/storage path, and boots that registration to resume the existing checkpoint. It does not repeat the shared WSL shutdown. Keep Ubuntu stopped throughout export/hash verification; opening it or issuing agent tools then can invalidate the export. The worker runs from Windows-local storage so Ubuntu poweroff cannot terminate it.
+
+After verified export, a bounded storage correction may stop only the six original Swift services and cleanly unmount their owned image, start Cinder's existing attachment dependency, verify the original PV/VG, and remount the same Swift image on a free loop device. No persistent configuration changes, formatting, restore or deletion occur. Foreign devices and Cinder volumes/snapshots block correction. Original checkpoint resume starts only missing original services and the retained VM once. Completion also requires KVM, pinned-key guest identity/network/MTU/CPU checks, service health and unchanged bundle hashes/packages. Future boot ordering remains a separate issue.
+
+Require Windows state completed with independent hash verification, Linux report verified and original checkpoint source_resumed. A failed or ambiguous intent requires inspection; no automatic retries or replacement backup. This does not prove full-image restore, same-instance OS rollback, representative nonempty storage/ledger recovery, upgrade or final POC acceptance.
 
 ## What this procedure can verify
 
