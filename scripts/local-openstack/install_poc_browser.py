@@ -30,6 +30,7 @@ REPO = Path(__file__).resolve().parents[2]
 STATE_DIR = Path('/var/lib/openstack-poc-billing')
 RELEASES = Path('/opt/openstack-poc/releases')
 PROXY = Path('/etc/swift/proxy-server.conf')
+CINDER = Path('/etc/cinder/cinder.conf')
 SNIPPET = '''# Managed by openstack-cloud-poc T48
 POC_BILLING_STATE_DIR = "/var/lib/openstack-poc-billing"
 POC_BILLING_COLLECTOR_CONFIG = "/var/lib/openstack-poc-billing/collector.json"
@@ -73,6 +74,41 @@ def swift_metering_config(text):
         'filter:poc_metering': {'paste.filter_factory': 'openstack_cloud_poc.swift_metering:filter_factory'},
         'filter:keystoneauth': {'operator_roles': ','.join(roles)},
     })
+
+
+def cinder_reader_policy(text):
+    # Caracal's deprecated admin_or_owner fallback admits owner readers to
+    # volume writes. Use the registered member/reader rules instead.
+    return common.edit_ini(text, {'oslo_policy': {'enforce_new_defaults': 'true'}})
+
+
+def configure_cinder_reader(directory):
+    info = safety.protected(CINDER)
+    before = CINDER.read_text()
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read_string(before)
+    policy = Path(parser.get('oslo_policy', 'policy_file', fallback='policy.yaml'))
+    if not policy.is_absolute():
+        policy = CINDER.parent / policy
+    safety.require(not policy.exists() or policy.read_text().strip() in ('', '{}', '---'),
+                   'custom_cinder_policy_requires_review')
+    after = cinder_reader_policy(before)
+    if before != after:
+        (directory / 'cinder.conf.before').write_text(before)
+        safety.atomic_write(CINDER, after, stat.S_IMODE(info.st_mode), info.st_gid)
+    # This POC serves Cinder's WSGI API in Apache, alongside Horizon.
+    # Reload even on a retry after configuration was written successfully.
+    safety.run(['apache2ctl', 'configtest'])
+    safety.run(['systemctl', 'reload', 'apache2.service'], timeout=90)
+    from configure_cinder import cloud_ready
+    deadline = time.monotonic() + 45
+    while True:
+        try:
+            cloud_ready(common.read_secrets(common.SECRET_FILE))
+            return
+        except Exception:
+            safety.require(time.monotonic() < deadline, 'cinder_not_healthy_after_reader_policy')
+            time.sleep(2)
 
 
 def package_files():
@@ -220,6 +256,8 @@ def apply():
         safety.run(['systemctl', 'reload', 'apache2.service'], timeout=90)
         safety.run(['curl', '--silent', '--show-error', '--fail', '--head', '--cacert',
                     '/etc/ssl/certs/horizon-poc-local-ca.crt', 'https://localhost:8443/horizon/'], timeout=30)
+        save('enforce_cinder_member_reader_boundary')
+        configure_cinder_reader(directory)
         service, timer = collector_units(release)
         write_root(Path('/etc/systemd/system/poc-usage-collector.service'), service)
         write_root(Path('/etc/systemd/system/poc-usage-collector.timer'), timer)

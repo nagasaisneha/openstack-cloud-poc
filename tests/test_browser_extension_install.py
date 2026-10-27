@@ -28,6 +28,16 @@ operator_roles = admin,member
 
 
 class ExtensionInstallTests(unittest.TestCase):
+    def test_cinder_owner_reader_cannot_use_deprecated_write_fallback(self):
+        original = '[DEFAULT]\ntransport_url = offline-placeholder\n[oslo_policy]\nenforce_new_defaults = false\n[database]\nconnection = offline-placeholder\n'
+        result = installer.cinder_reader_policy(original)
+        parser = configparser.ConfigParser(interpolation=None)
+        parser.read_string(result)
+        self.assertTrue(parser.getboolean('oslo_policy', 'enforce_new_defaults'))
+        self.assertEqual(parser.get('DEFAULT', 'transport_url'), 'offline-placeholder')
+        self.assertEqual(parser.get('database', 'connection'), 'offline-placeholder')
+        self.assertEqual(installer.cinder_reader_policy(result), result)
+
     def test_service_code_directories_remain_traversable_with_private_umask(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'release' / 'package' / 'templates'

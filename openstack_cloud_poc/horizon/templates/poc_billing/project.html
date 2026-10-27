@@ -5,10 +5,10 @@
 <div class="panel panel-default">
   <div class="panel-heading"><h3 class="panel-title">{{ project_name }} <small>{{ project_id }}</small></h3></div>
   <div class="panel-body">
-    <form method="get" class="form-inline"><label for="usage-month">Month (UTC)</label>
+    <form method="get" action="{% url 'horizon:project:poc_billing:index' %}" class="form-inline"><label for="usage-month">Month (UTC)</label>
       <input id="usage-month" type="month" name="month" value="{{ month }}" required class="form-control">
       <button type="submit" class="btn btn-default">View month</button></form>
-    <form method="post" class="form-inline" style="margin-top:12px">{% csrf_token %}
+    <form method="post" action="{% url 'horizon:project:poc_billing:index' %}" class="form-inline" style="margin-top:12px">{% csrf_token %}
       <input type="hidden" name="action" value="refresh"><input type="hidden" name="month" value="{{ month }}">
       <button type="submit" class="btn btn-primary">Refresh provider usage</button></form>
     <p class="help-block">Usage and statements belong to the selected project. Switching projects changes the billing scope.</p>
@@ -34,6 +34,7 @@ Missing meters are unavailable; they are not zero usage.</div>
 {% for item in statements %}<tr><td>{{ item.period_start|date:'Y-m' }}</td><td>{{ item.revision }}</td><td>{{ item.rate_card_version }}</td><td>{{ item.status.value }}</td>
 <td>{{ item.total|default_if_none:'Incomplete' }} {{ item.currency }}</td><td><a href="{% url 'horizon:project:poc_billing:download' item.statement_id 'csv' %}">CSV</a> · <a href="{% url 'horizon:project:poc_billing:download' item.statement_id 'json' %}">JSON</a></td></tr>
 {% empty %}<tr><td colspan="6">No statement has been issued for this project.</td></tr>{% endfor %}</tbody></table>
+{% for item in statements %}{% include 'poc_billing/lines.html' %}{% endfor %}
 <h3>Available demo rate versions</h3>
 {% for card in cards %}<details><summary>{{ card.version }} · {{ card.currency }}</summary><ul>{% for rule in card.rules %}<li>{{ rule.metric }}: {{ rule.rate_per_unit }} {{ card.currency }} / {{ rule.unit }}, effective {{ rule.effective_from|date:'Y-m-d' }} UTC</li>{% endfor %}</ul></details>
 {% empty %}<p>No demo rates are configured. An administrator can add a version.</p>{% endfor %}

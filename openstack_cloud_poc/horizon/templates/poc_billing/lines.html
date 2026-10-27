@@ -1,0 +1,6 @@
+<details><summary>Priced allocation lines · {{ item.period_start|date:'Y-m' }} · revision {{ item.revision }}</summary>
+<p>Statement {{ item.statement_id }}. {{ item.currency }}. These allocation charges cover only the listed meters.</p>
+<table class="table table-condensed"><thead><tr><th>Resource</th><th>Metric</th><th>Quantity</th><th>Unit</th><th>Rate</th><th>Line amount</th></tr></thead><tbody>
+{% for line in item.lines %}<tr><td>{{ line.resource_id }}</td><td>{{ line.metric }}</td><td>{{ line.quantity }}</td><td>{{ line.unit }}</td><td>{{ line.rate_per_unit|default_if_none:'Unavailable' }}</td><td>{{ line.amount|default_if_none:'Unavailable' }}</td></tr>{% empty %}<tr><td colspan="6">No priced allocation lines.</td></tr>{% endfor %}</tbody></table>
+{% if item.incomplete_reasons %}<p>Complete total unavailable. Coverage gaps:</p><ul>{% for reason in item.incomplete_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>{% endif %}
+</details>

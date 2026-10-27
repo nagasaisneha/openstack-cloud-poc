@@ -1,0 +1,4 @@
+html,body{height:100%;margin:0;background:#111827;color:#e5e7eb;font:15px system-ui,sans-serif}
+body{display:flex;flex-direction:column}header{display:flex;align-items:center;gap:24px;padding:14px 20px;background:#1f2937}
+#status{flex:1}button{border:1px solid #64748b;border-radius:5px;background:#334155;color:white;padding:8px 12px}
+button:disabled{opacity:.5}#screen{flex:1;min-height:0;overflow:hidden}

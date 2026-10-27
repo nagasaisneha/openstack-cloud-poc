@@ -1,12 +1,13 @@
 # Local Horizon browser slice
 
-**Status:** Horizon 24.0.1, trusted Windows HTTPS, admin and two tenant browser logins are verified. Custom Usage & Billing panels and scoped usage collection are deployed; full resource/billing acceptance continues in [T48](../../docs/tasks/T48.md).
+**Status:** Horizon 24.0.1, trusted Windows HTTPS, admin/two-tenant login, resource creation, interactive consoles, scoped usage and provisional billing/downloads are verified locally. Start with the [browser quickstart](../../docs/browser-poc-quickstart.md); [T48](../../docs/tasks/T48.md) records exact acceptance limits.
 
 The browser URL is **https://localhost:8443/horizon/**. Existing administrator
 credentials remain in protected Keystone configuration. New POC tenant names
 are `poc-browser-a` and `poc-browser-b`; their separate passwords and SSH keys
 remain private under `/root/openstack-poc-acceptance/browser-poc-20261027/`.
-Read credentials locally as root; never paste them into reports or Git.
+Read login credentials locally as root with `show_browser_access.py --show-passwords`;
+never paste them into reports or Git.
 
 Project users open **Project → Usage & Billing**. Explicit system billing
 administrators open **Admin → Usage & Billing** for versioned demo rates,
@@ -24,7 +25,10 @@ requires the configured single Horizon daemon process (multiple threads work).
 
 Keep the verified Windows backup unchanged. No backup/restore rehearsal,
 additional WSL distribution or OS upgrade is part of browser delivery. Historical
-package-installation and certificate-setup notes follow.
+package-installation and certificate-setup notes follow. Those dated historical
+instructions must not be replayed as backup/restore or upgrade work. The Windows
+CA import and HTTPS path have since passed; older pending statements below
+describe the earlier installation state.
 
 This package targets the existing Ubuntu 22.04 / OpenStack Caracal WSL POC. It keeps the shared Apache service and existing OpenStack APIs in place. It is not a staging or production deployment.
 
