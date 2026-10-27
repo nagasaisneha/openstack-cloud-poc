@@ -7,6 +7,27 @@ from openstack_cloud_poc.keystone_billing_auth import KeystoneBillingPrincipalAd
 
 
 class KeystoneBillingPrincipalAdapterTests(unittest.TestCase):
+    def test_real_sdk_project_token_without_system_stanza_is_project_scoped(self):
+        from keystoneauth1.access import AccessInfoV3
+        access = AccessInfoV3({'token': {
+            'user': {'id': 'user-1'}, 'project': {'id': 'project-1'},
+            'roles': [{'name': 'member'}, {'name': 'billing_viewer'}],
+        }})
+        self.assertIsNone(access.system_scoped)
+        principal = KeystoneBillingPrincipalAdapter(self.session(access)).principal_for('user-1', 'project-1')
+        self.assertEqual(principal.project_bindings[0].roles, frozenset({'billing_viewer'}))
+        self.assertEqual(principal.system_roles, frozenset())
+
+    def test_real_sdk_system_token_does_not_create_project_membership(self):
+        from keystoneauth1.access import AccessInfoV3
+        access = AccessInfoV3({'token': {
+            'user': {'id': 'user-1'}, 'system': {'all': True},
+            'roles': [{'name': 'cloud_admin'}],
+        }})
+        principal = KeystoneBillingPrincipalAdapter(self.session(access)).principal_for('user-1')
+        self.assertEqual(principal.project_bindings, ())
+        self.assertEqual(principal.system_roles, frozenset({'cloud_admin'}))
+
     def session(self, access):
         session = SimpleNamespace()
         session.auth = SimpleNamespace(

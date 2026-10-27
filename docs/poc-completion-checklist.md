@@ -30,8 +30,8 @@ The service-specific backlog below retains future maintained-release acceptance 
 | ID / tasks | Capability | Status | Evidence boundary and next acceptance |
 |---|---|---|---|
 | F01 · T11/T33/T40 | Keystone users, projects, roles, isolation | In progress | Source two-tenant API checks passed historically. Verify live admin/customer login, least privilege and backend denials in the existing Ubuntu; no upgrade dependency. |
-| F02 · T32/T34 | Horizon/self-service dashboard | In progress | Source TLS dashboard endpoint installed; Windows browser CA trust, admin/customer login and complete workflow unverified. Port/retest maintained Horizon. |
-| F03 · T33/T34 | Administrator/customer resource workflows | Not implemented | Complete browser identity/quota/resource/usage/bill workflows and API consistency still absent. |
+| F02 · T32/T34 | Horizon/self-service dashboard | In progress | Horizon TLS, trusted Windows HTTPS and admin/two-tenant Chromium login verified. Full self-service/resource acceptance continues on Caracal. |
+| F03 · T33/T34 | Administrator/customer resource workflows | In progress | Two project/user creations through Horizon verified; bounded quotas and billing roles configured. Resource, quota-edit and billing acceptance continue. |
 | F04 · T11/T16 | Nova provision/lifecycle/KVM | In progress | Retained VM ACTIVE/KVM/SSH verified after live service repair. Verify tenant browser create/access without replacing existing resources. |
 | F05 · T11 | Glance image management | In progress | Preserve existing image/payloads; verify project-visible browser image selection and launch on Caracal. |
 | F06 · T11/T15 | Neutron private networking/security groups | In progress | Retained guest addressing/MTU/ping verified. Tenant browser networking and backend isolation acceptance remain. |
@@ -41,8 +41,8 @@ The service-specific backlog below retains future maintained-release acceptance 
 | F10 · T44 | Automatic unhealthy exclusion/rejoin | Not implemented | Real app outage/recovery with monitor-driven transitions, untouched member admin state and measured traffic/convergence required. |
 | F11 · T18/T35 | Cinder volumes/snapshots/storage | In progress | Existing Cinder image/PV preserved and volume service repaired. Verify browser creation/quotas and usage. Full-backend restore remains unverified and is not a development gate. |
 | F12 · T19/T36 | Object lifecycle/isolation | In progress | Swift is healthy with its original image. Verify browser object workflow, project isolation and usage; restore rehearsal is stopped. |
-| F13 · T20/T37 | Compute/storage/network metering | In progress | Three real Nova allocation-hour samples collected historically. Complete storage/network sources, least privilege, freshness, reset/duplicate handling and reconciliation absent. |
-| F14 · T21/T31/T38/T39 | Configurable demo rates/billing | In progress | Decimal/ledger/CSV/auth code and synthetic-data recovery tested; no complete real usage bill or deployed customer/admin billing UI. Actual ledger location/deployment unverified. |
+| F13 · T20/T37 | Compute/storage/network metering | In progress | Scoped one-minute collector and immutable history deployed. Nova allocation and current Cinder/Swift observations verified; active-only/network meters and storage-hour rating remain unavailable. |
+| F14 · T21/T31/T38/T39 | Configurable demo rates/billing | In progress | Protected ledger and Horizon panels deployed; logins and scope denials verified. Browser rate-entry/statement/download acceptance continues. Incomplete coverage is provisional. |
 | F15 · T33/T35/T36/T43 | Tenant quotas and limits | In progress | Full positive/over-quota and cross-tenant/admin denial workflow across compute/network/storage/LB remains unverified. |
 | F16 · T26/T41 | Monitoring, dashboards, logs, alerts | In progress | Host PCP metrics exist. POC/service/billing/LB dashboards, alert triggers/delivery/recovery and retention are unverified. |
 | F17 · T25/T32/T40 | TLS, secrets, isolation/security | In progress | Source isolation/protected secrets/local Horizon TLS exist. Complete API TLS, browser/role tests, listeners/firewall, rotation, scans and findings disposition remain open. |

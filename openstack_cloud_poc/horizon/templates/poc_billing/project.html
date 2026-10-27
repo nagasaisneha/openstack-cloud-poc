@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Usage & Billing{% endblock %}
+{% block page_header %}{% include 'horizon/common/_page_header.html' with title=page_title %}{% endblock %}
+{% block main %}
+<div class="panel panel-default">
+  <div class="panel-heading"><h3 class="panel-title">{{ project_name }} <small>{{ project_id }}</small></h3></div>
+  <div class="panel-body">
+    <form method="get" class="form-inline"><label for="usage-month">Month (UTC)</label>
+      <input id="usage-month" type="month" name="month" value="{{ month }}" required class="form-control">
+      <button type="submit" class="btn btn-default">View month</button></form>
+    <form method="post" class="form-inline" style="margin-top:12px">{% csrf_token %}
+      <input type="hidden" name="action" value="refresh"><input type="hidden" name="month" value="{{ month }}">
+      <button type="submit" class="btn btn-primary">Refresh provider usage</button></form>
+    <p class="help-block">Usage and statements belong to the selected project. Switching projects changes the billing scope.</p>
+  </div>
+</div>
+{% if source_available %}
+<h3>Current allocations and storage</h3>
+<p>Collected {{ batch.collected_at|date:'Y-m-d H:i:s' }} UTC. Source: <code>{{ batch.source }}</code>.</p>
+<table class="table table-bordered"><thead><tr><th>Instances</th><th>Volumes</th><th>Provisioned volume GiB</th><th>Stored object bytes</th><th>Objects</th></tr></thead>
+<tbody><tr><td>{% if inventory.instances is None %}Unavailable{% else %}{{ inventory.instances|length }}{% endif %}</td><td>{% if inventory.volumes is None %}Unavailable{% else %}{{ inventory.volumes|length }}{% endif %}</td>
+<td>{{ inventory.volume_gib|default_if_none:'Unavailable' }}</td><td>{{ inventory.object_bytes|default_if_none:'Unavailable' }}</td><td>{{ inventory.object_count|default_if_none:'Unavailable' }}</td></tr></tbody></table>
+<h3>Provider-reported compute allocation</h3>
+<p class="help-block">Allocation hours describe provisioned resources. They do not measure active CPU time or network traffic.</p>
+<table class="table table-striped"><thead><tr><th>Resource</th><th>Metric</th><th>Quantity</th><th>Unit</th></tr></thead><tbody>
+{% for sample in batch.samples %}<tr><td>{{ sample.resource_id }}</td><td>{{ sample.metric }}</td><td>{{ sample.quantity }}</td><td>{{ sample.unit }}</td></tr>
+{% empty %}<tr><td colspan="4">No compute allocation samples are available for this collection.</td></tr>{% endfor %}</tbody></table>
+<div class="alert alert-warning"><strong>Coverage gaps</strong><ul>{% for reason in batch.incomplete_reasons %}<li>{{ reason }}</li>{% endfor %}{% for reason in inventory.gaps %}<li>{{ reason }}</li>{% endfor %}</ul>
+Missing meters are unavailable; they are not zero usage.</div>
+{% else %}<div class="alert alert-info">No provider collection is available for this project/month yet. Refresh usage or wait for the collector.</div>{% endif %}
+<h3>Project statements</h3>
+<p>POC charge summaries. Provisional statements do not present a complete total. These are not payment requests or tax invoices.</p>
+<table class="table table-striped"><thead><tr><th>Period (UTC)</th><th>Revision</th><th>Rates</th><th>Status</th><th>Total</th><th>Downloads</th></tr></thead><tbody>
+{% for item in statements %}<tr><td>{{ item.period_start|date:'Y-m' }}</td><td>{{ item.revision }}</td><td>{{ item.rate_card_version }}</td><td>{{ item.status.value }}</td>
+<td>{{ item.total|default_if_none:'Incomplete' }} {{ item.currency }}</td><td><a href="{% url 'horizon:project:poc_billing:download' item.statement_id 'csv' %}">CSV</a> · <a href="{% url 'horizon:project:poc_billing:download' item.statement_id 'json' %}">JSON</a></td></tr>
+{% empty %}<tr><td colspan="6">No statement has been issued for this project.</td></tr>{% endfor %}</tbody></table>
+<h3>Available demo rate versions</h3>
+{% for card in cards %}<details><summary>{{ card.version }} · {{ card.currency }}</summary><ul>{% for rule in card.rules %}<li>{{ rule.metric }}: {{ rule.rate_per_unit }} {{ card.currency }} / {{ rule.unit }}, effective {{ rule.effective_from|date:'Y-m-d' }} UTC</li>{% endfor %}</ul></details>
+{% empty %}<p>No demo rates are configured. An administrator can add a version.</p>{% endfor %}
+{% endblock %}

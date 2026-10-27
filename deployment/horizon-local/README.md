@@ -1,6 +1,30 @@
 # Local Horizon browser slice
 
-**Status:** Horizon 24.0.1 is installed; the package global Apache config is disabled; localhost TLS and the dedicated loopback vhost are installed and locally verified. Windows browser trust and Keystone sign-in remain unverified.
+**Status:** Horizon 24.0.1, trusted Windows HTTPS, admin and two tenant browser logins are verified. Custom Usage & Billing panels and scoped usage collection are deployed; full resource/billing acceptance continues in [T48](../../docs/tasks/T48.md).
+
+The browser URL is **https://localhost:8443/horizon/**. Existing administrator
+credentials remain in protected Keystone configuration. New POC tenant names
+are `poc-browser-a` and `poc-browser-b`; their separate passwords and SSH keys
+remain private under `/root/openstack-poc-acceptance/browser-poc-20261027/`.
+Read credentials locally as root; never paste them into reports or Git.
+
+Project users open **Project → Usage & Billing**. Explicit system billing
+administrators open **Admin → Usage & Billing** for versioned demo rates,
+statement generation and billing audit. Unknown rates/meters remain unavailable;
+incomplete source coverage produces provisional statements without a complete
+total. These are POC summaries, not invoices or payment requests.
+
+`install_poc_browser.py` defaults to a read-only plan; `--apply` installs a
+content-addressed root-owned release, checks imports/templates as the service
+users, and gracefully reloads Horizon. A Horizon-owned timer collects only
+enrolled projects every minute. Check `poc-usage-collector.timer` and its oneshot
+service; inactive after successful collection is normal. Mutable state is
+mode 0600 under `/var/lib/openstack-poc-billing` mode 0700. The existing ledger
+requires the configured single Horizon daemon process (multiple threads work).
+
+Keep the verified Windows backup unchanged. No backup/restore rehearsal,
+additional WSL distribution or OS upgrade is part of browser delivery. Historical
+package-installation and certificate-setup notes follow.
 
 This package targets the existing Ubuntu 22.04 / OpenStack Caracal WSL POC. It keeps the shared Apache service and existing OpenStack APIs in place. It is not a staging or production deployment.
 

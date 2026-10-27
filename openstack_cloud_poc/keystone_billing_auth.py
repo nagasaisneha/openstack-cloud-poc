@@ -63,6 +63,11 @@ class KeystoneBillingPrincipalAdapter:
 
         project_scoped = getattr(access, "project_scoped", False)
         system_scoped = getattr(access, "system_scoped", False)
+        # AccessInfoV3's missing-property wrapper returns None when a token
+        # has no "system" stanza. This means no system scope/privileges; it
+        # must not invalidate a correctly verified project-scoped token.
+        if system_scoped is None:
+            system_scoped = False
         project_id = getattr(access, "project_id", None)
         roles = _role_names(getattr(access, "role_names", None))
         if roles is None or not isinstance(project_scoped, bool) or not isinstance(system_scoped, bool):

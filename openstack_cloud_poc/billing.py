@@ -322,6 +322,7 @@ class BillingStatement:
 class BillingAuditAction(str, Enum):
     RATE_CARD_CONFIGURE = "billing.rate_card.configure"
     RATE_CARD_READ = "billing.rate_card.read"
+    RATE_CARD_LIST = "billing.rate_card.list"
     STATEMENT_GENERATE = "billing.statement.generate"
     STATEMENT_LIST = "billing.statement.list"
     STATEMENT_READ = "billing.statement.read"
@@ -502,6 +503,14 @@ class BillingLedger:
             return RateCard.from_wire(json.loads(row["payload"]))
         except BillingError:
             raise
+        except (sqlite3.Error, TypeError, ValueError, KeyError):
+            raise BillingError(BillingErrorCode.LEDGER_UNAVAILABLE) from None
+
+    def list_rate_cards(self) -> tuple[RateCard, ...]:
+        try:
+            with self._lock:
+                rows = self._db.execute("SELECT payload FROM rate_cards ORDER BY created_at DESC, version").fetchall()
+            return tuple(RateCard.from_wire(json.loads(row['payload'])) for row in rows)
         except (sqlite3.Error, TypeError, ValueError, KeyError):
             raise BillingError(BillingErrorCode.LEDGER_UNAVAILABLE) from None
 
@@ -755,6 +764,28 @@ class BillingService:
             error = BillingError(BillingErrorCode.INVALID_REQUEST)
             self._record_failed_action(principal, BillingAuditAction.RATE_CARD_CONFIGURE, error, correlation)
             raise error from None
+
+    def available_rate_cards(
+        self,
+        principal: BillingPrincipal,
+        project_id: str | None = None,
+        *,
+        correlation_id: str | None = None,
+    ) -> tuple[RateCard, ...]:
+        correlation = self._correlation(correlation_id)
+        try:
+            if project_id is None:
+                _require_system_role(principal, "cloud_admin")
+            else:
+                _require_project_billing_role(principal, project_id)
+            cards = self.ledger.list_rate_cards()
+        except BillingError as error:
+            self._record_failed_action(principal, BillingAuditAction.RATE_CARD_LIST, error,
+                                      correlation, project_id=project_id)
+            raise
+        self._record_audit_event(principal, BillingAuditAction.RATE_CARD_LIST,
+                                 BillingAuditOutcome.SUCCESS, correlation, project_id=project_id)
+        return cards
 
     def project_rate_card(
         self,
