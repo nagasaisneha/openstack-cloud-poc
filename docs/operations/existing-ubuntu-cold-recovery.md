@@ -1,5 +1,13 @@
 # Existing Ubuntu cold backup and reboot procedure
 
+> **Historical procedure — execution stopped by user instruction, 2026-10-27.**
+> The export was created and its SHA256 independently verified. Preserve it
+> unchanged. Do not rerun backup/restore rehearsals or the failed continuations.
+> Full restore verification remains unverified and does not block development.
+> Current live repair and browser delivery are tracked in [T48](../tasks/T48.md).
+> The Cinder image now uses identity-based dynamic loop attachment; the fixed
+> `/dev/loop0` assumptions below describe earlier attempts only.
+
 Prepared 2026-10-27. **Execution update:** Existing backup approval covers continuation. Service quiescence passed, but the Windows worker failed on a source-VHDX sharing violation before invoking export. It left one empty destination directory and no backup. The seven original bundle hashes still pass; guest SHUTOFF, no start intent. Ubuntu was reopened after failure and its services restarted. Preserve the failed attempt and follow the corrected handoff below. No upgrade is authorized.
 
 ## Current continuation handoff

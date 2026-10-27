@@ -303,12 +303,13 @@ def ensure_identity_and_catalog(secrets, cloud, state):
 
 def verify_storage():
     state = json.loads(storage.STATE.read_text())
+    device = state.get('loop_device', '')
     if (state.get('status') != 'prepared' or state.get('volume_group') != storage.VG
-            or state.get('loop_device') != str(storage.LOOP)):
+            or not isinstance(device, str) or re.fullmatch(r'/dev/loop(?:0|[1-9][0-9]*)', device) is None):
         raise RuntimeError('dedicated Cinder storage state does not match expected loop/VG')
-    if storage.loop_inventory() != str(storage.IMAGE):
+    if storage.loop_inventory(device) != str(storage.IMAGE):
         raise RuntimeError('Cinder backing image is not attached to the expected loop device')
-    pv = storage.pv_inventory()
+    pv = storage.pv_inventory(device)
     groups = storage.vg_inventory()
     group = [item for item in groups if item.get('vg_name', '').strip() == storage.VG]
     if (not pv or pv.get('vg_name', '').strip() != storage.VG

@@ -107,8 +107,11 @@ def atomic_create(path, content, mode, gid=0):
     return True
 
 
-def loop_inventory():
-    raw = run(['losetup', '--json', '--list', '--output', 'NAME,BACK-FILE', str(LOOP)])
+def loop_inventory(device=LOOP):
+    expected_device = str(device)
+    if not re.fullmatch(r'/dev/loop(?:0|[1-9][0-9]*)', expected_device):
+        raise RuntimeError('invalid dedicated loop device')
+    raw = run(['losetup', '--json', '--list', '--output', 'NAME,BACK-FILE', expected_device])
     body = json.loads(raw)
     devices = body.get('loopdevices', [])
     if not isinstance(devices, list) or len(devices) > 1:
@@ -118,7 +121,7 @@ def loop_inventory():
     device = devices[0]
     name = device.get('name')
     backing = device.get('back-file')
-    if name != str(LOOP):
+    if name != expected_device:
         raise RuntimeError('unexpected loop device identity')
     if backing is None or backing == '':
         return None
@@ -127,10 +130,12 @@ def loop_inventory():
     return backing
 
 
-def pv_inventory():
+def pv_inventory(device=LOOP):
+    if not re.fullmatch(r'/dev/loop(?:0|[1-9][0-9]*)', str(device)):
+        raise RuntimeError('invalid dedicated loop device')
     result = subprocess.run(
         ['pvs', '--reportformat', 'json', '--units', 'b', '--nosuffix',
-         '--options', 'pv_name,vg_name,pv_uuid', str(LOOP)],
+         '--options', 'pv_name,vg_name,pv_uuid', str(device)],
         text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30, check=False)
     body = parse_pv_report(result.stdout, result.returncode)
     reports = body.get('report', [])
