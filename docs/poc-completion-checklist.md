@@ -21,7 +21,14 @@ Status vocabulary: **Completed and verified**, **In progress**, **Blocked**, **N
 | R09 | Not implemented | OS/OpenStack upgrade execution is outside the current authorized scope. The existing Ubuntu/Caracal is the delivery environment; no extra distribution or staging deployment. |
 | R10 | In progress | Patched hash-locked SDK/Swift dependencies: 737 tests pass with two opt-in skips on each clean Python 3.10/3.12; both Swift dependency checks pass. Published advisory scan has zero unresolved findings and two narrowly dispositioned Swift backport aliases. Windows syntax/read-only/unconfirmed-export refusal pass. CI jobs implemented. Remote CI and complete release artifact acceptance are not yet evidenced. |
 
-The next milestone is **admin and tenant browser login, user/project management, self-service resources, VM access, usage and billing**, tracked in [T48](tasks/T48.md). Backup and restore rehearsals are stopped. Keep full restore verification unverified without using it as a blocker for these features. Protected credentials, runtime records and the unchanged backup remain outside Git.
+The core browser demonstration is verified in [T48](tasks/T48.md). The active
+continuation [T49](tasks/T49.md) prioritizes guest/client access, full browser
+lifecycle, isolation/quotas, complete measurements/billing verification,
+Octavia/failure recovery and monitoring/regression. Backup and restore
+rehearsals are stopped. Full restore remains unverified and is not a development
+gate. Protected credentials/runtime records and the unchanged backup stay
+outside Git. Staging readiness remains an overall objective; staging deployment
+and AI/GPU acceptance are explicitly pending.
 
 ## Every mandatory capability remains in scope
 
@@ -35,7 +42,7 @@ The service-specific backlog below retains future maintained-release acceptance 
 | F04 · T11/T16 | Nova provision/lifecycle/KVM | Verified local subset | Retained VM ACTIVE/KVM/pinned SSH/MTU passed; two new browser-created VMs ACTIVE with HTTPS/WSS consoles. Broader browser lifecycle remains open. |
 | F05 · T11 | Glance image management | In progress | Browser selected and launched a hash-verified public CirrOS copy; original image preserved. Private/shared image mutation cases remain open. |
 | F06 · T11/T15 | Neutron private networking/security groups | In progress | Browser private networks/DHCP subnets and backend foreign-network denial passed. Broader security-group/lifecycle cases remain open. |
-| F07 · T42 | Floating IP/application ingress | Not implemented | Source has no external network/router/FIP. Need reviewed laptop client path and real VM/VIP HTTP response. No public-internet publication implied. |
+| F07 · T42 | Floating IP/application ingress | Verified local VM path; VIP pending | T49 adds isolated logical provider bridge, per-tenant routers/FIPs and source-restricted rules. Native Windows pinned SSH, foreign-key rejection and distinct app HTTP 200 passed for both tenants (2026-10-27 21:18:38 UTC). Only localhost forwards; no physical NIC/Windows route/public exposure. VIP acceptance awaits Octavia. |
 | F08 · T43 | Octavia customer lifecycle | Not implemented | No catalog service/package deployment. Matching maintained OVN provider, roles/quotas and customer LB/listener/pool/member/monitor CRUD required. |
 | F09 · T44 | Two real VM traffic distribution | Not implemented | Two owned app VMs, unique responses, fresh connection distribution and recorded errors required. |
 | F10 · T44 | Automatic unhealthy exclusion/rejoin | Not implemented | Real app outage/recovery with monitor-driven transitions, untouched member admin state and measured traffic/convergence required. |

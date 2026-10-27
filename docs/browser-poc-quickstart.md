@@ -38,8 +38,23 @@ and DHCP subnet, one imported public key, one available 1 GiB Cinder volume,
 one private Swift container and a 40-byte sample text object. The original
 retained VM, image, storage and keys remain separate and preserved.
 Limits per sample project are 2 VMs/2 cores/768 MiB RAM and 2 volumes/2 GiB.
-Private networks have no floating IP or external router. Browser console
-access is verified; a Windows-to-guest SSH route is not configured.
+T49 adds per-tenant routers/floating IPs on an isolated logical provider network.
+Browser consoles and native Windows SSH/application paths are verified. Tenant A
+SSH is `127.0.0.1:2221` and app `http://127.0.0.1:8081/`; tenant B uses SSH port
+2222 and app port 8082. No physical NIC, Windows route or public exposure was
+added. The forwarded connections traverse Neutron's floating-IP/router path.
+
+The native Windows verification places only demo tenant keys and pinned
+known-hosts in `%LOCALAPPDATA%\OpenStackPocAccess-20261028`, with access limited
+to the current user and SYSTEM. For example, in PowerShell:
+
+```powershell
+ssh.exe -p 2221 -i "$env:LOCALAPPDATA\OpenStackPocAccess-20261028\tenant-a-ed25519" -o "UserKnownHostsFile=$env:LOCALAPPDATA\OpenStackPocAccess-20261028\tenant-a-known-hosts" -o StrictHostKeyChecking=yes cirros@127.0.0.1
+```
+
+Use B's key/known-hosts and port 2222 for tenant B. These are local operator
+access paths, not a staging bastion. The app directory is separately marked
+inside each guest; keep guest/application lifecycle receipts in [T49](tasks/T49.md).
 
 ## Usage and demonstration charges
 
