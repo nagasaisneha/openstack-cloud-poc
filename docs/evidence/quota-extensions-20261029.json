@@ -1,0 +1,13 @@
+{
+  "phase": "network_router_and_swift_container_quota_enforcement_verified",
+  "checks": {
+    "network_limit_two_denied_third": true,
+    "router_limit_one_denied_second": true,
+    "swift_container_byte_and_count_413": true,
+    "rejected_object_unchanged_and_no_orphan": true,
+    "foreign_quota_edit_denied": true,
+    "account_wide_quota_claimed": false,
+    "existing_networks_routers_quotas_preserved": true,
+    "new_container_absent": true
+  }
+}

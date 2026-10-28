@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "observed_at": "2026-10-28T19:52:19.239874+00:00",
+  "operations": {
+    "probe_count": 45,
+    "unhealthy": 0,
+    "active_alerts": 0,
+    "snapshot_age_seconds": 8.549
+  },
+  "checks": {
+    "original_cinder_pv_and_image": true,
+    "retained_vm_active": true,
+    "tenant_a_b_active_pinned_ssh_uuid": true,
+    "guest_and_vip_http_probes_healthy": true,
+    "original_demo_lb_active_online": true,
+    "swift_journal_no_poison_or_pending": true,
+    "certified_closed_period_preserved": true
+  },
+  "limits": {
+    "staging_deployed": false,
+    "tenant_gpu_verified": false,
+    "historical_billing_complete": false
+  }
+}
