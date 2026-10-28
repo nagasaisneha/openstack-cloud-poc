@@ -1,15 +1,19 @@
 # Staging deployment proposal
 
 Prepared 2026-10-28 from the existing Kolla inventory, extended service profile,
-preflight and locked tooling. Status: no target selected, no deployment, no
-spending approved. The existing Ubuntu POC is a local development environment.
+preflight and locked tooling. Decision updated 2026-10-29: use **only the current ACER laptop**. No deployment or chargeable purchase/rental is approved. Budget approval belongs to **Tribhuvan**; release, platform/network/storage, security, operations and billing acceptance belong to **Sneha**. The existing Ubuntu POC is a local development environment.
 
-## Target and bill of resources
+## Selected local hardware and blocker
 
-Recommended procurement path: use an organization-controlled isolated lab if
-these resources already exist. Otherwise obtain a bare-metal quote with these
-requirements. An existing operator-managed OpenStack staging cloud can run
-application acceptance, but its operator must supply foundation/HA evidence.
+[Actual hardware inventory](evidence/local-staging-hardware-20261029.json) found a Predator PT515-51 with six physical CPU cores, 16 GiB RAM, one system SSD, a disconnected 2.5-Gbit/s Ethernet adapter and active Wi-Fi. Existing WSL has about 7.7 GiB total, about 1.2 GiB available, full 2-GiB swap and four active guests. The current POC and its data must retain those resources. This cannot fit a supported separate full-scope Kolla staging cloud alongside the POC; even the proposal's single-host planning guard is 32 GiB, and the selected HA/storage design requires independent hosts/devices. WSL CUDA is available, but no NVIDIA PCI device is assignable to a tenant.
+
+The user confirmed there are **no additional local machines**. Staging deployment and tenant GPU acceptance are therefore hardware-blocked. Owner assignment and infrastructure direction are resolved. Further progress requires additional suitable local hardware or an explicit change to the staging acceptance scope; this proposal does not silently reduce that scope. No second cluster, new WSL distribution, disk format or OS change was attempted.
+
+The secret-free [decision record](../deployment/staging-local-hardware-decision.json) records zero external spend and the assigned owners. It does not claim Tribhuvan approved a purchase.
+
+## Resource requirements for the unchanged full staging scope
+
+The following is the existing full-scope resource proposal. These resources are **not available on the selected laptop**. Rental references below remain planning comparisons; the active user decision is owned local hardware only.
 
 | Role | Count | Minimum proposed resources per host | Purpose |
 |---|---:|---|---|
@@ -78,11 +82,12 @@ spending. H100 purchase is outside the original local requirements.
 
 | Responsibility | Required assignment |
 |---|---|
-| Budget, region/data residency, release acceptance | User-selected accountable release/budget owner |
-| Hosts, disks, network/IPAM/VLANs and privileged access | Platform operator and network/storage contacts |
-| Secrets, CA, access policy and security findings | Security approver |
-| Monitoring, external alerts, archive, incident response | Operations/on-call owner |
-| User journeys and billing/rate policy signoff | Acceptance and billing owner (may be same person as release owner) |
+| Budget approval | Tribhuvan |
+| Release acceptance and local data handling | Sneha |
+| Hosts, disks, network/IPAM/VLANs and privileged access | Sneha |
+| Secrets, CA, access policy and security findings | Sneha |
+| Monitoring, external alerts, archive, incident response | Sneha |
+| User journeys and billing/rate policy signoff | Sneha |
 
 After approval: materialize the private inventory, verify resource/disk
 ownership and reviewed image digests, run read-only host discovery and Kolla

@@ -2,8 +2,22 @@
   "schema": 1,
   "target_kind": null,
   "region_and_data_location": null,
-  "budget": {"currency": null, "monthly_cap": null, "setup_cap": null, "spending_approved": false},
-  "owners": {"release_budget": null, "platform": null, "network_storage": null, "security": null, "operations": null, "billing_acceptance": null},
+  "budget": {
+    "currency": null,
+    "monthly_cap": null,
+    "setup_cap": null,
+    "spending_approved": false,
+    "zero_cost_use_authorized": false
+  },
+  "owners": {
+    "release": null,
+    "budget_approval": null,
+    "platform": null,
+    "network_storage": null,
+    "security": null,
+    "operations": null,
+    "billing_acceptance": null
+  },
   "nodes": [],
   "management_cidr": null,
   "overlay_cidr": null,

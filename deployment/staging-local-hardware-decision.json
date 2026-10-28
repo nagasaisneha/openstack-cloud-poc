@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "target_kind": "existing_local_hardware_only",
+  "region_and_data_location": "Existing owner-controlled ACER only; no external deployment or data transfer",
+  "budget": {
+    "currency": null,
+    "monthly_cap": 0,
+    "setup_cap": 0,
+    "spending_approved": false,
+    "zero_cost_use_authorized": true,
+    "approval_scope": "Use already-owned local hardware only. Purchases/rentals need Tribhuvan approval."
+  },
+  "owners": {
+    "release": "Sneha",
+    "budget_approval": "Tribhuvan",
+    "platform": "Sneha",
+    "network_storage": "Sneha",
+    "security": "Sneha",
+    "operations": "Sneha",
+    "billing_acceptance": "Sneha"
+  },
+  "nodes": [],
+  "management_cidr": null,
+  "overlay_cidr": null,
+  "storage_cidr": null,
+  "provider_cidr": null,
+  "internal_api_vip": null,
+  "external_api_vip": null,
+  "floating_ip_pool": null,
+  "endpoint_dns": null,
+  "secret_store_reference": null,
+  "certificate_issuer": null,
+  "approved_change_id": null,
+  "only_current_acer_available": true,
+  "hardware_evidence": "docs/evidence/local-staging-hardware-20261029.json",
+  "staging_deployment_status": "blocked_on_hardware",
+  "decision_recorded_on": "2026-10-29"
+}

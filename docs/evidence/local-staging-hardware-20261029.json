@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "observed_at": "2026-10-28T19:18:33.126117+00:00",
+  "selected_direction": "existing local hardware; no rental or purchase authorized",
+  "budget_approver": "Tribhuvan",
+  "release_platform_network_storage_security_operations_billing_owner": "Sneha",
+  "windows": {
+    "computer": {
+      "Manufacturer": "Acer",
+      "Model": "Predator PT515-51",
+      "TotalPhysicalMemory": 17022767104,
+      "NumberOfLogicalProcessors": 12
+    },
+    "processors": [
+      {
+        "Name": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "NumberOfCores": 6,
+        "NumberOfLogicalProcessors": 12
+      }
+    ],
+    "operating_system": {
+      "Caption": "Microsoft Windows 11 Home Single Language",
+      "Version": "10.0.26300",
+      "FreePhysicalMemory": 1959412,
+      "TotalVisibleMemorySize": 16623796
+    },
+    "physical_disks": [
+      {
+        "FriendlyName": "NVMe WDC PC SN720 SED",
+        "Size": 1024209543168,
+        "BusType": "RAID",
+        "MediaType": "SSD",
+        "CanPool": false,
+        "HealthStatus": "Healthy"
+      }
+    ],
+    "logical_disks": [
+      {
+        "DeviceID": "C:",
+        "Size": 1023098957824,
+        "FreeSpace": 763919761408
+      }
+    ],
+    "physical_adapters": [
+      {
+        "InterfaceDescription": "Killer E3100G 2.5 Gigabit Ethernet Controller",
+        "Status": "Disconnected",
+        "LinkSpeed": "0 bps"
+      },
+      {
+        "InterfaceDescription": "Killer(R) Wi-Fi 6 AX1650x 160MHz Wireless Network Adapter (200NGW)",
+        "Status": "Up",
+        "LinkSpeed": "144.4 Mbps"
+      }
+    ]
+  },
+  "existing_wsl_memory": {
+    "MemTotal_kib": 8055596,
+    "MemAvailable_kib": 1237728,
+    "SwapTotal_kib": 2097152,
+    "SwapFree_kib": 0
+  },
+  "dev_kvm_present": true,
+  "actual_active_libvirt_guests": 4,
+  "nvidia_pci_devices": [],
+  "constraints": [
+    "16_GiB_physical_host_below_32_GiB_full_scope_single_host_planning_guard",
+    "existing_POC_must_retain_its_memory_guests_and_data",
+    "one_inspected_machine_does_not_provide_multi_host_failure_domains",
+    "no_approved_empty_Ceph_or_Swift_devices_or_provider_fabric_allocations",
+    "WSL_dxg_is_not_an_assignable_NVIDIA_PCI_device_for_Nova"
+  ],
+  "additional_owned_local_host_inventory": "none; user confirmed only current ACER",
+  "staging_deployed": false,
+  "staging_ready": false,
+  "changes_performed": [],
+  "only_current_acer_available": true,
+  "decision_updated_on": "2026-10-29"
+}

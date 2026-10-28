@@ -68,8 +68,8 @@ The service-specific backlog below retains future maintained-release acceptance 
 
 | Gate | Status | Remaining evidence |
 |---|---|---|
-| 0: scope/target/owners | Blocked | Human target, workload, budget, service owners and approvers not selected/approved. Maintained candidate design exists. |
-| 1: architecture/design | In progress | Kolla/Hibiscus/Noble candidate and topology prepared; actual networks, storage, sizing, images/provenance and owner review pending. |
+| 0: scope/target/owners | Blocked on available hardware | User chose only the current ACER. Budget approver: Tribhuvan; all other owners: Sneha. Actual 6-core/16-GiB Windows/WSL host lacks capacity for a separate supported staging cloud, independent storage/failure domains and tenant GPU PCI access. [Hardware evidence](evidence/local-staging-hardware-20261029.json). |
+| 1: architecture/design | Hardware-blocked | Concrete Kolla resource/network/secrets/cost/ownership proposal and executable preparation check exist. Current-only-laptop constraint cannot satisfy that scope. [Proposal](staging-deployment-proposal.md), [decision](../deployment/staging-local-hardware-decision.json). |
 | 2: foundation | Requires staging infrastructure | Real supported hosts, networking, disks, secrets/TLS and restore capacity. |
 | 3: integrations/security | Requires staging infrastructure | Live multi-node provider, identity/storage/LB/metering/security validation. |
 | 4: release candidate | Requires staging infrastructure | All real customer steps, failure recovery, performance, upgrade/rollback and security acceptance. |

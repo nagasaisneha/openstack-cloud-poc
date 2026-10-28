@@ -7,13 +7,13 @@ import json
 from pathlib import Path
 
 ROLE_COUNTS = {'controller': 3, 'compute': 2, 'storage': 3}
-OWNERS = ('release_budget', 'platform', 'network_storage', 'security', 'operations', 'billing_acceptance')
+OWNERS = ('release', 'budget_approval', 'platform', 'network_storage', 'security', 'operations', 'billing_acceptance')
 
 
 def proposal(record):
     missing, invalid = [], []
     target = record.get('target_kind')
-    if target not in ('organization_baremetal', 'rented_baremetal', 'existing_openstack'):
+    if target not in ('organization_baremetal', 'rented_baremetal', 'existing_openstack', 'existing_local_hardware_only'):
         missing.append('infrastructure_selection')
     if not record.get('region_and_data_location'):
         missing.append('region_and_data_location')
@@ -21,7 +21,10 @@ def proposal(record):
         if not record.get('owners', {}).get(role):
             missing.append('owner:' + role)
     budget = record.get('budget', {})
-    if not budget.get('currency'):
+    zero_owned_use = (target in ('organization_baremetal', 'existing_local_hardware_only')
+        and budget.get('zero_cost_use_authorized') is True
+        and str(budget.get('monthly_cap')) == '0' and str(budget.get('setup_cap')) == '0')
+    if not budget.get('currency') and not zero_owned_use:
         missing.append('budget_currency')
     for field in ('monthly_cap', 'setup_cap'):
         if budget.get(field) is None:
@@ -33,8 +36,10 @@ def proposal(record):
                     raise InvalidOperation
             except (ValueError, InvalidOperation):
                 invalid.append('invalid_budget:' + field)
-    if budget.get('spending_approved') is not True:
+    if budget.get('spending_approved') is not True and not zero_owned_use:
         missing.append('explicit_spending_or_zero_cost_approval')
+    if target == 'existing_local_hardware_only':
+        invalid.append('current_16_GiB_WSL_source_cannot_host_supported_separate_full_scope_staging')
     nodes = record.get('nodes', [])
     if target in ('organization_baremetal', 'rented_baremetal'):
         for role, count in ROLE_COUNTS.items():
