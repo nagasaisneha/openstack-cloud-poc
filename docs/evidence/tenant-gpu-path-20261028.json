@@ -1,0 +1,13 @@
+{
+  "environment": "existing tenant A Nova guest",
+  "pinned_ssh_uuid_verified": true,
+  "guest_device_readback": [
+    "nvidia_pci_count=0",
+    "dxg=no",
+    "nvidia0=no"
+  ],
+  "libvirt_hostdev_count": 0,
+  "tenant_gpu_access_verified": false,
+  "blocker": "WSL exposes CUDA through dxg; no assignable NVIDIA PCI device or tenant hostdev exists",
+  "needed": "approved bare-metal KVM compute with NVIDIA PCI GPU, IOMMU group/reset support and Nova PCI scheduling"
+}
