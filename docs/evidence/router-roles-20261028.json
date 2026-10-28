@@ -1,0 +1,10 @@
+{
+  "phase": "router_role_gateway_and_cleanup_verified",
+  "checks": {
+    "owner_router_interface_gateway_create_update": true,
+    "foreign_router_read_update_delete_interface_denied": true,
+    "new_resources_absent": true,
+    "original_router_ids_preserved": true,
+    "router_quota_restored": 1
+  }
+}
