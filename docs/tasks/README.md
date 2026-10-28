@@ -435,3 +435,7 @@ Before implementation, create a Markdown record for every executed T-ID (for exa
 - **Acceptance criteria:** Every step has evidence; unsupported steps are labelled; task cleanup is confirmed; all applicable requirements are satisfied or recorded as blocked/unavailable.
 - **Rollback/cleanup:** Stop/remove only portal and task-created resources/state; preserve all pre-existing cloud resources.
 - **Git:** After verification, apply the required review, documentation, commit, push, and SHA recording workflow; record final SHA and push result.
+
+## Active continuation T50
+
+[T50](T50.md) supersedes earlier WSL restore and local OS-upgrade gates and owns staging selection/deployment, actual AI/GPU acceptance, clean-period billing and broader role/browser journeys. Its dependency and evidence table is authoritative for this continuation.

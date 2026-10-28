@@ -41,6 +41,8 @@ No production timeline, SLA, capacity, or compliance claim is set by this docume
 
 ## Release gates
 
+Current scope override (2026-10-28): WSL distribution/export restore verification is excluded from every gate. Preserve the existing export. Historical WSL results are retained without a pass claim. Staging operational data protection and deployment rollback apply only to the separately approved staging target. See [T50](tasks/T50.md) and the [concrete staging proposal](staging-deployment-proposal.md).
+
 ### Gate 0 — Production target and scope approved
 
 **Entry:** Continue the local POC and begin release planning from the intended production use case. Record which POC requirements and artifacts exist, their evidence status, and which gaps need staging validation. POC completion is not implied by this gate, and a local demonstration does not pass staging acceptance.
