@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "phase": "two_tenant_resource_role_journeys_verified",
+  "updated_at": "2026-10-28T16:38:08.133316+00:00",
+  "run_id": "correct-network-path-01",
+  "checks": {
+    "cleanup": {
+      "container_a_absent": true,
+      "container_b_absent": true,
+      "image_absent": true,
+      "network_absent": true,
+      "port_absent": true,
+      "security_group_absent": true,
+      "security_group_rule_absent": true,
+      "subnet_absent": true
+    },
+    "image": {
+      "owner_update_verified": true,
+      "private_foreign_read_update_delete_denied": true,
+      "shared_foreign_update_delete_denied": true,
+      "shared_member_accept_download_sha256": "7d6355852aeb6dbcd191bcda7cd74f1536cfe5cbf8a10495a7283a8396e4b75b"
+    },
+    "network": {
+      "foreign_read_update_delete_and_port_creation_denied": true,
+      "own_port_update_verified": true,
+      "private_network_subnet_port_security_group_create": true
+    },
+    "objects_a": {
+      "foreign_list_read_write_metadata_delete_denied": true,
+      "private_crud_overwrite_metadata": true,
+      "replacement_sha256": "dc404a613fedaeb54034514bc6505f56b933caa5250299ba7d094377a51caa46"
+    },
+    "objects_b": {
+      "foreign_list_read_write_metadata_delete_denied": true,
+      "private_crud_overwrite_metadata": true,
+      "replacement_sha256": "dc404a613fedaeb54034514bc6505f56b933caa5250299ba7d094377a51caa46"
+    }
+  },
+  "existing_resources_preserved": true
+}

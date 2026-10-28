@@ -469,8 +469,10 @@ def tenant_isolation(cloud, source, private, state):
     with controls.connection(source, private, 'b') as tenant_b:
         safety.require(tenant_b.session.get_project_id() == source['projects']['b']['id'],
                        'tenant_b_token_scope_mismatch')
+        safety.require(cloud.network.get('/subnets/' + foreign_subnet, raise_exc=True).status_code == 200,
+                       'tenant_a_subnet_positive_control_failed')
         for name, service, path in (('loadbalancer', tenant_b.load_balancer, '/lbaas/loadbalancers/' + foreign_id),
-                                     ('subnet', tenant_b.network, '/v2.0/subnets/' + foreign_subnet)):
+                                     ('subnet', tenant_b.network, '/subnets/' + foreign_subnet)):
             try:
                 service.get(path, raise_exc=True)
                 status = 200
