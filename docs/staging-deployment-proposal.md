@@ -92,3 +92,7 @@ failure/rejoin, closed-window billing, GPU guest CUDA, alert/audit/retention and
 controller/compute/storage failure acceptance. Record exact artifact and
 provider IDs plus cleanup. Staging remains unready until those live results
 and named-owner acceptance exist. WSL restore evidence is not a release gate.
+
+## Executable preparation check
+
+`python3 scripts/prepare_staging_proposal.py --request deployment/staging-request.example.json` produces a bounded resource summary and an explicit missing-decision list. The example correctly exits 2 with no infrastructure selected. It rejects documentation/loopback host addresses, WSL targets, overlapping networks and invalid budgets. This is a decision/preparation check; `staging_ready` and `deployment_verified` remain false until real deployment and acceptance evidence exists. Store populated target records and secrets outside Git.

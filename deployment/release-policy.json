@@ -3,15 +3,28 @@
   "reviewed_on": "2026-10-26",
   "maintenance_review_max_age_days": 7,
   "selected_release": "2026.2",
-  "selected_releases": {"local_poc": "2026.1", "staging": "2026.2"},
+  "selected_releases": {
+    "local_poc": "2026.1",
+    "staging": "2026.2"
+  },
   "local_upgrade_plan": {
     "status": "planning_only",
     "execution_authorized": false,
     "strategy": "existing_distribution_in_place",
     "deployment_method": "ubuntu_packages",
-    "source_host_os": {"id": "ubuntu", "version": "22.04"},
-    "planned_host_os": {"id": "ubuntu", "version": "24.04"},
-    "release_checkpoints": ["2024.1", "2025.1", "2026.1"],
+    "source_host_os": {
+      "id": "ubuntu",
+      "version": "22.04"
+    },
+    "planned_host_os": {
+      "id": "ubuntu",
+      "version": "24.04"
+    },
+    "release_checkpoints": [
+      "2024.1",
+      "2025.1",
+      "2026.1"
+    ],
     "requires_new_distribution": false,
     "whole_cloud_upgrade_verified": false,
     "swift_runtime_proposal": {
@@ -24,9 +37,12 @@
       "maintenance_ownership_accepted": false
     }
   },
-  "required_environments": ["local_poc", "staging"],
+  "required_environments": [
+    "local_poc",
+    "staging"
+  ],
   "preserved_source_release": "2024.1",
-  "source_use": "existing in-place migration source; preserve matched full-state rollback checkpoints and all original backups",
+  "source_use": "preserve the existing local cloud and all original backups; previous migration planning is historical and excluded from active completion",
   "minimum_full_scope_memory_mib": 32768,
   "minimum_memory_basis": "Staging Kolla full-scope planning guard only; local package cloud needs measured capacity, not this threshold",
   "candidates": {
@@ -35,16 +51,28 @@
       "upstream_status_at_review": "maintained",
       "slurp": true,
       "kolla_major": 22,
-      "ansible_core_minors": ["2.19", "2.20"],
-      "selected_host_os": {"id": "ubuntu", "version": "24.04"}
+      "ansible_core_minors": [
+        "2.19",
+        "2.20"
+      ],
+      "selected_host_os": {
+        "id": "ubuntu",
+        "version": "24.04"
+      }
     },
     "2026.2": {
       "name": "Hibiscus",
       "upstream_status_at_review": "maintained",
       "slurp": false,
       "kolla_major": 23,
-      "ansible_core_minors": ["2.20", "2.21"],
-      "selected_host_os": {"id": "ubuntu", "version": "24.04"}
+      "ansible_core_minors": [
+        "2.20",
+        "2.21"
+      ],
+      "selected_host_os": {
+        "id": "ubuntu",
+        "version": "24.04"
+      }
     }
   },
   "sources": [
@@ -57,5 +85,15 @@
     "https://docs.openstack.org/kolla-ansible/2026.2/user/support-matrix",
     "https://docs.openstack.org/releasenotes/kolla-ansible/2026.1.html",
     "https://docs.openstack.org/releasenotes/kolla-ansible/2026.2.html"
-  ]
+  ],
+  "active_completion_scope": {
+    "recorded_on": "2026-10-29",
+    "local_runtime": "existing Ubuntu 22.04 / Caracal",
+    "local_os_upgrade_required": false,
+    "additional_wsl_distribution_allowed": false,
+    "wsl_restore_verification_required": false,
+    "historical_upgrade_plan_is_active_gate": false,
+    "staging_requires_explicit_target_budget_and_owners": true,
+    "staging_requires_live_deployment_acceptance": true
+  }
 }
