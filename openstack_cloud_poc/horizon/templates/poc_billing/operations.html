@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}POC Operations{% endblock %}
+{% block page_header %}{% include 'horizon/common/_page_header.html' with title=page_title %}{% endblock %}
+{% block main %}
+{% if not fresh %}<div class="alert alert-danger">Monitoring observations are stale. Check the operations timer.</div>{% endif %}
+<p>Last observation: {{ status.generated_at }} UTC. Active alerts: <strong id="active-alerts">{{ status.active_alerts }}</strong>.</p>
+<p>Alerts open after two consecutive failures and resolve after two successes. Delivery is local to this dashboard and its private audit log.</p>
+<table class="table table-striped"><thead><tr><th>Probe</th><th>Latest result</th><th>Alert</th><th>Detail</th><th>HTTP latency (ms)</th></tr></thead><tbody>
+{% for name, probe in probes %}<tr><td>{{ name }}</td><td>{% if probe.healthy %}Healthy{% else %}Failed{% endif %}</td><td>{% if probe.active %}OPEN since {{ probe.opened_at }}{% else %}Clear{% endif %}</td><td>{{ probe.detail }}</td><td>{{ probe.latency_ms|default_if_none:'—' }}</td></tr>{% endfor %}
+</tbody></table>
+<p>Operations audit retention: 90 daily rotations. Immutable billing and measurement evidence is retained indefinitely in this POC. External alert delivery and off-host audit archival remain staging acceptance items.</p>
+<p>Billing statements remain provisional while measurement coverage is incomplete.</p>
+{% endblock %}

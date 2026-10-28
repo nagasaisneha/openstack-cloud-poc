@@ -53,6 +53,31 @@ def selected_project(request):
 
 @login_required
 @never_cache
+@require_GET
+def operations(request):
+    try:
+        actor = runtime.principal(request, system=True)
+        runtime.service().available_rate_cards(actor)
+        from pathlib import Path
+        import os
+        import stat
+        from ..operations import fresh_status
+        path = Path('/var/lib/openstack-poc-operations/status.json')
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o600:
+            raise ValueError('unsafe_operations_status')
+        data = json.loads(path.read_text())
+        fresh = fresh_status(data)
+        return render(request, 'poc_billing/operations.html', {'page_title': 'POC Operations', 'status': data,
+                      'probes': sorted(data['probes'].items()), 'fresh': fresh}, status=200 if fresh else 503)
+    except BillingError as error:
+        return failure(error)
+    except Exception:
+        return HttpResponse('Operations observations are unavailable.', status=503)
+
+
+@login_required
+@never_cache
 @csrf_protect
 @require_http_methods(['GET', 'POST'])
 def project_index(request):

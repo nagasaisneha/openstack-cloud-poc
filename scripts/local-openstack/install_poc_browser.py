@@ -114,7 +114,7 @@ def configure_cinder_reader(directory):
 def package_files():
     result = {}
     for path in sorted((REPO / 'openstack_cloud_poc').rglob('*')):
-        if path.is_file() and path.suffix in ('.py', '.html'):
+        if path.is_file() and path.suffix in ('.py', '.html', '.js'):
             safety.require(not path.is_symlink(), 'source_symlink_refused')
             result[str(path.relative_to(REPO))] = path.read_bytes()
     result['collect_poc_usage.py'] = (REPO / 'scripts/local-openstack/collect_poc_usage.py').read_bytes()
@@ -223,7 +223,8 @@ def apply():
         safety.run(['runuser', '-u', 'horizon', '--', '/usr/bin/python3', '-B',
                     '/usr/share/openstack-dashboard/manage.py', 'shell', '--command',
                     'from django.template.loader import get_template; '
-                    'get_template("poc_billing/admin.html"); get_template("poc_billing/project.html")'], timeout=90)
+                    'get_template("poc_billing/admin.html"); get_template("poc_billing/project.html"); '
+                    'get_template("poc_billing/operations.html")'], timeout=90)
         save('swift_metering_restriction_intent')
         (directory / 'proxy-server.conf.before').write_bytes(PROXY.read_bytes())
         (directory / 'swift-setup.json.before').write_bytes(swift.STATE.read_bytes())
