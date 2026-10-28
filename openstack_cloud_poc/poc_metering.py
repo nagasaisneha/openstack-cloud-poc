@@ -8,6 +8,8 @@ import stat
 from .billing import BillingError, BillingErrorCode, UsageBatch
 from .nova_billing_usage import NovaBillingUsageSource
 from .usage import UsageProvenance
+from .provider_usage import read_meter, SOURCE as VERIFIED_SOURCE
+from .usage_history import batch_from_wire
 
 
 def month_bounds(value):
@@ -46,6 +48,22 @@ def bounded(values, maximum=250):
             raise ValueError('inventory_limit')
         result.append(value)
     return result
+
+
+def verified_batch(config, project_id, start, end, clock):
+    path = config.get('verified_meter_socket')
+    if path != '/run/openstack-poc-meter/read.sock':
+        raise BillingError(BillingErrorCode.USAGE_SOURCE_UNAVAILABLE)
+    result = read_meter(project_id, start, end, path)
+    batch = batch_from_wire(result['batch'])
+    if (batch.project_id != project_id or batch.interval_start != start or batch.interval_end != end
+            or batch.source != VERIFIED_SOURCE or batch.provenance is not UsageProvenance.OBSERVED
+            or batch.complete
+            or batch.collected_at is None or (clock() - batch.collected_at).total_seconds() > 90
+            or (batch.collected_at - clock()).total_seconds() > 2
+            or not result.get('source_clock_checked')):
+        raise BillingError(BillingErrorCode.USAGE_SOURCE_UNAVAILABLE)
+    return batch, result['measurement_policy']
 
 
 def collect_project(config, project_id, start, end, clock=None):
@@ -94,4 +112,16 @@ def collect_project(config, project_id, start, end, clock=None):
             for key in ('object_bytes', 'object_count', 'container_count'):
                 inventory[key] = None
             inventory['gaps'].append('object_account_usage_unavailable')
+        if config.get('verified_meter_socket'):
+            try:
+                measured, policy = verified_batch(config, project_id, start, end, current)
+                batch = measured
+                inventory['measurement_policy'] = policy
+                present = {sample.metric for sample in batch.samples}
+                if 'compute.active_vcpu_hours' in present:
+                    inventory['gaps'].remove('active_compute_intervals_unavailable')
+                if 'network.interface_bytes' in present:
+                    inventory['gaps'].remove('network_bytes_unavailable')
+            except Exception:
+                inventory['gaps'].append('verified_measurement_source_unavailable')
         return batch, inventory

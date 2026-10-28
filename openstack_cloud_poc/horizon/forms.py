@@ -7,6 +7,13 @@ METERS = (
     ('vcpu_rate', 'compute.instance_vcpu_hours', 'vCPU-hour', 'vCPU allocation hour'),
     ('memory_rate', 'compute.instance_memory_mib_hours', 'MiB-hour', 'RAM allocation MiB-hour'),
     ('disk_rate', 'compute.instance_local_disk_gib_hours', 'GiB-hour', 'Local disk allocation GiB-hour'),
+    ('active_vcpu_rate', 'compute.active_vcpu_hours', 'vCPU-hour', 'Provider-confirmed active vCPU-hour'),
+    ('active_memory_rate', 'compute.active_memory_mib_hours', 'MiB-hour', 'Provider-confirmed active RAM MiB-hour'),
+    ('verified_disk_rate', 'compute.local_disk_gib_hours', 'GiB-hour', 'Provisioned local disk GiB-hour'),
+    ('volume_rate', 'storage.volume_gib_hours', 'GiB-hour', 'Provisioned volume GiB-hour'),
+    ('snapshot_rate', 'storage.snapshot_gib_hours', 'GiB-hour', 'Provisioned snapshot GiB-hour'),
+    ('cpu_seconds_rate', 'compute.cpu_seconds', 'CPU-second', 'Measured domain-process CPU-second'),
+    ('interface_bytes_rate', 'network.interface_bytes', 'byte', 'Combined interface byte'),
 )
 
 
@@ -20,6 +27,20 @@ class RateForm(forms.Form):
                                     required=False, label='Per RAM MiB-hour')
     disk_rate = forms.DecimalField(min_value=Decimal('0'), max_digits=20, decimal_places=8,
                                   required=False, label='Per local disk GiB-hour')
+    active_vcpu_rate = forms.DecimalField(min_value=Decimal('0'), max_digits=20, decimal_places=8,
+        required=False, label='Per provider-confirmed active vCPU-hour')
+    active_memory_rate = forms.DecimalField(min_value=Decimal('0'), max_digits=20, decimal_places=8,
+        required=False, label='Per provider-confirmed active RAM MiB-hour')
+    verified_disk_rate = forms.DecimalField(min_value=Decimal('0'), max_digits=20, decimal_places=8,
+        required=False, label='Per provisioned local disk GiB-hour')
+    volume_rate = forms.DecimalField(min_value=Decimal('0'), max_digits=20, decimal_places=8,
+        required=False, label='Per provisioned volume GiB-hour')
+    snapshot_rate = forms.DecimalField(min_value=Decimal('0'), max_digits=20, decimal_places=8,
+        required=False, label='Per provisioned snapshot GiB-hour')
+    cpu_seconds_rate = forms.DecimalField(min_value=Decimal('0'), max_digits=20, decimal_places=8,
+        required=False, label='Per measured domain-process CPU-second (includes hypervisor overhead)')
+    interface_bytes_rate = forms.DecimalField(min_value=Decimal('0'), max_digits=20, decimal_places=8,
+        required=False, label='Per combined interface byte (not internet egress)')
 
     def clean(self):
         data = super().clean()

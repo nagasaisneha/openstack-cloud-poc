@@ -235,7 +235,7 @@ def access_and_io(page, cloud, source, state, label, name):
         page.locator('input[type=submit]').click()
         page.wait_for_load_state('networkidle')
     safety.require(cloud.network.get_ip(floating.id).port_id == ports[0].id, 'browser_floating_ip_association_mismatch')
-    hosts = task.DIRECTORY / ('known_hosts_lifecycle_' + label)
+    hosts = task.DIRECTORY / ('known_hosts_' + state['prefix'])
     if not hosts.exists():
         descriptor = os.open(hosts, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
         os.close(descriptor)
@@ -475,11 +475,13 @@ def inspect_access(page, state):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--label', choices=('a', 'b'), required=True)
+    parser.add_argument('--run-id', default='', help='Fresh short identifier for a separate sealed acceptance run')
     parser.add_argument('--phase', choices=('create-vm', 'stop-vm', 'start-vm', 'create-volume', 'attach-volume', 'access-and-io', 'detach-and-snapshot', 'create-snapshot', 'reserve-snapshot-capacity', 'restore-snapshot-capacity', 'cleanup', 'vm-cycle-and-volume', 'inspect', 'inspect-access'), required=True)
     args = parser.parse_args()
     source, private = task.initialize()
     logging.disable(logging.CRITICAL)
-    name = 'lifecycle-' + args.label
+    safety.require(not args.run_id or re.fullmatch('[a-z0-9][a-z0-9-]{0,31}', args.run_id), 'unsafe_lifecycle_run_id')
+    name = 'lifecycle-' + args.label + ('-' + args.run_id if args.run_id else '')
     with task.locked():
         state = task.read(name, source)
         if 'prefix' not in state:

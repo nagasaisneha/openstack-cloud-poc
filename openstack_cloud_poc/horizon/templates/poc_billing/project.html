@@ -20,11 +20,11 @@
 <table class="table table-bordered"><thead><tr><th>Instances</th><th>Volumes</th><th>Provisioned volume GiB</th><th>Stored object bytes</th><th>Objects</th></tr></thead>
 <tbody><tr><td>{% if inventory.instances is None %}Unavailable{% else %}{{ inventory.instances|length }}{% endif %}</td><td>{% if inventory.volumes is None %}Unavailable{% else %}{{ inventory.volumes|length }}{% endif %}</td>
 <td>{{ inventory.volume_gib|default_if_none:'Unavailable' }}</td><td>{{ inventory.object_bytes|default_if_none:'Unavailable' }}</td><td>{{ inventory.object_count|default_if_none:'Unavailable' }}</td></tr></tbody></table>
-<h3>Provider-reported compute allocation</h3>
-<p class="help-block">Allocation hours describe provisioned resources. They do not measure active CPU time or network traffic.</p>
+<h3>Measured usage and resource allocation</h3>
+<p class="help-block">Active vCPU/RAM hours use provider-confirmed lifecycle events. Measured domain CPU seconds include hypervisor overhead. Combined interface bytes are separate from internet egress. Legacy allocation hours remain distinct.</p>
 <table class="table table-striped"><thead><tr><th>Resource</th><th>Metric</th><th>Quantity</th><th>Unit</th></tr></thead><tbody>
 {% for sample in batch.samples %}<tr><td>{{ sample.resource_id }}</td><td>{{ sample.metric }}</td><td>{{ sample.quantity }}</td><td>{{ sample.unit }}</td></tr>
-{% empty %}<tr><td colspan="4">No compute allocation samples are available for this collection.</td></tr>{% endfor %}</tbody></table>
+{% empty %}<tr><td colspan="4">No verified usage samples are available for this collection.</td></tr>{% endfor %}</tbody></table>
 <div class="alert alert-warning"><strong>Coverage gaps</strong><ul>{% for reason in batch.incomplete_reasons %}<li>{{ reason }}</li>{% endfor %}{% for reason in inventory.gaps %}<li>{{ reason }}</li>{% endfor %}</ul>
 Missing meters are unavailable; they are not zero usage.</div>
 {% else %}<div class="alert alert-info">No provider collection is available for this project/month yet. Refresh usage or wait for the collector.</div>{% endif %}
