@@ -1,0 +1,19 @@
+{
+  "phase": "native_octavia_update_and_cascade_delete_verified",
+  "checks": {
+    "browser_update": {
+      "description_preserved": true,
+      "name_verified_by_provider": true
+    },
+    "browser_cascade_delete": {
+      "loadbalancer_absent": true,
+      "listener_absent": true,
+      "pool_absent": true,
+      "monitor_absent": true,
+      "vip_port_absent": true,
+      "original_a_loadbalancer_preserved": true,
+      "tenant_b_list_empty": true,
+      "members_removed_with_parent_pool": true
+    }
+  }
+}
