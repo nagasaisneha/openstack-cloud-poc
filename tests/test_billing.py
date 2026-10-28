@@ -1,5 +1,6 @@
 import sqlite3
 import csv
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import io
@@ -565,6 +566,34 @@ class BillingTests(unittest.TestCase):
                 collector(), "project-a", START + timedelta(days=1), END, "demo-v1"
             )
         self.assertEqual(raised.exception.code, BillingErrorCode.INVALID_REQUEST)
+
+    def test_only_observed_source_certified_closed_period_can_bypass_month_boundary(self):
+        from openstack_cloud_poc.usage_history import UsageHistory, SnapshotUsageSource
+        start, end = START + timedelta(days=1), START + timedelta(days=1, hours=1)
+        source = 'openstack:provider-events+libvirt-readonly'
+        sample = replace(make_sample(start=start, end=end, provenance=UsageProvenance.OBSERVED), source=source)
+        observed = UsageBatch('project-a', start, end, source, UsageProvenance.OBSERVED, True, (sample,), end)
+        history = UsageHistory(Path(self.temp.name) / 'period-usage.sqlite')
+        proof = {'id': 'a' * 64, 'project_id': 'project-a', 'start': start.isoformat(), 'end': end.isoformat()}
+        history.append(observed, {'measurement_policy': {'sealed_period': proof}})
+        self.service.source = SnapshotUsageSource(history, clock=self.service.clock)
+        statement = self.service.generate_statement(collector(), 'project-a', start, end, 'demo-v1')
+        self.assertEqual(statement.status, BillingStatus.COMPLETE)
+        self.assertEqual(statement.total, Decimal('2.50'))
+        history.append(replace(observed, collected_at=end + timedelta(seconds=1)),
+                       {'measurement_policy': {'sealed_period': dict(proof, project_id='project-b')}})
+        with self.assertRaises(BillingError) as rejected:
+            self.service.generate_statement(collector(), 'project-a', start, end, 'demo-v1')
+        self.assertEqual(rejected.exception.code, BillingErrorCode.INVALID_REQUEST)
+
+    def test_simulated_source_cannot_attest_a_complete_non_month_statement(self):
+        start, end = START + timedelta(days=1), START + timedelta(days=1, hours=1)
+        self.source.samples = (make_sample(start=start, end=end),)
+        self.source.certifies_closed_period = lambda *args: True
+        with self.assertRaises(BillingError) as rejected:
+            self.service.generate_statement(collector(), 'project-a', start, end, 'demo-v1')
+        self.assertEqual(rejected.exception.code, BillingErrorCode.INVALID_REQUEST)
+        self.assertEqual(self.ledger.list_all_statements(), ())
 
     def test_billing_viewer_can_read_rate_card_for_its_project(self):
         card = self.service.project_rate_card(

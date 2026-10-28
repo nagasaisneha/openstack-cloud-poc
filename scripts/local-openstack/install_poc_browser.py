@@ -54,7 +54,7 @@ def collector_units(release):
     return service, timer
 
 
-def swift_metering_config(text):
+def swift_metering_config(text, journal=False):
     parser = configparser.ConfigParser(interpolation=None)
     parser.read_string(text)
     pipeline = parser.get('pipeline:main', 'pipeline').split()
@@ -69,9 +69,13 @@ def swift_metering_config(text):
     roles = [name.strip() for name in parser.get('filter:keystoneauth', 'operator_roles').split(',') if name.strip()]
     if 'billing_collector' not in roles:
         roles.append('billing_collector')
+    filter_values = {'paste.filter_factory': 'openstack_cloud_poc.swift_metering:filter_factory'}
+    if journal:
+        filter_values.update(byte_journal_path='/var/lib/openstack-poc-swift-meter/events.sqlite',
+                             meter_projects_path='/etc/swift/poc-meter-projects.json')
     return common.edit_ini(text, {
         'pipeline:main': {'pipeline': ' '.join(pipeline)},
-        'filter:poc_metering': {'paste.filter_factory': 'openstack_cloud_poc.swift_metering:filter_factory'},
+        'filter:poc_metering': filter_values,
         'filter:keystoneauth': {'operator_roles': ','.join(roles)},
     })
 
@@ -139,7 +143,7 @@ def plan():
     safety.protected(PROXY)
     swift_state = swift.protected_json(swift.STATE)
     swift.verify_owned_files(swift_state)
-    updated = swift_metering_config(PROXY.read_text())
+    updated = swift_metering_config(PROXY.read_text(), journal=Path('/etc/swift/poc-meter-projects.json').exists())
     files = package_files()
     digest = release_hash(files)
     enabled, snippets = layout()
@@ -225,6 +229,11 @@ def apply():
                     'from django.template.loader import get_template; '
                     'get_template("poc_billing/admin.html"); get_template("poc_billing/project.html"); '
                     'get_template("poc_billing/operations.html")'], timeout=90)
+        # Static auto-discovery changes the offline compression context. Build
+        # the matching manifest before Apache serves the new release.
+        for command in (['collectstatic', '--noinput'], ['compress', '--force']):
+            safety.run(['runuser', '-u', 'horizon', '--', '/usr/bin/python3', '-B',
+                        '/usr/share/openstack-dashboard/manage.py', *command], timeout=120)
         save('swift_metering_restriction_intent')
         (directory / 'proxy-server.conf.before').write_bytes(PROXY.read_bytes())
         (directory / 'swift-setup.json.before').write_bytes(swift.STATE.read_bytes())

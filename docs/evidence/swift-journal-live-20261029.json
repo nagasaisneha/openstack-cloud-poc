@@ -1,0 +1,12 @@
+{
+  "phase": "live_swift_journal_and_acl_attribution_verified",
+  "checks": {
+    "private_foreign_put_denied": true,
+    "explicit_acl_writer_put_delete_allowed": true,
+    "write_acl_does_not_grant_read": true,
+    "two_durable_known_events": true,
+    "charged_to_storage_account_owner_not_actor": true,
+    "server_transaction_id_verified": true,
+    "test_container_absent": true
+  }
+}

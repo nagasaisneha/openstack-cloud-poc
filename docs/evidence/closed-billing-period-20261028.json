@@ -1,0 +1,309 @@
+{
+  "schema": 1,
+  "start": "2026-10-28T18:13:36.675115+00:00",
+  "end": "2026-10-28T18:13:46.231517+00:00",
+  "sealed_period": {
+    "end": "2026-10-28T18:13:46.231517+00:00",
+    "id": "ffe904ea8849ebc26cacc8799676f8114504a55c4970e984245d6b36e8c358cc",
+    "policy": "source_snapshot_counter_deltas_and_proxy_completion_byte_hours_v1",
+    "project_id": "d35ea2f669ae44a4bd0b1ed83df0f6e2",
+    "start": "2026-10-28T18:13:36.675115+00:00"
+  },
+  "measurements": {
+    "cpu_delta_ns": 1150000000,
+    "interface_delta_bytes": 19816,
+    "source_endpoint_reconciliation": true,
+    "swift_byte_seconds": "39549.424592",
+    "swift_mutations_verified": 2,
+    "test_container_removed": true
+  },
+  "statement": {
+    "currency": "INR",
+    "decimal_lines_and_total_verified": true,
+    "eight_meters_verified": true,
+    "exact_interval_visible_in_admin_and_tenant_browser": true,
+    "historical_statements_unchanged": true,
+    "lines": 22,
+    "status": "complete",
+    "tenant_a_csv_json_http": 200,
+    "tenant_b_foreign_http": 404,
+    "total": "2.76"
+  },
+  "pricing": {
+    "compute.active_vcpu_hours": "10",
+    "compute.active_memory_mib_hours": ".01",
+    "compute.local_disk_gib_hours": "1",
+    "storage.volume_gib_hours": "2",
+    "storage.snapshot_gib_hours": "3",
+    "compute.cpu_seconds": ".5",
+    "network.interface_bytes": ".0001",
+    "storage.object_byte_hours": ".01"
+  },
+  "policy": {
+    "cpu": "exact_domain_counter_source_endpoints_including_hypervisor",
+    "network": "exact_combined_interface_source_endpoints_not_internet_egress",
+    "object": "byte_hours_at_successful_proxy_response_completion",
+    "sealed_period": {
+      "end": "2026-10-28T18:13:46.231517+00:00",
+      "id": "ffe904ea8849ebc26cacc8799676f8114504a55c4970e984245d6b36e8c358cc",
+      "policy": "source_snapshot_counter_deltas_and_proxy_completion_byte_hours_v1",
+      "project_id": "d35ea2f669ae44a4bd0b1ed83df0f6e2",
+      "start": "2026-10-28T18:13:36.675115+00:00"
+    }
+  },
+  "historical_backfill": false,
+  "payment_executed": false,
+  "source_evidence": {
+    "counter_endpoints": {
+      "65e75435-467f-4dd8-b9dc-f5a96e1e18b8": {
+        "end": "2026-10-28T18:13:46.219750+00:00",
+        "generation": "8ae13c4d-fa34-456e-8135-10de286358e8:10:81335bd946727e36",
+        "start": "2026-10-28T18:13:36.662680+00:00"
+      },
+      "ee8e8bec-b6d6-473a-9044-8026bbc4cca1": {
+        "end": "2026-10-28T18:13:46.221579+00:00",
+        "generation": "8ae13c4d-fa34-456e-8135-10de286358e8:2:33bbdd99852bd4bb",
+        "start": "2026-10-28T18:13:36.664543+00:00"
+      }
+    },
+    "historical_backfill": false,
+    "initial_objects_hash": "0ebe38ca61fed77c8e07d92ab3937d97bee4f56102ec401133f780757d85669e",
+    "maximum_acquisition_offset_seconds": 2,
+    "maximum_source_gap_seconds": 45,
+    "policy": "source_snapshot_counter_deltas_and_proxy_completion_byte_hours_v1",
+    "snapshot_count": 5,
+    "snapshot_hashes": [
+      "eea48f06eb402cbdf76ad953a57b476279ec524b37ad5b51213fe52d1560c9ad",
+      "d30d5916c40634df27c690d4295c1ea83a31359b394d97996f7e5ba8b2ba64b7",
+      "e608ad4870e44c698d74f4470471915d9b8ffb31bff35cab799d39394b686426",
+      "dba9a8aec550ca344d8975ece70b1bf225dc59cc4b06049edc27b4852f40a691",
+      "5d4d65b9bc0677a2b9439b2964143e89a55e5000f635c852f91377e047876d00"
+    ],
+    "swift_byte_seconds": "39549.424592",
+    "swift_events_hash": "4e73ada636b861b1b9c4236414d3e3e397b63c62ab0610de27e3a23947700f0e",
+    "swift_requests_hash": "9ef57fe2d442cbec747476996644b6d8617d1c660c7408567acb3771efb0f7f8",
+    "terminal_objects_hash": "2e55bcaf20f281938923794513e8f856e64ef4c4e046242da8fed0fa573062ca"
+  },
+  "rated_lines": [
+    {
+      "resource_id": "ee8e8bec-b6d6-473a-9044-8026bbc4cca1",
+      "metric": "compute.active_vcpu_hours",
+      "quantity": "0.002649509444444444444444444444",
+      "unit": "vCPU-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "10",
+      "amount": "0.03"
+    },
+    {
+      "resource_id": "ee8e8bec-b6d6-473a-9044-8026bbc4cca1",
+      "metric": "compute.active_memory_mib_hours",
+      "quantity": "0.6782744177777777777777777778",
+      "unit": "MiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.01",
+      "amount": "0.01"
+    },
+    {
+      "resource_id": "ee8e8bec-b6d6-473a-9044-8026bbc4cca1",
+      "metric": "compute.local_disk_gib_hours",
+      "quantity": "0.002649509444444444444444444444",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "1",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "d9a224f6-2233-43c0-be1c-da8fbc05c381",
+      "metric": "compute.active_vcpu_hours",
+      "quantity": "0",
+      "unit": "vCPU-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "10",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "d9a224f6-2233-43c0-be1c-da8fbc05c381",
+      "metric": "compute.active_memory_mib_hours",
+      "quantity": "0",
+      "unit": "MiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.01",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "d9a224f6-2233-43c0-be1c-da8fbc05c381",
+      "metric": "compute.local_disk_gib_hours",
+      "quantity": "0",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "1",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "88e27b1d-8a79-45e0-b4d6-6789f685d8e4",
+      "metric": "compute.active_vcpu_hours",
+      "quantity": "0",
+      "unit": "vCPU-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "10",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "88e27b1d-8a79-45e0-b4d6-6789f685d8e4",
+      "metric": "compute.active_memory_mib_hours",
+      "quantity": "0",
+      "unit": "MiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.01",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "88e27b1d-8a79-45e0-b4d6-6789f685d8e4",
+      "metric": "compute.local_disk_gib_hours",
+      "quantity": "0",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "1",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "65e75435-467f-4dd8-b9dc-f5a96e1e18b8",
+      "metric": "compute.active_vcpu_hours",
+      "quantity": "0.002649509444444444444444444444",
+      "unit": "vCPU-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "10",
+      "amount": "0.03"
+    },
+    {
+      "resource_id": "65e75435-467f-4dd8-b9dc-f5a96e1e18b8",
+      "metric": "compute.active_memory_mib_hours",
+      "quantity": "0.6782744177777777777777777778",
+      "unit": "MiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.01",
+      "amount": "0.01"
+    },
+    {
+      "resource_id": "65e75435-467f-4dd8-b9dc-f5a96e1e18b8",
+      "metric": "compute.local_disk_gib_hours",
+      "quantity": "0.002649509444444444444444444444",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "1",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "68790710-68d2-485a-8ff7-c13fe601d0f3",
+      "metric": "storage.volume_gib_hours",
+      "quantity": "0",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "2",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "7ef69893-1968-459c-bfa5-883d89d94dba",
+      "metric": "storage.volume_gib_hours",
+      "quantity": "0",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "2",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "b91f3cc6-f94e-4d11-a267-80030494f8c6",
+      "metric": "storage.volume_gib_hours",
+      "quantity": "0.002649509444444444444444444444",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "2",
+      "amount": "0.01"
+    },
+    {
+      "resource_id": "cd68ca49-1957-4b5e-8042-8317df5a461e",
+      "metric": "storage.snapshot_gib_hours",
+      "quantity": "0",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "3",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "ce780f58-2267-459d-8f90-4f0e73427a98",
+      "metric": "storage.snapshot_gib_hours",
+      "quantity": "0",
+      "unit": "GiB-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "3",
+      "amount": "0.00"
+    },
+    {
+      "resource_id": "65e75435-467f-4dd8-b9dc-f5a96e1e18b8",
+      "metric": "compute.cpu_seconds",
+      "quantity": "0.45",
+      "unit": "CPU-second",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.5",
+      "amount": "0.23"
+    },
+    {
+      "resource_id": "65e75435-467f-4dd8-b9dc-f5a96e1e18b8",
+      "metric": "network.interface_bytes",
+      "quantity": "830",
+      "unit": "byte",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.0001",
+      "amount": "0.08"
+    },
+    {
+      "resource_id": "ee8e8bec-b6d6-473a-9044-8026bbc4cca1",
+      "metric": "compute.cpu_seconds",
+      "quantity": "0.7",
+      "unit": "CPU-second",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.5",
+      "amount": "0.35"
+    },
+    {
+      "resource_id": "ee8e8bec-b6d6-473a-9044-8026bbc4cca1",
+      "metric": "network.interface_bytes",
+      "quantity": "18986",
+      "unit": "byte",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.0001",
+      "amount": "1.90"
+    },
+    {
+      "resource_id": "swift-account-d35ea2f669ae44a4bd0b1ed83df0f6e2",
+      "metric": "storage.object_byte_hours",
+      "quantity": "10.98595127555555555555555556",
+      "unit": "byte-hour",
+      "interval_start": "2026-10-28T18:13:36.675115+00:00",
+      "interval_end": "2026-10-28T18:13:46.231517+00:00",
+      "rate_per_unit": "0.01",
+      "amount": "0.11"
+    }
+  ]
+}

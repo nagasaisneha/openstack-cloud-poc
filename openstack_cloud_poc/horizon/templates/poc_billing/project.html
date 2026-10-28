@@ -30,8 +30,9 @@ Missing meters are unavailable; they are not zero usage.</div>
 {% else %}<div class="alert alert-info">No provider collection is available for this project/month yet. Refresh usage or wait for the collector.</div>{% endif %}
 <h3>Project statements</h3>
 <p>POC charge summaries. Provisional statements do not present a complete total. These are not payment requests or tax invoices.</p>
+<p>A complete statement covers only the exact interval shown below.</p>
 <table class="table table-striped"><thead><tr><th>Period (UTC)</th><th>Revision</th><th>Rates</th><th>Status</th><th>Total</th><th>Downloads</th></tr></thead><tbody>
-{% for item in statements %}<tr><td>{{ item.period_start|date:'Y-m' }}</td><td>{{ item.revision }}</td><td>{{ item.rate_card_version }}</td><td>{{ item.status.value }}</td>
+{% for item in statements %}<tr><td>{% include 'poc_billing/period.html' %}</td><td>{{ item.revision }}</td><td>{{ item.rate_card_version }}</td><td>{{ item.status.value }}</td>
 <td>{{ item.total|default_if_none:'Incomplete' }} {{ item.currency }}</td><td><a href="{% url 'horizon:project:poc_billing:download' item.statement_id 'csv' %}">CSV</a> · <a href="{% url 'horizon:project:poc_billing:download' item.statement_id 'json' %}">JSON</a></td></tr>
 {% empty %}<tr><td colspan="6">No statement has been issued for this project.</td></tr>{% endfor %}</tbody></table>
 {% for item in statements %}{% include 'poc_billing/lines.html' %}{% endfor %}

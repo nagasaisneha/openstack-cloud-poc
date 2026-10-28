@@ -155,9 +155,13 @@ def compile_usage(project_id, start, end, snapshot, counters=(), *, counters_are
         key = counter['resource_id']
         old = previous.get(key)
         if old:
+            if old == counter:
+                continue  # Identical source replay contributes no second delta or gap.
             try:
                 delta = counter_delta(old, counter)
                 left, right = timestamp(old['observed_at']), timestamp(counter['observed_at'])
+                if seconds(left, right) > 45:
+                    gaps.add('counter_sampling_gap')
                 # Never prorate cumulative deltas across a billing boundary.
                 if left >= start and right <= counter_finish:
                     total = totals.setdefault(key, {'cpu_ns': 0, 'network_bytes': 0})

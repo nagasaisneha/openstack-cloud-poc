@@ -60,6 +60,22 @@ class UsageHistoryTests(unittest.TestCase):
         self.assertFalse(unclosed.complete)
         self.assertIn('period_not_closed', unclosed.incomplete_reasons)
 
+    def test_certified_closed_source_period_remains_usable_but_scope_mismatch_does_not(self):
+        source = 'openstack:provider-events+libvirt-readonly'
+        original = batch()
+        measured = replace(original, source=source, complete=True, incomplete_reasons=(),
+                           samples=tuple(replace(sample, source=source) for sample in original.samples))
+        proof = {'id': 'a' * 64, 'project_id': 'project-a', 'start': START.isoformat(), 'end': END.isoformat()}
+        self.history.append(measured, {'measurement_policy': {'sealed_period': proof}})
+        clock = lambda: END + timedelta(days=2)
+        result = SnapshotUsageSource(self.history, clock=clock).collect('project-a', START, END)
+        self.assertTrue(result.complete)
+        self.history.append(replace(measured, collected_at=END + timedelta(seconds=1)),
+                            {'measurement_policy': {'sealed_period': dict(proof, project_id='project-b')}})
+        result = SnapshotUsageSource(self.history, clock=clock).collect('project-a', START, END)
+        self.assertFalse(result.complete)
+        self.assertIn('usage_collection_stale', result.incomplete_reasons)
+
     def test_unsafe_database_or_parent_permissions_are_rejected(self):
         os.chmod(self.path, 0o644)
         with self.assertRaises(BillingError):

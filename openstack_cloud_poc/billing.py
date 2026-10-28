@@ -826,9 +826,16 @@ class BillingService:
                 or not project_id.strip()
                 or "\n" in project_id
                 or "\r" in project_id
-                or not _is_utc_calendar_month(period_start, period_end)
             ):
                 raise BillingError(BillingErrorCode.INVALID_REQUEST)
+            calendar_month = _is_utc_calendar_month(period_start, period_end)
+            if not calendar_month:
+                attest = getattr(self.source, 'certifies_closed_period', None)
+                if (not _is_utc(period_start) or not _is_utc(period_end)
+                        or not timedelta(0) < period_end - period_start <= timedelta(days=32)
+                        or period_end > self.clock() or not callable(attest)
+                        or not attest(project_id, period_start, period_end)):
+                    raise BillingError(BillingErrorCode.INVALID_REQUEST)
             card = self.ledger.get_rate_card(rate_card_version)
             batch = self.source.collect(project_id, period_start, period_end)
             if (
@@ -836,6 +843,7 @@ class BillingService:
                 or batch.project_id != project_id
                 or batch.interval_start != period_start
                 or batch.interval_end != period_end
+                or not calendar_month and (not batch.complete or batch.provenance is not UsageProvenance.OBSERVED)
             ):
                 raise BillingError(BillingErrorCode.INVALID_REQUEST)
             lines = []

@@ -6,6 +6,7 @@ from decimal import Decimal
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import sqlite3
 import stat
@@ -124,10 +125,24 @@ class SnapshotUsageSource:
         self.history = history
         self.clock = clock or (lambda: datetime.now(timezone.utc))
 
+    def certifies_closed_period(self, project_id, interval_start, interval_end):
+        batch, inventory = self.history.latest(project_id, interval_start, interval_end)
+        sealed = inventory.get('measurement_policy', {}).get('sealed_period', {})
+        return (batch.complete and not batch.incomplete_reasons and batch.provenance is UsageProvenance.OBSERVED
+            and batch.source == 'openstack:provider-events+libvirt-readonly'
+            and re.fullmatch('[0-9a-f]{64}', sealed.get('id', '')) is not None
+            and sealed.get('project_id') == project_id and sealed.get('start') == interval_start.isoformat()
+            and sealed.get('end') == interval_end.isoformat() and interval_end <= self.clock())
+
     def collect(self, project_id, interval_start, interval_end):
-        batch, ignored = self.history.latest(project_id, interval_start, interval_end)
+        batch, inventory = self.history.latest(project_id, interval_start, interval_end)
         reasons = set(batch.incomplete_reasons)
-        if batch.collected_at is None or self.clock() - batch.collected_at > timedelta(minutes=3):
+        sealed = inventory.get('measurement_policy', {}).get('sealed_period', {})
+        certified = (batch.complete and batch.source == 'openstack:provider-events+libvirt-readonly'
+            and re.fullmatch('[0-9a-f]{64}', sealed.get('id', '')) is not None
+            and sealed.get('project_id') == project_id and sealed.get('start') == interval_start.isoformat()
+            and sealed.get('end') == interval_end.isoformat() and interval_end <= self.clock())
+        if batch.collected_at is None or not certified and self.clock() - batch.collected_at > timedelta(minutes=3):
             reasons.add('usage_collection_stale')
         if interval_end > self.clock():
             reasons.add('period_not_closed')

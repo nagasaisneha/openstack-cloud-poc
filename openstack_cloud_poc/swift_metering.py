@@ -26,4 +26,10 @@ class CollectorAccountHeadOnly:
 
 
 def filter_factory(global_conf, **local_conf):
-    return lambda app: CollectorAccountHeadOnly(app)
+    def factory(app):
+        guarded = CollectorAccountHeadOnly(app)
+        if local_conf.get('byte_journal_path'):
+            from .swift_usage_journal import wrap
+            return wrap(guarded, local_conf['byte_journal_path'], local_conf['meter_projects_path'])
+        return guarded
+    return factory

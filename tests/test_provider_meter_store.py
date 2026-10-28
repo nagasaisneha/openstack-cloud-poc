@@ -62,6 +62,15 @@ class MeterStoreTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'no_meter_collection'):
             self.store.report('b', START, START + timedelta(seconds=3))
 
+    def test_journal_evidence_shares_a_bounded_byte_budget(self):
+        rows, remaining = agent.bounded_journal_rows(iter([{'known': 1}]), 30)
+        self.assertEqual(rows, [{'known': 1}])
+        self.assertLess(remaining, 30)
+        with self.assertRaisesRegex(ValueError, 'period_journal_evidence_limit'):
+            agent.bounded_journal_rows(iter([{'large': 'x' * 30}]), remaining)
+        with self.assertRaisesRegex(ValueError, 'period_journal_evidence_limit'):
+            agent.bounded_journal_rows(({} for _ in range(100001)), 1000000)
+
     def test_out_of_order_ingestion_keeps_source_order_and_original_values(self):
         for value in (point(30, 4000000000, 40), point(10, 1000000000, 10), point(20, 2000000000, 20)):
             self.store.append(value)

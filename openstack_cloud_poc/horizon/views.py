@@ -144,7 +144,8 @@ def admin_index(request):
                 statement_form = StatementForm(request.POST, projects=projects, cards=cards)
                 if statement_form.is_valid():
                     data = statement_form.cleaned_data
-                    start, end = period(data['month'])
+                    start, end = ((data['period_start'], data['period_end']) if data.get('period_start')
+                                  else period(data['month']))
                     config = collector_config(settings.POC_BILLING_COLLECTOR_CONFIG)
                     batch, inventory = collect_project(config, data['project_id'], start, end)
                     runtime.history().append(batch, inventory)

@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 import json
 import os
+import re
 from pathlib import Path
 import stat
 
@@ -56,10 +57,14 @@ def verified_batch(config, project_id, start, end, clock):
         raise BillingError(BillingErrorCode.USAGE_SOURCE_UNAVAILABLE)
     result = read_meter(project_id, start, end, path)
     batch = batch_from_wire(result['batch'])
+    sealed = result.get('measurement_policy', {}).get('sealed_period', {})
+    verified_closed = (batch.complete and re.fullmatch('[0-9a-f]{64}', sealed.get('id', '')) is not None
+        and sealed.get('project_id') == project_id and sealed.get('start') == start.isoformat()
+        and sealed.get('end') == end.isoformat() and end <= clock() and not batch.incomplete_reasons)
     if (batch.project_id != project_id or batch.interval_start != start or batch.interval_end != end
             or batch.source != VERIFIED_SOURCE or batch.provenance is not UsageProvenance.OBSERVED
-            or batch.complete
-            or batch.collected_at is None or (clock() - batch.collected_at).total_seconds() > 90
+            or batch.complete and not verified_closed
+            or batch.collected_at is None or not verified_closed and (clock() - batch.collected_at).total_seconds() > 90
             or (batch.collected_at - clock()).total_seconds() > 2
             or not result.get('source_clock_checked')):
         raise BillingError(BillingErrorCode.USAGE_SOURCE_UNAVAILABLE)

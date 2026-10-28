@@ -31,6 +31,17 @@ SOCKET = Path('/run/openstack-poc-meter/read.sock')
 TABLES = ('instances', 'actions', 'events', 'volumes', 'snapshots')
 
 
+def bounded_journal_rows(cursor, remaining_bytes):
+    rows = []
+    for row in cursor:
+        value = dict(row)
+        remaining_bytes -= len(json.dumps(value).encode())
+        if len(rows) >= 100000 or remaining_bytes < 0:
+            raise ValueError('period_journal_evidence_limit')
+        rows.append(value)
+    return rows, remaining_bytes
+
+
 def serialize(value):
     if isinstance(value, datetime):
         return value.replace(tzinfo=timezone.utc).isoformat()
@@ -61,6 +72,13 @@ class Store:
                     BEGIN SELECT RAISE(ABORT, 'immutable'); END;
                 CREATE TRIGGER IF NOT EXISTS meter_no_delete BEFORE DELETE ON snapshots
                     BEGIN SELECT RAISE(ABORT, 'immutable'); END;
+                CREATE TABLE IF NOT EXISTS sealed_periods (
+                    project_id TEXT, start TEXT, end TEXT, payload TEXT NOT NULL,
+                    PRIMARY KEY(project_id,start,end));
+                CREATE TRIGGER IF NOT EXISTS sealed_no_update BEFORE UPDATE ON sealed_periods
+                    BEGIN SELECT RAISE(ABORT,'immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS sealed_no_delete BEFORE DELETE ON sealed_periods
+                    BEGIN SELECT RAISE(ABORT,'immutable'); END;
             ''')
 
     @contextmanager
@@ -83,6 +101,10 @@ class Store:
 
     def report(self, project_id, start, end):
         with self.connect() as db:
+            sealed = db.execute('SELECT payload FROM sealed_periods WHERE project_id=? AND start=? AND end=?',
+                                (project_id, start.isoformat(), end.isoformat())).fetchone()
+            if sealed:
+                return json.loads(sealed[0])
             row = db.execute('SELECT payload FROM snapshots WHERE project_id=? ORDER BY observed_at DESC LIMIT 1',
                              (project_id,)).fetchone()
             if row is None:
@@ -119,6 +141,66 @@ class Store:
             'provider_snapshot_at': latest.get('source_snapshot_at', latest['observed_at']),
             'counter_observation_count': observations,
             'source_clock_checked': latest.get('source_clock_checked', False)}
+
+    def seal(self, project, first_id, last_id, initial, terminal):
+        from openstack_cloud_poc.closed_billing_period import compile_closed_period, fingerprint
+        with self.connect() as db:
+            boundaries = [db.execute('SELECT payload FROM snapshots WHERE id=? AND project_id=?',
+                                    (identifier, project)).fetchone() for identifier in (first_id, last_id)]
+            if any(row is None for row in boundaries):
+                raise ValueError('unowned_period_boundary')
+            first, last = [json.loads(row[0]) for row in boundaries]
+            start, end = timestamp(first['observed_at']), timestamp(last['observed_at'])
+            size = db.execute('SELECT count(*),coalesce(sum(length(payload)),0) FROM snapshots '
+                              'WHERE project_id=? AND observed_at>=? AND observed_at<=?',
+                              (project, start.isoformat(), end.isoformat())).fetchone()
+            if size[0] > 100000 or size[1] > 16 * 1024**2:
+                raise ValueError('period_evidence_memory_limit')
+            rows = db.execute('SELECT payload FROM snapshots WHERE project_id=? AND observed_at>=? '
+                              'AND observed_at<=? ORDER BY observed_at LIMIT 100001',
+                              (project, start.isoformat(), end.isoformat())).fetchall()
+        if len(rows) > 100000:
+            raise ValueError('period_evidence_limit')
+        journal_path = Path('/var/lib/openstack-poc-swift-meter/events.sqlite')
+        with sqlite3.connect('file:' + str(journal_path) + '?mode=ro', uri=True, timeout=5) as journal:
+            journal.row_factory = sqlite3.Row
+            events, remaining = bounded_journal_rows(journal.execute('SELECT * FROM mutations WHERE project_id=? '
+                      'AND at>=? AND at<? ORDER BY sequence LIMIT 100001',
+                      (project, start.isoformat(), end.isoformat())), 16 * 1024**2 - size[1])
+            requests, remaining = bounded_journal_rows(journal.execute('SELECT r.*,c.status,c.known FROM requests r '
+                        'LEFT JOIN completions c USING(request_id) WHERE r.project_id=? AND r.at<?',
+                        (project, end.isoformat())), remaining)
+            if not (timestamp(initial['captured_at']) <= start < end <= timestamp(terminal['captured_at'])):
+                raise ValueError('inventory_boundary_order_invalid')
+            for lower, upper in ((initial['captured_at'], start.isoformat()),
+                                  (end.isoformat(), terminal['captured_at'])):
+                if journal.execute('SELECT count(*) FROM mutations WHERE project_id=? AND at>=? AND at<=?',
+                                   (project, lower, upper)).fetchone()[0]:
+                    raise ValueError('swift_inventory_boundary_race')
+        batch, evidence = compile_closed_period(project, [json.loads(row[0]) for row in rows],
+            initial['objects'], terminal['objects'], events, requests, poisoned=journal_path.with_suffix('.failed').exists())
+        if not batch.complete:
+            raise ValueError('incomplete_period:' + ','.join(batch.incomplete_reasons))
+        wire = batch_wire(batch)
+        identifier = fingerprint({'batch': wire, 'evidence': evidence})
+        attestation = {'id': identifier, 'project_id': project, 'start': start.isoformat(), 'end': end.isoformat(),
+                       'policy': evidence['policy']}
+        result = {'project_id': project, 'batch': wire, 'closed_evidence': evidence,
+            'measurement_policy': {'cpu': 'exact_domain_counter_source_endpoints_including_hypervisor',
+                'network': 'exact_combined_interface_source_endpoints_not_internet_egress',
+                'object': 'byte_hours_at_successful_proxy_response_completion', 'sealed_period': attestation},
+            'latest_source_timestamp': last['observed_at'], 'provider_snapshot_at': last['source_snapshot_at'],
+            'counter_observation_count': sum(len(json.loads(row[0]).get('counters', [])) for row in rows),
+            'source_clock_checked': True}
+        payload = json.dumps(result, sort_keys=True)
+        with self.connect() as db:
+            existing = db.execute('SELECT payload FROM sealed_periods WHERE project_id=? AND start=? AND end=?',
+                                  (project, start.isoformat(), end.isoformat())).fetchone()
+            if existing and existing[0] != payload:
+                raise ValueError('sealed_period_immutable_conflict')
+            db.execute('INSERT OR IGNORE INTO sealed_periods VALUES (?,?,?,?)',
+                       (project, start.isoformat(), end.isoformat(), payload))
+        return result
 
 
 def provider_snapshot(config):
@@ -227,11 +309,15 @@ class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         self.connection.settimeout(5)
         meter = self.server.meter
+        uid = None
         try:
             ignored_pid, uid, ignored_gid = struct.unpack('3i', self.connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
             if uid not in (0, meter.config['horizon_uid']):
                 raise ValueError('untrusted_meter_peer')
-            request = json.loads(self.rfile.readline(4097))
+            encoded = self.rfile.readline(256 * 1024 + 1)
+            if len(encoded) > 256 * 1024:
+                raise ValueError('meter_request_size_limit')
+            request = json.loads(encoded)
             project = request['project_id']
             if project not in meter.config['project_ids']:
                 raise ValueError('unenrolled_project')
@@ -239,13 +325,23 @@ class Handler(socketserver.StreamRequestHandler):
                 if uid != 0:
                     raise ValueError('force_collection_requires_operator')
                 meter.collect()
+            if request.get('seal'):
+                if uid != 0:
+                    raise ValueError('period_seal_requires_operator')
+                result = meter.store.seal(project, request['first_snapshot_id'], request['last_snapshot_id'],
+                                          request['initial_objects'], request['terminal_objects'])
+                self.wfile.write(json.dumps(result).encode() + b'\n')
+                return
             start, end = timestamp(request['start']), timestamp(request['end'])
             if not 0 < (end - start).total_seconds() <= 32 * 86400:
                 raise ValueError('invalid_meter_period')
             result = meter.store.report(project, start, end)
             self.wfile.write(json.dumps(result).encode() + b'\n')
-        except Exception:
-            self.wfile.write(b'{"error":"meter_unavailable"}\n')
+        except Exception as error:
+            result = {'error': 'meter_unavailable'}
+            if uid == 0 and isinstance(error, ValueError):
+                result['reason'] = str(error)
+            self.wfile.write(json.dumps(result).encode() + b'\n')
 
 
 def main():

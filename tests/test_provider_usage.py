@@ -80,6 +80,17 @@ class ProviderUsageTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 counter_delta(first, dict(last, **change))
 
+    def test_replayed_counter_is_not_double_charged_and_missing_cadence_is_explicit(self):
+        first = {'project_id': 'a', 'resource_id': 'vm-a', 'generation': 'one',
+                 'observed_at': START, 'cpu_ns': 0, 'network_bytes': 10}
+        last = dict(first, observed_at=START + timedelta(seconds=60), cpu_ns=1000000000, network_bytes=210)
+        batch = compile_usage('a', START, START + timedelta(seconds=60), snapshot(), [first, dict(first), last])
+        values = {row.metric: row.quantity for row in batch.samples}
+        self.assertEqual(values['compute.cpu_seconds'], 1)
+        self.assertEqual(values['network.interface_bytes'], 200)
+        self.assertIn('counter_sampling_gap', batch.incomplete_reasons)
+        self.assertNotIn('counter_generation_or_sequence_gap', batch.incomplete_reasons)
+
     def test_foreign_provider_rows_are_rejected(self):
         for kind in ('instances', 'volumes', 'snapshots'):
             source = snapshot()
