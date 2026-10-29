@@ -1,0 +1,26 @@
+{
+  "observed_at": "2026-10-29T11:31:00.444526+00:00",
+  "username": "openstack_viewer",
+  "account_host": "127.0.0.1",
+  "listener": "127.0.0.1:3306",
+  "databases": [
+    "cinder",
+    "glance",
+    "keystone",
+    "neutron",
+    "nova",
+    "nova_api",
+    "nova_cell0",
+    "octavia",
+    "placement",
+    "poc_meter_sources"
+  ],
+  "select_each_database": true,
+  "only_select_grants": true,
+  "database_name_wildcards_escaped": true,
+  "system_schema_denied": true,
+  "no_row_update_denied": true,
+  "wrong_password_denied": true,
+  "existing_authentication_and_grants_unchanged": true,
+  "password_printed": false
+}

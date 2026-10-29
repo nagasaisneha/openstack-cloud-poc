@@ -1,0 +1,27 @@
+{
+  "observed_at": "2026-10-29T11:34:12.4286381Z",
+  "windows_localhost_connection": true,
+  "client_library": "HeidiSQL libmariadb.dll",
+  "client_library_version": "3.4.9",
+  "current_user": "openstack_viewer@127.0.0.1",
+  "server_version": "10.6.23-MariaDB-0ubuntu0.22.04.1",
+  "ssl": "disabled; existing server has no TLS; loopback transport only",
+  "databases": [
+    "cinder",
+    "glance",
+    "keystone",
+    "neutron",
+    "nova",
+    "nova_api",
+    "nova_cell0",
+    "octavia",
+    "placement",
+    "poc_meter_sources"
+  ],
+  "select_each_database": true,
+  "update_denied": true,
+  "system_schema_denied": true,
+  "windows_listener_loopback_only": true,
+  "wsl_nonloopback_connection_denied": true,
+  "password_printed": false
+}

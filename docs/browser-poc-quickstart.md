@@ -17,6 +17,11 @@ and the URL only. It never prints collector credentials or private keys.
 Existing passwords have not been reset. The protected credential source is
 under `/root/openstack-poc-acceptance/browser-poc-20261027/`.
 
+To inspect the existing MariaDB service databases from Windows, use the
+[HeidiSQL viewer setup](mariadb-heidisql-access.md). Its dedicated account has
+SELECT-only access through `127.0.0.1:3306`; the runbook includes password
+retrieval and the verified connection settings.
+
 ## Browser journeys
 
 - **Administrator:** Identity → Projects / Users for project and user
