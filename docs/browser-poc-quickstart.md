@@ -1,5 +1,8 @@
 # Existing Ubuntu browser POC
 
+For WSL startup, service operation, CLI login, VM/storage/network commands,
+logs and data locations, see the [terminal operations guide](terminal-operations.md).
+
 Open **https://localhost:8443/horizon/** in Windows. The existing constrained
 localhost CA is trusted in this Windows user's certificate store; a normal
 certificate-validated Windows HTTPS request reached the login page. Domain:
