@@ -22,6 +22,10 @@ To inspect the existing MariaDB service databases from Windows, use the
 SELECT-only access through `127.0.0.1:3306`; the runbook includes password
 retrieval and the verified connection settings.
 
+For the separate SQLite usage, billing and application-job data, use the
+[SQLite viewing snapshots](sqlite-viewer-snapshots.md). These exports use the
+online backup API and keep the live POC databases running.
+
 ## Browser journeys
 
 - **Administrator:** Identity → Projects / Users for project and user

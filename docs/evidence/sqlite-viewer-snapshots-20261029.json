@@ -1,0 +1,90 @@
+{
+  "completed_at": "2026-10-29T14:04:22.265237+00:00",
+  "method": "sqlite3.Connection.backup",
+  "consistency": "one transactionally consistent snapshot per database; separate snapshot times",
+  "live_sources_opened_read_only": true,
+  "source_identity_and_permissions_unchanged": true,
+  "services_before": [
+    {
+      "MainPID": "948",
+      "ExecMainStartTimestampMonotonic": "5148886",
+      "Id": "apache2.service",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    {
+      "MainPID": "970",
+      "ExecMainStartTimestampMonotonic": "5180305",
+      "Id": "mariadb.service",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    {
+      "Id": "poc-usage-collector.timer",
+      "ActiveState": "active",
+      "SubState": "waiting"
+    }
+  ],
+  "services_after": [
+    {
+      "MainPID": "948",
+      "ExecMainStartTimestampMonotonic": "5148886",
+      "Id": "apache2.service",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    {
+      "MainPID": "970",
+      "ExecMainStartTimestampMonotonic": "5180305",
+      "Id": "mariadb.service",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    {
+      "Id": "poc-usage-collector.timer",
+      "ActiveState": "active",
+      "SubState": "waiting"
+    }
+  ],
+  "monitored_services_unchanged": true,
+  "services_stopped_or_restarted_by_export": false,
+  "snapshots": [
+    {
+      "filename": "usage.sqlite",
+      "source": "/var/lib/openstack-poc-billing/usage.sqlite",
+      "source_journal_mode": "wal",
+      "backup_started_at": "2026-10-29T14:04:17.301767+00:00",
+      "backup_completed_at": "2026-10-29T14:04:20.729686+00:00",
+      "bytes": 17350656,
+      "sha256": "a61ab36dcde186d332cf908d75495601e284a6c310d21751443678288864566c",
+      "tables": 1,
+      "integrity_check": "ok",
+      "standalone": true
+    },
+    {
+      "filename": "billing.sqlite",
+      "source": "/var/lib/openstack-poc-billing/billing.sqlite",
+      "source_journal_mode": "delete",
+      "backup_started_at": "2026-10-29T14:04:22.097999+00:00",
+      "backup_completed_at": "2026-10-29T14:04:22.152194+00:00",
+      "bytes": 163840,
+      "sha256": "c4eb742263566350563531192ae849240e4b92edc2fc77fea99a2f438630d225",
+      "tables": 3,
+      "integrity_check": "ok",
+      "standalone": true
+    },
+    {
+      "filename": "application-jobs.sqlite",
+      "source": "/root/openstack-poc-acceptance/application-jobs.sqlite",
+      "source_journal_mode": "delete",
+      "backup_started_at": "2026-10-29T14:04:22.183370+00:00",
+      "backup_completed_at": "2026-10-29T14:04:22.213811+00:00",
+      "bytes": 16384,
+      "sha256": "c769f73cef0db30b570f0504edcb4713e25bd6c81584d805b2d505a45a6c81a7",
+      "tables": 1,
+      "integrity_check": "ok",
+      "standalone": true
+    }
+  ],
+  "windows_folder_under_localappdata": "OpenStackPocSnapshots-20261029T134627Z-00e112b2"
+}
