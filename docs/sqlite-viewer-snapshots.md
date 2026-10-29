@@ -55,3 +55,12 @@ The exporter also passed an isolated WAL test: committed WAL data was included,
 an in-flight uncommitted row was excluded, the live writer remained usable,
 the result was standalone, and overwrite attempts were rejected. See the
 [sanitized export evidence](evidence/sqlite-viewer-snapshots-20261029.json).
+
+The operator returned the completed Windows verification result at
+2026-10-29 14:33:50 UTC. All three hashes matched, each file had only operator
+and SYSTEM ACL entries, the directory ACL was protected, and each snapshot was
+standalone and read-only. The monitored services were unchanged. See the
+[sanitized Windows receipt](evidence/sqlite-viewer-windows-20261029.json).
+WSL administrator/Windows process launches from the agent session timed out;
+the export and Windows verification therefore ran in the operator's existing
+Ubuntu and PowerShell terminals. No WSL or POC service restart was used.

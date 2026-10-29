@@ -1,0 +1,36 @@
+{
+  "verified_at": "2026-10-29T14:33:50.0217220Z",
+  "verification_origin": "operator-returned result from verify_sqlite_viewer_snapshots.ps1 in Windows PowerShell",
+  "windows_folder_under_localappdata": "OpenStackPocSnapshots-20261029T134627Z-00e112b2",
+  "directory_acl_protected": true,
+  "monitored_services_unchanged": true,
+  "files": [
+    {
+      "filename": "usage.sqlite",
+      "bytes": 17350656,
+      "sha256": "a61ab36dcde186d332cf908d75495601e284a6c310d21751443678288864566c",
+      "integrity_check": "ok",
+      "acl_operator_and_system_only": true,
+      "read_only": true,
+      "standalone": true
+    },
+    {
+      "filename": "billing.sqlite",
+      "bytes": 163840,
+      "sha256": "c4eb742263566350563531192ae849240e4b92edc2fc77fea99a2f438630d225",
+      "integrity_check": "ok",
+      "acl_operator_and_system_only": true,
+      "read_only": true,
+      "standalone": true
+    },
+    {
+      "filename": "application-jobs.sqlite",
+      "bytes": 16384,
+      "sha256": "c769f73cef0db30b570f0504edcb4713e25bd6c81584d805b2d505a45a6c81a7",
+      "integrity_check": "ok",
+      "acl_operator_and_system_only": true,
+      "read_only": true,
+      "standalone": true
+    }
+  ]
+}
